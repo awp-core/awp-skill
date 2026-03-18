@@ -221,7 +221,7 @@ awp-wallet sign-typed-data --token {T} --data '{
     "symbol": "{subnetSymbol}",
     "subnetManager": "0x0000000000000000000000000000000000000000",
     "salt": "'$SALT'",
-    "minStake": "{minStakeWei}",
+    "minStake": {minStakeWei},
     "nonce": '$NONCE',
     "deadline": '$DEADLINE'
   }
@@ -236,7 +236,7 @@ curl -X POST {API_BASE}/relay/register-subnet \
     "user": "'$WALLET_ADDR'",
     "name": "{subnetName}", "symbol": "{subnetSymbol}",
     "subnetManager": "0x0000000000000000000000000000000000000000",
-    "salt": "'$SALT'", "minStake": "{minStakeWei}",
+    "salt": "'$SALT'", "minStake": {minStakeWei},
     "deadline": '$DEADLINE',
     "permitSignature": "{permitSigHex}",
     "registerSignature": "{registerSigHex}"

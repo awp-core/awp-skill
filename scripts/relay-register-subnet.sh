@@ -48,7 +48,8 @@ if [[ -z "$TOKEN" || -z "$NAME" || -z "$SYMBOL" ]]; then
 fi
 
 # Step 1: Fetch contract addresses
-REGISTRY=$(curl -sf "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
+REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
+echo "$REGISTRY" | jq -e '.rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
 ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
 
@@ -99,7 +100,7 @@ PERMIT_DATA=$(cat <<EIPJSON
   "message": {
     "owner": "$WALLET_ADDR",
     "spender": "$ROOT_NET",
-    "value": "$LP_COST",
+    "value": $LP_COST,
     "nonce": $PERMIT_NONCE,
     "deadline": $DEADLINE
   }
@@ -146,7 +147,7 @@ REGISTER_DATA=$(cat <<EIPJSON
     "symbol": "$SYMBOL",
     "subnetManager": "$SUBNET_MANAGER",
     "salt": "$SALT",
-    "minStake": "$MIN_STAKE",
+    "minStake": $MIN_STAKE,
     "nonce": $ROOTNET_NONCE,
     "deadline": $DEADLINE
   }

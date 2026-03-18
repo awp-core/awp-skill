@@ -39,7 +39,8 @@ if [[ -z "$PRINCIPAL" ]]; then
 fi
 
 # Step 1: Fetch contract addresses
-REGISTRY=$(curl -sf "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
+REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
+echo "$REGISTRY" | jq -e '.rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
 ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
 
 # Step 2: Get wallet address (this is the agent)

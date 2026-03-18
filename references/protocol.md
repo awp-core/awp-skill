@@ -127,7 +127,7 @@ All events arrive via WebSocket (`wss://tapi.awp.sh/ws/live`) with envelope:
 | SubnetUnbanned | RootNet | `{subnetId}` | — |
 | SubnetDeregistered | RootNet | `{subnetId}` | — |
 
-### Emission Events
+### Emission Events [DRAFT]
 
 | Event | Source | Data Fields |
 |-------|--------|-------------|

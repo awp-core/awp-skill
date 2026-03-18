@@ -33,14 +33,15 @@ if [[ -z "$TOKEN" ]]; then
 fi
 
 # Step 1: Fetch contract addresses
-REGISTRY=$(curl -sf "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
+REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
+echo "$REGISTRY" | jq -e '.rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
 ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
 
 # Step 2: Get wallet address
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 
 # Step 3: Check if already registered
-CHECK=$(curl -sf "$API_BASE/address/$WALLET_ADDR/check") || { echo '{"error": "Failed to check registration"}' >&2; exit 1; }
+CHECK=$(curl -s "$API_BASE/address/$WALLET_ADDR/check") || { echo '{"error": "Failed to check registration"}' >&2; exit 1; }
 IS_REGISTERED=$(echo "$CHECK" | jq -r '.isRegisteredUser')
 if [[ "$IS_REGISTERED" == "true" ]]; then
   echo '{"status": "already_registered", "address": "'"$WALLET_ADDR"'"}'
