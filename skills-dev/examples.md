@@ -4,14 +4,14 @@
 
 ### Query subnet info
 ```javascript
-const res = await fetch('https://api.awp.network/api/subnets/1');
+const res = await fetch('https://tapi.awp.sh/api/subnets/1');
 const subnet = await res.json();
 console.log(subnet.name, subnet.status, subnet.skills_uri);
 ```
 
 ### Query user balance
 ```javascript
-const res = await fetch('https://api.awp.network/api/staking/user/0x1234.../balance');
+const res = await fetch('https://tapi.awp.sh/api/staking/user/0x1234.../balance');
 const balance = await res.json();
 // balance.totalStaked, balance.totalAllocated, balance.unallocated are in wei (string)
 const totalAWP = Number(balance.totalStaked) / 1e18;
@@ -19,34 +19,34 @@ const totalAWP = Number(balance.totalStaked) / 1e18;
 
 ### Query user positions (StakeNFT)
 ```javascript
-const res = await fetch('https://api.awp.network/api/staking/user/0x1234.../positions');
+const res = await fetch('https://tapi.awp.sh/api/staking/user/0x1234.../positions');
 const positions = await res.json();
 // positions[0].token_id, positions[0].amount, positions[0].lock_end_time, positions[0].created_at
 ```
 
 ### Get emission info
 ```javascript
-const res = await fetch('https://api.awp.network/api/emission/current');
+const res = await fetch('https://tapi.awp.sh/api/emission/current');
 const emission = await res.json();
 // emission.epoch, emission.dailyEmission, emission.totalWeight
 ```
 
 ### List active subnets
 ```javascript
-const res = await fetch('https://api.awp.network/api/subnets?status=Active&page=1&limit=10');
+const res = await fetch('https://tapi.awp.sh/api/subnets?status=Active&page=1&limit=10');
 const subnets = await res.json();
 ```
 
 ### Get subnet skills
 ```javascript
-const res = await fetch('https://api.awp.network/api/subnets/1/skills');
+const res = await fetch('https://tapi.awp.sh/api/subnets/1/skills');
 const { skillsURI } = await res.json();
 // skillsURI = "ipfs://QmSkillsFile..."
 ```
 
 ### Batch agent info (for coordinators)
 ```javascript
-const res = await fetch('https://api.awp.network/api/agents/batch-info', {
+const res = await fetch('https://tapi.awp.sh/api/agents/batch-info', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ agents: ['0xAgent1', '0xAgent2'], subnetId: 1 })
@@ -207,7 +207,7 @@ await walletClient.writeContract({
 });
 
 // 3a. (Optional) Compute a vanity salt via the API — pattern determined by factory's vanityRule
-const vanityRes = await fetch('https://api.awp.network/api/vanity/compute-salt', {
+const vanityRes = await fetch('https://tapi.awp.sh/api/vanity/compute-salt', {
   method: 'POST',
 });
 const { salt: vanitySalt, address: predictedAddr } = await vanityRes.json();
@@ -216,14 +216,12 @@ const { salt: vanitySalt, address: predictedAddr } = await vanityRes.json();
 // 3b. Register subnet (salt=0x00..00 uses subnetId as CREATE2 salt; or pass vanitySalt for vanity address)
 const hash = await walletClient.writeContract({
   address: ROOTNET,
-  abi: parseAbi(['function registerSubnet((string,string,string,address,string,bytes32,uint128)) returns (uint256)']),
+  abi: parseAbi(['function registerSubnet((string,string,address,bytes32,uint128)) returns (uint256)']),
   functionName: 'registerSubnet',
   args: [{
     name: "My Subnet Alpha",
     symbol: "MSALPHA",
-    metadataURI: "ipfs://QmMetadata...",
     subnetManager: "0x0000000000000000000000000000000000000000", // address(0) = auto-deploy SubnetManager
-    coordinatorURL: "https://coord.mysubnet.io",
     salt: vanitySalt ?? "0x0000000000000000000000000000000000000000000000000000000000000000",
     minStake: 0n,
   }],
@@ -245,7 +243,7 @@ await walletClient.writeContract({
 ## 4. WebSocket Example
 
 ```javascript
-const ws = new WebSocket('wss://api.awp.network/ws/live');
+const ws = new WebSocket('wss://tapi.awp.sh/ws/live');
 
 ws.onopen = () => {
   // Subscribe to events relevant for a subnet coordinator

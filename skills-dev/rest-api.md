@@ -1,6 +1,6 @@
 # AWP REST API Reference
 
-> Base URL: `https://api.awp.network/api` (configurable)
+> Base URL: `https://tapi.awp.sh/api`
 
 ## System
 
@@ -144,9 +144,7 @@ StakeNFT position NFTs owned by the user:
     "owner": "0x...",
     "name": "My Subnet",
     "symbol": "MSUB",
-    "metadata_uri": "ipfs://...",
     "subnet_contract": "0x...",
-    "coordinator_url": "https://...",
     "skills_uri": "ipfs://QmSkills...",
     "alpha_token": "0x...",
     "lp_pool": "0x...",
@@ -178,7 +176,9 @@ Single subnet detail (same fields as above).
 
 ---
 
-## Emission
+## Emission [DRAFT]
+
+> **Emission API endpoints are preliminary. The mechanism has not been finalized.**
 
 ### `GET /emission/current`
 From Redis cache (TTL 30s, refreshed every 25s by Keeper):
@@ -243,7 +243,7 @@ From Redis cache (TTL 10m):
 ### `WS /ws/live`
 
 ```javascript
-const ws = new WebSocket('wss://api.awp.network/ws/live');
+const ws = new WebSocket('wss://tapi.awp.sh/ws/live');
 
 // Subscribe to specific event types
 ws.send(JSON.stringify({
@@ -272,9 +272,8 @@ ws.onmessage = (event) => {
 | `Allocated` | `{user, agent, subnetId, amount, operator}` | RootNet |
 | `Deallocated` | `{user, agent, subnetId, amount, operator}` | RootNet |
 | `Reallocated` | `{user, fromAgent, fromSubnet, toAgent, toSubnet, amount, operator}` | RootNet |
-| `SubnetRegistered` | `{subnetId, owner, name, symbol, metadataURI, subnetManager, alphaToken, coordinatorURL}` | RootNet |
+| `SubnetRegistered` | `{subnetId, owner, name, symbol, subnetManager, alphaToken}` | RootNet |
 | `LPCreated` | `{subnetId, poolId, awpAmount, alphaAmount}` | RootNet |
-| `MetadataUpdated` | `{subnetId, metadataURI, coordinatorURL}` | RootNet |
 | `SkillsURIUpdated` | `{subnetId, skillsURI}` | SubnetNFT |
 | `MinStakeUpdated` | `{subnetId, minStake}` | SubnetNFT |
 | `SubnetActivated` | `{subnetId}` | RootNet |
@@ -294,7 +293,7 @@ ws.onmessage = (event) => {
 
 ## Relay (Gasless Transactions)
 
-> Rate limit: 5 requests per IP per 4 hours (shared across both endpoints).
+> Rate limit: 100 requests per IP per 1 hour (shared across both endpoints).
 > Requires `RELAYER_PRIVATE_KEY` configured on the API server.
 
 ### `POST /relay/register`
@@ -330,8 +329,7 @@ Fully gasless subnet registration via `registerSubnetForWithPermit()`. User sign
 ```json
 {
   "user": "0x...", "name": "EVO Alpha", "symbol": "EVO",
-  "metadataURI": "ipfs://...", "subnetManager": "0x0000...0000",
-  "coordinatorURL": "https://...", "salt": "0x...",
+  "subnetManager": "0x0000...0000", "salt": "0x...",
   "minStake": "0", "deadline": 1742400000,
   "permitSignature": "0x...65 bytes (ERC-2612 AWP permit)",
   "registerSignature": "0x...65 bytes (EIP-712 registerSubnet)"
@@ -352,9 +350,20 @@ Both are standard 65-byte signatures (r[32] + s[32] + v[1]), hex-encoded with `0
 **Error responses:**
 | Code | Body | Meaning |
 |------|------|---------|
-| 400 | `{"error": "..."}` | Invalid params, expired deadline, bad signature format |
-| 429 | `{"error": "rate limit exceeded: max 5 requests per 4 hours"}` | IP rate limit exceeded |
-| 500 | `{"error": "relay transaction failed"}` | On-chain transaction submission failed |
+| 400 | `{"error": "invalid user address"}` | Malformed Ethereum address |
+| 400 | `{"error": "deadline is missing or expired"}` | Deadline is 0 or in the past |
+| 400 | `{"error": "missing signature"}` | Signature field empty |
+| 400 | `{"error": "invalid signature"}` | EIP-712 signature verification failed |
+| 400 | `{"error": "signature expired"}` | On-chain deadline check failed |
+| 400 | `{"error": "user already registered"}` | User is already registered on-chain |
+| 400 | `{"error": "agent already bound"}` | Agent is already bound to a principal |
+| 400 | `{"error": "invalid subnet params (name 1-64 bytes, symbol 1-16 bytes)"}` | Name/symbol length violation |
+| 400 | `{"error": "subnet manager address required (auto-deploy not available)"}` | No default SubnetManager impl set |
+| 400 | `{"error": "insufficient AWP balance"}` | User lacks AWP for subnet registration |
+| 400 | `{"error": "insufficient AWP allowance"}` | Permit signature did not authorize enough AWP |
+| 400 | `{"error": "contract is paused"}` | RootNet is in emergency pause state |
+| 400 | `{"error": "relay transaction failed"}` | Unrecognized on-chain revert |
+| 429 | `{"error": "rate limit exceeded: max 100 requests per 3600s"}` | IP rate limit exceeded |
 
 ---
 

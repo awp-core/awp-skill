@@ -46,7 +46,6 @@ registerSubnetForWithPermit(user, params, deadline, permitV, permitR, permitS, r
 activateSubnet(uint256 subnetId)                               // NFT Owner: Pending → Active
 pauseSubnet(uint256 subnetId)                                  // NFT Owner: Active → Paused
 resumeSubnet(uint256 subnetId)                                 // NFT Owner: Paused → Active
-updateMetadata(uint256 subnetId, string metadataURI, string coordinatorURL) // NFT Owner; event-only notification
 ```
 
 ### Governance (Timelock only)
@@ -58,7 +57,7 @@ setInitialAlphaPrice(uint256 price)
 setGuardian(address g)
 setImmunityPeriod(uint256 p)                                   // Minimum 7 days
 setAlphaTokenFactory(address factory)                          // Replace factory for new subnets
-setDefaultSubnetManagerImpl(address impl)                      // Set/update auto-deploy impl
+setSubnetManagerImpl(address impl)                              // Set/update auto-deploy impl
 ```
 
 ### View Functions
@@ -83,7 +82,9 @@ unpause()   // Timelock only
 
 ---
 
-## AWPEmission — Emission Engine (UUPS Proxy)
+## AWPEmission — Emission Engine (UUPS Proxy) [DRAFT]
+
+> **This section describes a preliminary design. The emission mechanism has not been finalized.**
 
 ### Oracle Submission
 ```
@@ -167,9 +168,7 @@ struct SubnetFullInfo {
 struct SubnetParams {
     string name;               // Alpha token name (1-64 bytes)
     string symbol;             // Alpha token symbol (1-16 bytes)
-    string metadataURI;        // IPFS metadata URI
     address subnetManager;     // address(0) = auto-deploy SubnetManager proxy
-    string coordinatorURL;
     bytes32 salt;              // CREATE2 salt; bytes32(0) = use subnetId as salt
     uint128 minStake;          // Minimum stake for agents (0 = no minimum)
 }

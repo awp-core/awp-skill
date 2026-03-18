@@ -666,6 +666,11 @@
         "name": "stakeNFT_",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "defaultSubnetManagerImpl_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -917,19 +922,9 @@
             "internalType": "string"
           },
           {
-            "name": "metadataURI",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
             "name": "subnetManager",
             "type": "address",
             "internalType": "address"
-          },
-          {
-            "name": "coordinatorURL",
-            "type": "string",
-            "internalType": "string"
           },
           {
             "name": "salt",
@@ -978,19 +973,9 @@
             "internalType": "string"
           },
           {
-            "name": "metadataURI",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
             "name": "subnetManager",
             "type": "address",
             "internalType": "address"
-          },
-          {
-            "name": "coordinatorURL",
-            "type": "string",
-            "internalType": "string"
           },
           {
             "name": "salt",
@@ -1059,19 +1044,9 @@
             "internalType": "string"
           },
           {
-            "name": "metadataURI",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
             "name": "subnetManager",
             "type": "address",
             "internalType": "address"
-          },
-          {
-            "name": "coordinatorURL",
-            "type": "string",
-            "internalType": "string"
           },
           {
             "name": "salt",
@@ -1379,29 +1354,6 @@
     "stateMutability": "nonpayable"
   },
   {
-    "type": "function",
-    "name": "updateMetadata",
-    "inputs": [
-      {
-        "name": "subnetId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "metadataURI",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "coordinatorURL",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
     "type": "event",
     "name": "AgentBound",
     "inputs": [
@@ -1614,31 +1566,6 @@
   },
   {
     "type": "event",
-    "name": "MetadataUpdated",
-    "inputs": [
-      {
-        "name": "subnetId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "metadataURI",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      },
-      {
-        "name": "coordinatorURL",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "Paused",
     "inputs": [
       {
@@ -1799,12 +1726,6 @@
         "internalType": "string"
       },
       {
-        "name": "metadataURI",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      },
-      {
         "name": "subnetManager",
         "type": "address",
         "indexed": false,
@@ -1815,12 +1736,6 @@
         "type": "address",
         "indexed": false,
         "internalType": "address"
-      },
-      {
-        "name": "coordinatorURL",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
       }
     ],
     "anonymous": false

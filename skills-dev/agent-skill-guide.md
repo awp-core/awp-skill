@@ -33,14 +33,13 @@ Agent                          AWP API                      Subnet
 
 ```javascript
 // REST API — list all active subnets with their skills URIs
-const res = await fetch('https://api.awp.network/api/subnets?status=Active&page=1&limit=50');
+const res = await fetch('https://tapi.awp.sh/api/subnets?status=Active&page=1&limit=50');
 const subnets = await res.json();
 
 for (const subnet of subnets) {
   console.log(`[${subnet.subnet_id}] ${subnet.name}`);
   console.log(`  Status: ${subnet.status}`);
   console.log(`  Skills: ${subnet.skills_uri || 'None'}`);
-  console.log(`  Coordinator: ${subnet.coordinator_url}`);
 }
 ```
 
@@ -48,20 +47,14 @@ for (const subnet of subnets) {
 
 ```javascript
 // REST API — get skills URI for a specific subnet
-const res = await fetch('https://api.awp.network/api/subnets/1/skills');
+const res = await fetch('https://tapi.awp.sh/api/subnets/1/skills');
 const { skillsURI } = await res.json();
 // skillsURI = "https://subnet.example.com/SKILL.md"
 ```
 
 ### 2.3 On-Chain Query (optional)
 
-Skills URI is emitted via the `SubnetRegistered` and `MetadataUpdated` events. The on-chain contract does not store strings — the API reads them from the indexed database.
-
-```solidity
-// Events that contain skillsURI (indexed by the backend, not stored on-chain):
-event SubnetRegistered(..., string skillsURI);
-event MetadataUpdated(uint256 indexed subnetId, string metadataURI, string coordinatorURL, string skillsURI);
-```
+Skills URI is stored on-chain in SubnetNFT and emitted via the `SubnetRegistered` event. It can be updated by the NFT owner via `subnetNFT.setSkillsURI()`, which emits `SkillsURIUpdated`.
 
 ---
 
@@ -158,7 +151,7 @@ A script that discovers all active subnets and installs their skills:
 #!/usr/bin/env bash
 # Install all AWP subnet skills into the local workspace
 
-API_BASE="https://api.awp.network/api"
+API_BASE="https://tapi.awp.sh/api"
 SKILLS_DIR="./skills"
 
 # Fetch active subnets
@@ -281,20 +274,13 @@ When registering or updating your subnet, include the URL:
 await rootNet.registerSubnet({
   name: "MyProject",
   symbol: "MYP",
-  metadataURI: "ipfs://Qm...",
   subnetManager: "0x...",
-  coordinatorURL: "https://coord.myproject.io",
-  skillsURI: "https://docs.myproject.io/SKILL.md",  // ← agent will fetch this
-  salt: "0x00...00"
+  salt: "0x00...00",
+  minStake: 0n,
 });
 
-// Or update later (NFT owner only)
-await rootNet.updateMetadata(
-  subnetId,
-  "ipfs://QmNewMeta...",
-  "https://coord.myproject.io",
-  "https://docs.myproject.io/SKILL.md"  // ← updated skillsURI
-);
+// Update skillsURI later (NFT owner only, via SubnetNFT)
+await subnetNFT.setSkillsURI(subnetId, "https://docs.myproject.io/SKILL.md");
 ```
 
 ### 7.4 Publish to ClawHub (optional)
@@ -312,7 +298,7 @@ clawhub publish
 
 ```bash
 # 1. Discover subnets with skills
-curl -s https://api.awp.network/api/subnets?status=Active | \
+curl -s https://tapi.awp.sh/api/subnets?status=Active | \
   jq '.[] | select(.skills_uri != null) | {id: .subnet_id, name: .name, skills: .skills_uri}'
 
 # Output:

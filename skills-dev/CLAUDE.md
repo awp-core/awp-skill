@@ -4,11 +4,11 @@ You are developing **OpenClaw skills** for interacting with the AWP RootNet prot
 
 ## Protocol Overview
 
-AWP RootNet is an **Agent Mining protocol on BSC** with these core components:
+AWP RootNet is an **Agent Working protocol on BSC** (13 Solidity contracts) with these core components:
 
 - **RootNet** — Unified entry: subnet management + staking allocation + gasless relay (registerFor, bindFor, registerSubnetFor). No deposit/withdraw (handled by StakeNFT).
 - **StakeNFT** — ERC721 position NFT. Deposit AWP with lock period (timestamp-based, seconds). addToPosition blocked on expired locks (PositionExpired).
-- **AWPEmission** — UUPS proxy emission engine. settleEpoch(limit) uses mintAndCall to auto-trigger SubnetManager strategies.
+- **AWPEmission** — **[DRAFT]** UUPS proxy emission engine. settleEpoch(limit) uses mintAndCall to auto-trigger SubnetManager strategies.
 - **StakingVault** — Pure allocation logic. Auto-enumerates agent subnets. allocate/reallocate reject subnetId=0.
 - **LPManager** — PancakeSwap V4 CL pool (permanently locked LP).
 - **AWPToken** — ERC20+ERC1363+Votes, 10B max. mintAndCall(to, amount, data) triggers ERC1363 callback.
@@ -46,7 +46,7 @@ AWP RootNet is an **Agent Mining protocol on BSC** with these core components:
 9. **register-subnet** — Register a new subnet (deploy Alpha + LP)
 10. **deposit-stake** — Deposit AWP via StakeNFT (mint position NFT with lock period)
 11. **allocate-stake** — Allocate stake to (agent, subnet)
-12. **manage-subnet** — Activate/pause/resume subnet, update metadata
+12. **manage-subnet** — Activate/pause/resume subnet, update skillsURI
 
 ### Monitoring Skills
 13. **watch-events** — Subscribe to WebSocket events (emission, staking, subnet lifecycle)
@@ -56,7 +56,7 @@ AWP RootNet is an **Agent Mining protocol on BSC** with these core components:
 
 - **Chain**: BSC (Chain ID 56), RPC via QuickNode or public BSC RPC
 - **Contract interaction**: Use `viem` or `ethers.js` for on-chain reads/writes
-- **REST API**: Base URL configurable, default `https://api.awp.network/api`
-- **WebSocket**: `wss://api.awp.network/ws/live`
+- **REST API**: Base URL `https://tapi.awp.sh/api`
+- **WebSocket**: `wss://tapi.awp.sh/ws/live`
 - **All token amounts are in wei** (18 decimals). Display as human-readable with proper formatting.
 - **Addresses are lowercase** in the API but mixed-case (EIP-55) on-chain.
