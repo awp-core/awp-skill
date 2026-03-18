@@ -66,8 +66,8 @@ EIP712_DATA=$(cat <<EIPJSON
     ],
     "Register": [
       {"name": "user", "type": "address"},
-      {"name": "deadline", "type": "uint256"},
-      {"name": "nonce", "type": "uint256"}
+      {"name": "nonce", "type": "uint256"},
+      {"name": "deadline", "type": "uint256"}
     ]
   },
   "primaryType": "Register",
@@ -79,8 +79,8 @@ EIP712_DATA=$(cat <<EIPJSON
   },
   "message": {
     "user": "$WALLET_ADDR",
-    "deadline": $DEADLINE,
-    "nonce": $NONCE
+    "nonce": $NONCE,
+    "deadline": $DEADLINE
   }
 }
 EIPJSON
@@ -93,11 +93,16 @@ SIG_RESULT=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$EIP712_DATA") 
 SIGNATURE=$(echo "$SIG_RESULT" | jq -r '.signature')
 
 # Step 7: Submit to relay
-RELAY_RESULT=$(curl -sf -X POST "$API_BASE/relay/register" \
+RELAY_RESULT=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/relay/register" \
   -H "Content-Type: application/json" \
-  -d "{\"user\": \"$WALLET_ADDR\", \"deadline\": $DEADLINE, \"signature\": \"$SIGNATURE\"}") || {
-  echo '{"error": "Relay submission failed"}' >&2
-  exit 1
-}
+  -d "{\"user\": \"$WALLET_ADDR\", \"deadline\": $DEADLINE, \"signature\": \"$SIGNATURE\"}")
 
-echo "$RELAY_RESULT"
+HTTP_CODE=$(echo "$RELAY_RESULT" | tail -1)
+BODY=$(echo "$RELAY_RESULT" | sed '$d')
+
+if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+  echo "$BODY"
+else
+  echo "$BODY" >&2
+  exit 1
+fi

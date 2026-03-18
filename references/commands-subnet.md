@@ -204,8 +204,8 @@ awp-wallet sign-typed-data --token {T} --data '{
       {"name": "subnetManager", "type": "address"},
       {"name": "salt", "type": "bytes32"},
       {"name": "minStake", "type": "uint128"},
-      {"name": "deadline", "type": "uint256"},
-      {"name": "nonce", "type": "uint256"}
+      {"name": "nonce", "type": "uint256"},
+      {"name": "deadline", "type": "uint256"}
     ]
   },
   "primaryType": "RegisterSubnet",
@@ -222,8 +222,8 @@ awp-wallet sign-typed-data --token {T} --data '{
     "subnetManager": "0x0000000000000000000000000000000000000000",
     "salt": "'$SALT'",
     "minStake": "{minStakeWei}",
-    "deadline": '$DEADLINE',
-    "nonce": '$NONCE'
+    "nonce": '$NONCE',
+    "deadline": '$DEADLINE'
   }
 }'
 ```

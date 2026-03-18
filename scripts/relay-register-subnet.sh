@@ -129,8 +129,8 @@ REGISTER_DATA=$(cat <<EIPJSON
       {"name": "subnetManager", "type": "address"},
       {"name": "salt", "type": "bytes32"},
       {"name": "minStake", "type": "uint128"},
-      {"name": "deadline", "type": "uint256"},
-      {"name": "nonce", "type": "uint256"}
+      {"name": "nonce", "type": "uint256"},
+      {"name": "deadline", "type": "uint256"}
     ]
   },
   "primaryType": "RegisterSubnet",
@@ -147,8 +147,8 @@ REGISTER_DATA=$(cat <<EIPJSON
     "subnetManager": "$SUBNET_MANAGER",
     "salt": "$SALT",
     "minStake": "$MIN_STAKE",
-    "deadline": $DEADLINE,
-    "nonce": $ROOTNET_NONCE
+    "nonce": $ROOTNET_NONCE,
+    "deadline": $DEADLINE
   }
 }
 EIPJSON
@@ -160,7 +160,7 @@ REGISTER_SIG=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$REGISTER_DAT
 REGISTER_SIGNATURE=$(echo "$REGISTER_SIG" | jq -r '.signature')
 
 # Step 8: Submit to relay
-RELAY_RESULT=$(curl -sf -X POST "$API_BASE/relay/register-subnet" \
+RELAY_RESULT=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/relay/register-subnet" \
   -H "Content-Type: application/json" \
   -d "{
     \"user\": \"$WALLET_ADDR\",
@@ -172,9 +172,14 @@ RELAY_RESULT=$(curl -sf -X POST "$API_BASE/relay/register-subnet" \
     \"deadline\": $DEADLINE,
     \"permitSignature\": \"$PERMIT_SIGNATURE\",
     \"registerSignature\": \"$REGISTER_SIGNATURE\"
-  }") || {
-  echo '{"error": "Relay submission failed"}' >&2
-  exit 1
-}
+  }")
 
-echo "$RELAY_RESULT"
+HTTP_CODE=$(echo "$RELAY_RESULT" | tail -1)
+BODY=$(echo "$RELAY_RESULT" | sed '$d')
+
+if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+  echo "$BODY"
+else
+  echo "$BODY" >&2
+  exit 1
+fi

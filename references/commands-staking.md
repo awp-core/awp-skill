@@ -190,8 +190,8 @@ awp-wallet sign-typed-data --token {T} --data '{
     ],
     "Register": [
       {"name": "user", "type": "address"},
-      {"name": "deadline", "type": "uint256"},
-      {"name": "nonce", "type": "uint256"}
+      {"name": "nonce", "type": "uint256"},
+      {"name": "deadline", "type": "uint256"}
     ]
   },
   "primaryType": "Register",
@@ -203,8 +203,8 @@ awp-wallet sign-typed-data --token {T} --data '{
   },
   "message": {
     "user": "'$WALLET_ADDR'",
-    "deadline": '$DEADLINE',
-    "nonce": '$NONCE'
+    "nonce": '$NONCE',
+    "deadline": '$DEADLINE'
   }
 }'
 # -> {"signature": "0x...130 hex chars", "v": 28, "r": "0x...", "s": "0x..."}
@@ -231,8 +231,8 @@ awp-wallet sign-typed-data --token {T} --data '{
     "Bind": [
       {"name": "agent", "type": "address"},
       {"name": "principal", "type": "address"},
-      {"name": "deadline", "type": "uint256"},
-      {"name": "nonce", "type": "uint256"}
+      {"name": "nonce", "type": "uint256"},
+      {"name": "deadline", "type": "uint256"}
     ]
   },
   "primaryType": "Bind",
@@ -245,8 +245,8 @@ awp-wallet sign-typed-data --token {T} --data '{
   "message": {
     "agent": "'$WALLET_ADDR'",
     "principal": "'$PRINCIPAL'",
-    "deadline": '$DEADLINE',
-    "nonce": '$NONCE'
+    "nonce": '$NONCE',
+    "deadline": '$DEADLINE'
   }
 }'
 

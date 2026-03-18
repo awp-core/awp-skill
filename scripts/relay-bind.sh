@@ -45,7 +45,7 @@ ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
 # Step 2: Get wallet address (this is the agent)
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 
-# Step 3: Get nonce
+# Step 3: Get nonce (bind uses the AGENT's nonce, not principal's)
 NONCE=$(cast call "$ROOT_NET" "nonces(address)(uint256)" "$WALLET_ADDR" --rpc-url "$RPC_URL" 2>/dev/null || echo "0")
 NONCE=$(echo "$NONCE" | tr -d '[:space:]')
 
@@ -65,8 +65,8 @@ EIP712_DATA=$(cat <<EIPJSON
     "Bind": [
       {"name": "agent", "type": "address"},
       {"name": "principal", "type": "address"},
-      {"name": "deadline", "type": "uint256"},
-      {"name": "nonce", "type": "uint256"}
+      {"name": "nonce", "type": "uint256"},
+      {"name": "deadline", "type": "uint256"}
     ]
   },
   "primaryType": "Bind",
@@ -79,8 +79,8 @@ EIP712_DATA=$(cat <<EIPJSON
   "message": {
     "agent": "$WALLET_ADDR",
     "principal": "$PRINCIPAL",
-    "deadline": $DEADLINE,
-    "nonce": $NONCE
+    "nonce": $NONCE,
+    "deadline": $DEADLINE
   }
 }
 EIPJSON
@@ -93,11 +93,16 @@ SIG_RESULT=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$EIP712_DATA") 
 SIGNATURE=$(echo "$SIG_RESULT" | jq -r '.signature')
 
 # Step 6: Submit to relay
-RELAY_RESULT=$(curl -sf -X POST "$API_BASE/relay/bind" \
+RELAY_RESULT=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/relay/bind" \
   -H "Content-Type: application/json" \
-  -d "{\"agent\": \"$WALLET_ADDR\", \"principal\": \"$PRINCIPAL\", \"deadline\": $DEADLINE, \"signature\": \"$SIGNATURE\"}") || {
-  echo '{"error": "Relay submission failed"}' >&2
-  exit 1
-}
+  -d "{\"agent\": \"$WALLET_ADDR\", \"principal\": \"$PRINCIPAL\", \"deadline\": $DEADLINE, \"signature\": \"$SIGNATURE\"}")
 
-echo "$RELAY_RESULT"
+HTTP_CODE=$(echo "$RELAY_RESULT" | tail -1)
+BODY=$(echo "$RELAY_RESULT" | sed '$d')
+
+if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+  echo "$BODY"
+else
+  echo "$BODY" >&2
+  exit 1
+fi
