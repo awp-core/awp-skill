@@ -113,7 +113,7 @@ These are used so often they belong here. For full EIP-712 templates and gasless
 curl -s https://tapi.awp.sh/api/address/{addr}/check
 ```
 
-**Get RootNet address** (run once per session, cache in `$ROOT_NET`):
+**Get RootNet address** (run before every write action — do not cache):
 ```bash
 ROOT_NET=$(curl -s https://tapi.awp.sh/api/registry | jq -r '.rootNet')
 ```
@@ -139,7 +139,7 @@ Ask user: **Principal (self-managed) or Agent (work for someone)?**
 - **Amounts**: `{formatAWP(amount)}` = wei / 10^18, 4 decimals. Never show raw wei.
 - **Addresses**: `{shortAddr(addr)}` for display, full for params
 - **Timestamps**: `{tsToDate(ts)}` for lock end times and dates
-- **Contract addresses**: `GET /registry` — never hardcode
+- **Contract addresses**: `GET /registry` before every write action — never hardcode, never cache (addresses may change due to upgrades)
 - **Pagination**: limit=20 default, max=100
 - **Validation**: address = 0x+40hex, subnetId = positive int, amount = positive BigInt
 
@@ -148,7 +148,7 @@ Ask user: **Principal (self-managed) or Agent (work for someone)?**
 Track these across the conversation to avoid redundant checks:
 - `registered`: set to true after successful S1 bind/register — skip /address/check on subsequent actions
 - `wallet_addr`: cache after first awp-wallet status call
-- `registry`: cache GET /registry response — addresses don't change within a session
+- `registry`: DO NOT cache. Always call `GET /registry` before each write action to get the latest contract addresses.
 - `has_gas`: cache BNB balance check result — re-check only if a tx fails with insufficient gas
 - `ws_connected`: true after WebSocket connect — don't reconnect unless disconnected
 - `subscribed_events`: current WebSocket subscription — re-use for reconnection
