@@ -1,0 +1,7 @@
+.git
+skills/
+skills-dev/
+dev-guide.md
+*.skill
+*.log
+*.html
