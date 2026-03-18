@@ -188,7 +188,7 @@ The `skills-dev/` directory contains the authoritative protocol specifications u
 
 | Version | Changes |
 |---------|---------|
-| 2.0.0 | Merged awp + awp-monitor into single skill (23 actions). SKILL.md at repo root for one-command install. |
+| 1.4.0 | Merged awp + awp-monitor into single skill (23 actions). SKILL.md at repo root for one-command install. |
 | 1.3.0 | Split api-reference into focused command files, inline high-frequency commands, session state tracking, response format templates, auto-retry on 429 |
 | 1.2.0 | On Skill Load protocol, intent routing with reference file mapping, version check mechanism |
 | 1.1.0 | Welcome messages, executable command templates, EIP-712 JSON templates with AWPRootNet domain |
