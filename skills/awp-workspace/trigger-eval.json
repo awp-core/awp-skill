@@ -1,0 +1,22 @@
+[
+  {"query": "帮我查一下 AWP RootNet 上 subnet 12 的详细信息，我想看看它的 alpha token 价格和 skills URI，还有 coordinator URL 是什么", "should_trigger": true},
+  {"query": "i want to stake 50000 AWP on rootnet, lock for 52 epochs, and allocate it all to my agent 0x742d35Cc6634C0532925a3b844Bc9e7595f2bD68 on subnet 7. walk me through the whole process", "should_trigger": true},
+  {"query": "我刚注册了一个新的 subnet，id 是 15，现在想 activate 它，然后更新 metadata 把 skillsURI 改成我新的地址 ipfs://QmNewSkills123", "should_trigger": true},
+  {"query": "can you show me the current AWP emission schedule? i want to see how much the daily rate decays over the next year and what epoch we're on right now", "should_trigger": true},
+  {"query": "我要创建一个 signal proposal，内容是建议把 emission split 改成 60/40，用我的 position NFT #3 和 #7 的 voting power", "should_trigger": true},
+  {"query": "帮我看下 0xABC123 这个地址的 staking 情况，包括 total staked、各个 position 的 lock 到期时间，还有 allocation 分配到了哪些 subnet", "should_trigger": true},
+  {"query": "i need to vote FOR on proposal 88 using all my staked positions. make sure to handle the encoding correctly — i heard castVote doesn't work on this DAO", "should_trigger": true},
+  {"query": "想要注册一个新的 AWP subnet，名字叫 AITrader，symbol 是 AIT，coordinator URL 是 https://aitrader.io/coord。帮我算一下 LP cost 要多少 AWP", "should_trigger": true},
+  {"query": "show me all active subnets on AWP RootNet that have a skills URI published — i want to browse what's available for my agent to install", "should_trigger": true},
+  {"query": "我想把 subnet 5 上分配给 agent A 的 3000 AWP 重新分配到 subnet 8 的 agent B，听说 reallocate 不用等 cooldown 是吗", "should_trigger": true},
+  {"query": "帮我写一个 ERC-20 token 合约，要有 mint 和 burn 功能，用 OpenZeppelin 的库", "should_trigger": false},
+  {"query": "i want to deploy a PancakeSwap V4 pool on BSC with custom tick spacing, can you help me set up the concentrated liquidity parameters?", "should_trigger": false},
+  {"query": "can you check the ETH/USDT price on Uniswap right now? i need to decide whether to swap", "should_trigger": false},
+  {"query": "帮我分析一下 BSC 上这个合约 0x1234abcd 的源码，看看有没有安全漏洞", "should_trigger": false},
+  {"query": "i need help setting up a BSC validator node, what's the minimum BNB stake required and how do i configure the node client?", "should_trigger": false},
+  {"query": "我想做一个 DeFi dashboard 前端，用 React 加 wagmi 来显示用户的 token balance 和交易历史", "should_trigger": false},
+  {"query": "can you help me bridge my USDC from Ethereum to BSC using the official Binance bridge? need the cheapest route", "should_trigger": false},
+  {"query": "帮我在 Hardhat 里写一个 Governor 合约的测试，要测试 propose、vote、execute 的完整流程", "should_trigger": false},
+  {"query": "i want to set up a monitoring system for my BSC DeFi protocol — thinking of using TheGraph to index events and Grafana for dashboards", "should_trigger": false},
+  {"query": "我的 MetaMask 连不上 BSC 网络了，chainId 56 对吗？RPC URL 应该填什么？", "should_trigger": false}
+]

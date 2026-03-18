@@ -1,0 +1,17 @@
+{
+  "skill_name": "awp-monitor",
+  "evals": [
+    {
+      "id": 4,
+      "prompt": "帮我监控所有 staking 相关的事件，实时显示",
+      "expected_output": "Agent connects to wss://api.awp.network/ws/live, subscribes to staking preset (Deposited, Withdrawn, PositionIncreased, Allocated, Deallocated, Reallocated), formats with $ emoji and human-readable amounts",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "我想在每次 epoch 结算时收到通知，显示 top 收益地址",
+      "expected_output": "Agent subscribes to EpochSettled + RecipientAWPDistributed + DAOMatchDistributed, accumulates per-recipient amounts, displays settlement summary with DAO match and top recipients. Has polling fallback.",
+      "files": []
+    }
+  ]
+}

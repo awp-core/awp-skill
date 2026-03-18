@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "awp", "runs": [{"id": "query-subnet-info-with_skill", "prompt": "\u6211\u60f3\u67e5\u4e00\u4e0b subnet 5 \u7684\u8be6\u7ec6\u4fe1\u606f\uff0c\u5305\u62ec skills URI \u548c alpha token \u4ef7\u683c", "eval_id": 1, "outputs": [{"name": "response.md", "type": "text", "content": "# Query Subnet 5 \u2014 Execution Plan\n\n## Task\n\nUser requests: \"\u67e5\u4e00\u4e0b subnet 5 \u7684\u8be6\u7ec6\u4fe1\u606f\uff0c\u5305\u62ec skills URI \u548c alpha token \u4ef7\u683c\"\n\nThis is a read-only query \u2014 no wallet required. It maps to **Q1 (Query Subnet)** plus **Q6 (Query Skills URI)** plus the supplementary **Alpha Token Price** endpoint.\n\n---\n\n## Step 1: Fetch Contract Registry\n\nBefore any API call, fetch dynamic contract addresses (per skill convention: never hardcode).\n\n```\nGET {AWP_API_URL}/registry\n```\n\nExpected response:\n```json\n{\n  \"rootNet\": \"0x...\",\n  \"subnetNFT\": \"0x...\",\n  \"stakeNFT\": \"0x...\",\n  \"dao\": \"0x...\",\n  \"awpToken\": \"0x...\",\n  \"stakingVault\": \"0x...\",\n  \"awpEmission\": \"0x...\",\n  \"treasury\": \"0x...\"\n}\n```\n\nStore `rootNet` address for potential on-chain fallback.\n\n---\n\n## Step 2: Fetch Subnet Details, Skills URI, and Alpha Token Price (in parallel)\n\nThree independent GET requests, issued concurrently:\n\n### 2a. Subnet Info (Action Q1)\n\n```\nGET {AWP_API_URL}/subnets/5\n```\n\nExpected response:\n```json\n{\n  \"subnet_id\": 5,\n  \"owner\": \"0x...\",\n  \"name\": \"...\",\n  \"symbol\": \"...\",\n  \"metadata_uri\": \"ipfs://...\",\n  \"subnet_contract\": \"0x...\",\n  \"coordinator_url\": \"https://...\",\n  \"skills_uri\": \"ipfs://Qm...\",\n  \"alpha_token\": \"0x...\",\n  \"lp_pool\": \"0x...\",\n  \"status\": \"Active\",\n  \"created_at\": 1710000000,\n  \"activated_at\": 1710000100\n}\n```\n\n### 2b. Skills URI (Action Q6)\n\n```\nGET {AWP_API_URL}/subnets/5/skills\n```\n\nExpected response:\n```json\n{\n  \"subnetId\": 5,\n  \"skillsURI\": \"ipfs://QmSkillsFile...\"\n}\n```\n\nNote: This is redundant with the `skills_uri` field in Q1, but serves as a dedicated endpoint and confirms the indexed value. If Q1 already returns `skills_uri`, this call provides cross-validation.\n\n### 2c. Alpha Token Price (Supplementary Endpoint)\n\n```\nGET {AWP_API_URL}/tokens/alpha/5/price\n```\n\nExpected response:\n```json\n{\n  \"priceInAWP\": \"0.015\",\n  \"reserve0\": \"...\",\n  \"reserve1\": \"...\",\n  \"updatedAt\": \"...\"\n}\n```\n\n---\n\n## Step 3: Error Handling\n\n- If any request returns **404 Not Found**: report \"Subnet 5 does not exist\" and suggest using Q5 (`GET /subnets?status=Active`) to list available subnets.\n- If the REST API is unreachable (500 / timeout): fall back to on-chain read for subnet info only.\n\n### On-Chain Fallback (if REST fails for subnet info)\n\nCall `RootNet.getSubnet(5)` on BSC (Chain ID 56) using the `rootNet` address from `/registry`.\n\n```solidity\nfunction getSubnet(uint256 subnetId) view returns (SubnetInfo)\n// Returns: (subnetContract, alphaToken, lpPool, status, createdAt, activatedAt)\n```\n\n**Limitation**: On-chain `SubnetInfo` does NOT include string fields (`name`, `symbol`, `metadata_uri`, `coordinator_url`, `skills_uri`). These are only available from the REST API (indexed off-chain from `SubnetRegistered` / `MetadataUpdated` events). If the API is down, inform the user that name, skills URI, and metadata are unavailable and only on-chain fields can be shown.\n\nThere is no on-chain fallback for alpha token price \u2014 that requires reading LP pool reserves directly, which is not covered by a simple view function in the skill.\n\n---\n\n## Step 4: Format and Display Output\n\nUsing the data from all three responses, format the output as follows:\n\n```\nSubnet #5 \u2014 {subnet.name} ({subnet.symbol})\n\n  Status:          {subnet.status}\n  Owner:           {shortAddr(subnet.owner)}\n  Subnet Contract: {shortAddr(subnet.subnet_contract)}\n  Coordinator:     {subnet.coordinator_url}\n  Metadata URI:    {subnet.metadata_uri}\n  Skills URI:      {subnet.skills_uri}\n  Created:         {tsToDate(subnet.created_at)}\n  Activated:       {tsToDate(subnet.activated_at)}\n\nAlpha Token\n  Address:         {shortAddr(subnet.alpha_token)}\n  LP Pool:         {shortAddr(subnet.lp_pool)}\n  Price:           {priceInAWP} AWP per Alpha\n  Last Updated:    {updatedAt}\n```\n\n### Formatting Rules Applied\n\n- **Amounts**: All wei values converted via `amount / 10^18`, displayed to 4 decimal places (`{formatAWP(amount)}`).\n- **Addresses**: Shortened with `{shortAddr(addr)}` (e.g., `0x1234...abcd`) in display. Full addresses available on request.\n- **Timestamps**: Converted from Unix epoch to human-readable date via `{tsToDate(ts)}`.\n- **Price**: Shown as-is from the API response (already human-readable string).\n- **BSCScan links**: Optionally linkable \u2014 `https://bscscan.com/address/{subnet.alpha_token}` for the alpha token contract.\n\n---\n\n## Summary of API Calls\n\n| # | Method | Endpoint | Action ID | Purpose |\n|---|--------|----------|-----------|---------|\n| 1 | GET | `/registry` | \u2014 | Fetch contract addresses (for fallback) |\n| 2 | GET | `/subnets/5` | Q1 | Full subnet details |\n| 3 | GET | `/subnets/5/skills` | Q6 | Skills URI (cross-validation) |\n| 4 | GET | `/tokens/alpha/5/price` | Supplementary | Alpha token price in AWP |\n\nCalls 2, 3, and 4 are independent and execute in parallel. Call 1 can also run in parallel since its result is only needed for on-chain fallback.\n\nTotal: 4 REST calls, 0 on-chain calls (unless REST fails).\n"}], "grading": {"expectations": [{"text": "uses-correct-subnet-endpoint", "passed": true, "evidence": "Step 2a calls `GET {AWP_API_URL}/subnets/5`"}, {"text": "uses-skills-uri-endpoint", "passed": true, "evidence": "Step 2b calls `GET {AWP_API_URL}/subnets/5/skills`"}, {"text": "uses-alpha-price-endpoint", "passed": true, "evidence": "Step 2c calls `GET {AWP_API_URL}/tokens/alpha/5/price`"}, {"text": "formats-amounts-human-readable", "passed": true, "evidence": "Formatting Rules state: 'All wei values converted via amount / 10^18, displayed to 4 decimal places ({formatAWP(amount)})'"}, {"text": "no-hardcoded-addresses", "passed": true, "evidence": "Step 1 fetches addresses from `GET {AWP_API_URL}/registry`; all contract addresses shown as '0x...' placeholders, none hardcoded"}]}}, {"id": "query-subnet-info-without_skill", "prompt": "\u6211\u60f3\u67e5\u4e00\u4e0b subnet 5 \u7684\u8be6\u7ec6\u4fe1\u606f\uff0c\u5305\u62ec skills URI \u548c alpha token \u4ef7\u683c", "eval_id": 1, "outputs": [{"name": "response.md", "type": "text", "content": "# Response: \u67e5\u8be2 Subnet 5 \u8be6\u7ec6\u4fe1\u606f\uff08\u65e0\u4e13\u7528\u6280\u80fd\uff09\n\n## \u6211\u7684\u7406\u89e3\n\n\u4f60\u60f3\u67e5\u8be2 AWP RootNet \u534f\u8bae\u4e2d subnet 5 \u7684\u8be6\u7ec6\u4fe1\u606f\uff0c\u5305\u62ec\uff1a\n1. Skills URI\uff08\u6280\u80fd\u63cf\u8ff0\u6587\u4ef6\u5730\u5740\uff09\n2. Alpha Token \u4ef7\u683c\n\n## \u5766\u7387\u8bf4\u660e\n\n\u6211\u6ca1\u6709\u5173\u4e8e AWP RootNet \u534f\u8bae\u7684\u4e13\u7528\u6280\u80fd\u6216\u5185\u7f6e\u6587\u6863\u3002\u6211\u4e0d\u77e5\u9053\u5b83\u7684\u5177\u4f53 API \u7aef\u70b9\u3001\u5408\u7ea6\u5730\u5740\u6216\u6570\u636e\u7ed3\u6784\u3002\u4ee5\u4e0b\u662f\u6211\u57fa\u4e8e\u901a\u7528\u533a\u5757\u94fe\u77e5\u8bc6\u5c1d\u8bd5\u5e2e\u4f60\u5b8c\u6210\u8fd9\u4e2a\u4efb\u52a1\u7684\u601d\u8def\u3002\n\n---\n\n## \u65b9\u6848\u4e00\uff1a\u901a\u8fc7 REST API \u67e5\u8be2\uff08\u5982\u679c\u534f\u8bae\u63d0\u4f9b\u4e86\u516c\u5f00 API\uff09\n\n\u5927\u591a\u6570 DeFi \u534f\u8bae\u4f1a\u63d0\u4f9b REST API\u3002\u5982\u679c AWP RootNet \u6709\u516c\u5f00\u7684 API \u6587\u6863\uff0c\u6211\u9700\u8981\u4f60\u63d0\u4f9b\uff1a\n\n- **API \u57fa\u7840 URL**\uff08\u4f8b\u5982 `https://api.awp.network/api`\uff09\n- **API \u6587\u6863\u94fe\u63a5**\uff0c\u4ee5\u4fbf\u6211\u627e\u5230\u6b63\u786e\u7684\u7aef\u70b9\n\n\u5047\u8bbe API \u5b58\u5728\uff0c\u4e00\u822c\u6765\u8bf4\u4f1a\u6709\u7c7b\u4f3c\u8fd9\u6837\u7684\u7aef\u70b9\uff1a\n\n```\nGET /subnets/5          \u2192 \u83b7\u53d6 subnet \u57fa\u672c\u4fe1\u606f\nGET /subnets/5/skills   \u2192 \u83b7\u53d6 skills URI\n```\n\n\u5bf9\u4e8e Alpha Token \u4ef7\u683c\uff0c\u53ef\u80fd\u9700\u8981\u67e5\u8be2\uff1a\n- \u8be5 subnet \u5bf9\u5e94\u7684 Alpha Token \u5408\u7ea6\u5730\u5740\n- \u901a\u8fc7 DEX\uff08\u5982 PancakeSwap\uff09\u7684\u6d41\u52a8\u6027\u6c60\u83b7\u53d6\u4ef7\u683c\n- \u6216\u8005\u534f\u8bae\u662f\u5426\u63d0\u4f9b\u4e86\u4ef7\u683c\u805a\u5408\u7aef\u70b9\n\n**\u4e0d\u786e\u5b9a\u7684\u5730\u65b9\uff1a**\n- \u6211\u4e0d\u786e\u5b9a API \u7684 URL \u662f\u4ec0\u4e48\n- \u6211\u4e0d\u786e\u5b9a\u54cd\u5e94\u7684 JSON \u683c\u5f0f\n- \u6211\u4e0d\u786e\u5b9a \"skills URI\" \u662f\u5728 subnet \u57fa\u7840\u4fe1\u606f\u91cc\u8fd4\u56de\uff0c\u8fd8\u662f\u9700\u8981\u5355\u72ec\u7684\u7aef\u70b9\n- \u6211\u4e0d\u786e\u5b9a Alpha Token \u4ef7\u683c\u7684\u83b7\u53d6\u65b9\u5f0f\u2014\u2014\u662f\u901a\u8fc7 API \u76f4\u63a5\u63d0\u4f9b\uff0c\u8fd8\u662f\u9700\u8981\u94fe\u4e0a\u67e5\u8be2 LP \u6c60\n\n## \u65b9\u6848\u4e8c\uff1a\u901a\u8fc7\u94fe\u4e0a\u5408\u7ea6\u76f4\u63a5\u8bfb\u53d6\n\n\u5982\u679c\u4f60\u6709\u5408\u7ea6\u5730\u5740\uff0c\u6211\u53ef\u4ee5\u5e2e\u4f60\u7f16\u5199 viem/ethers.js \u4ee3\u7801\u76f4\u63a5\u4ece BSC \u94fe\u4e0a\u8bfb\u53d6\u3002\n\n\u4f46\u6211\u9700\u8981\u4f60\u63d0\u4f9b\uff1a\n1. **RootNet \u5408\u7ea6\u5730\u5740**\n2. **\u5408\u7ea6 ABI**\uff08\u81f3\u5c11\u662f\u67e5\u8be2\u51fd\u6570\u7684\u90e8\u5206\uff09\n\n\u4e00\u822c\u6765\u8bf4\u53ef\u80fd\u6709\u8fd9\u6837\u7684\u5408\u7ea6\u8c03\u7528\uff1a\n\n```javascript\n// \u4f2a\u4ee3\u7801 \u2014 \u5177\u4f53\u51fd\u6570\u540d\u548c\u53c2\u6570\u6211\u4e0d\u786e\u5b9a\nconst subnetInfo = await contract.getSubnet(5);\n```\n\n**\u4e0d\u786e\u5b9a\u7684\u5730\u65b9\uff1a**\n- \u5408\u7ea6\u91cc subnet \u7684\u6570\u636e\u7ed3\u6784\u662f\u4ec0\u4e48\uff1f\u662f\u5426\u5305\u542b skills_uri\uff1f\u8fd8\u662f skills_uri \u4ec5\u5b58\u50a8\u5728\u94fe\u4e0b\u7d22\u5f15\u4e2d\uff1f\n- Alpha Token \u4ef7\u683c\u662f\u901a\u8fc7\u5408\u7ea6\u76f4\u63a5\u83b7\u53d6\uff0c\u8fd8\u662f\u9700\u8981\u67e5\u8be2 PancakeSwap LP \u6c60\u7684 reserves\uff1f\n\n## \u65b9\u6848\u4e09\uff1a\u901a\u8fc7\u533a\u5757\u6d4f\u89c8\u5668\u624b\u52a8\u67e5\u8be2\n\n\u5982\u679c\u4ee5\u4e0a\u90fd\u4e0d\u53ef\u884c\uff0c\u4f60\u53ef\u4ee5\uff1a\n1. \u53bb [BscScan](https://bscscan.com) \u627e\u5230 RootNet \u5408\u7ea6\n2. \u5728 \"Read Contract\" \u9875\u9762\u8c03\u7528 `getSubnet(5)` \u67e5\u770b\u8fd4\u56de\u503c\n3. \u627e\u5230 Alpha Token \u5730\u5740\u540e\uff0c\u67e5\u770b\u5bf9\u5e94\u7684 LP \u6c60\u83b7\u53d6\u4ef7\u683c\n\n---\n\n## \u6211\u9700\u8981\u4f60\u63d0\u4f9b\u7684\u4fe1\u606f\n\n\u4e3a\u4e86\u5b9e\u9645\u5e2e\u4f60\u5b8c\u6210\u67e5\u8be2\uff0c\u6211\u9700\u8981\u4ee5\u4e0b\u4efb\u610f\u4e00\u9879\uff1a\n\n| \u9700\u8981\u7684\u4fe1\u606f | \u7528\u9014 |\n|------------|------|\n| AWP RootNet API \u6587\u6863\u94fe\u63a5 | \u786e\u8ba4\u6b63\u786e\u7684\u7aef\u70b9\u548c\u53c2\u6570 |\n| RootNet \u5408\u7ea6\u5730\u5740 | \u76f4\u63a5\u94fe\u4e0a\u67e5\u8be2 |\n| \u534f\u8bae\u5b98\u65b9\u7f51\u7ad9 | \u6211\u53ef\u4ee5\u5c1d\u8bd5\u4ece\u4e2d\u627e\u5230 API/\u5408\u7ea6\u4fe1\u606f |\n\n## \u603b\u7ed3\n\n\u6ca1\u6709\u534f\u8bae\u7684\u4e13\u7528\u6280\u80fd\u6216\u6587\u6863\uff0c\u6211\u65e0\u6cd5\u76f4\u63a5\u6267\u884c\u8fd9\u4e2a\u67e5\u8be2\u3002\u6211\u80fd\u505a\u7684\u662f\uff1a\n\n1. **\u5982\u679c\u4f60\u7ed9\u6211 API URL** \u2192 \u6211\u5e2e\u4f60\u6784\u9020\u8bf7\u6c42\u5e76\u89e3\u6790\u8fd4\u56de\u6570\u636e\n2. **\u5982\u679c\u4f60\u7ed9\u6211\u5408\u7ea6\u5730\u5740 + ABI** \u2192 \u6211\u5e2e\u4f60\u5199 viem \u4ee3\u7801\u4ece\u94fe\u4e0a\u8bfb\u53d6\n3. **\u5982\u679c\u4f60\u7ed9\u6211\u6587\u6863\u94fe\u63a5** \u2192 \u6211\u5148\u5b66\u4e60\u534f\u8bae\u7ed3\u6784\uff0c\u518d\u5e2e\u4f60\u67e5\u8be2\n\n\u8fd9\u662f\u4e00\u4e2a\u5178\u578b\u7684\"\u6ca1\u6709\u6b63\u786e\u5de5\u5177\u5c31\u65e0\u6cd5\u9ad8\u6548\u5b8c\u6210\u4efb\u52a1\"\u7684\u573a\u666f\u3002\u4e00\u4e2a\u4e13\u7528\u7684 AWP \u6280\u80fd\uff08\u5982\u679c\u5b58\u5728\uff09\u5e94\u8be5\u80fd\u4e00\u6b65\u5b8c\u6210\u8fd9\u4e2a\u67e5\u8be2\uff0c\u800c\u6211\u9700\u8981\u591a\u4e2a\u6765\u56de\u786e\u8ba4\u4fe1\u606f\u624d\u80fd\u5e2e\u5230\u4f60\u3002\n"}], "grading": null}, {"id": "deposit-and-allocate-with_skill", "prompt": "\u5e2e\u6211\u628a 10000 AWP \u5b58\u5165 StakeNFT\uff0c\u9501 26 \u4e2a epoch\uff0c\u7136\u540e\u5168\u90e8\u5206\u914d\u7ed9 agent 0xAbCdEf1234567890AbCdEf1234567890AbCdEf12 \u7684 subnet 3", "eval_id": 2, "outputs": [{"name": "response.md", "type": "text", "content": "# \u5b58\u5165 10,000 AWP \u5e76\u5206\u914d\u7ed9 Subnet 3 \u4e0a\u7684 Agent\n\n\u672c\u6b21\u64cd\u4f5c\u6d89\u53ca\u4e24\u4e2a\u6b65\u9aa4\uff1a**S2 (Deposit AWP)** \u548c **S3 (Allocate)**\u3002\u4e24\u8005\u90fd\u9700\u8981\u94b1\u5305\u5df2\u5c31\u7eea\u3002\n\n---\n\n## \u524d\u7f6e\u68c0\u67e5\n\n### 1. \u786e\u8ba4\u94b1\u5305\u5df2\u5b89\u88c5\u5e76\u89e3\u9501\n\n\u786e\u8ba4 AWP Wallet skill \u5df2\u5b89\u88c5\uff08skill URL: `https://raw.githubusercontent.com/awpix/agent-wallet/refs/heads/main/SKILL.md`\uff09\u3002\u5982\u672a\u5b89\u88c5\uff0c\u5148\u5b89\u88c5\u3002\n\n\u83b7\u53d6\u94b1\u5305\u5730\u5740\uff08\u540e\u7eed\u7528 `{walletAddr}` \u8868\u793a\uff09\uff1a\n\n```bash\nawp-wallet status\n```\n\n\u786e\u8ba4\u94b1\u5305\u5df2\u89e3\u9501\u3001\u94fe\u4e3a BSC\u3002\u5982\u672a\u89e3\u9501\uff1a\n\n```bash\nawp-wallet unlock --chain bsc\n```\n\n### 2. \u83b7\u53d6\u5408\u7ea6\u5730\u5740\n\n```\nGET {AWP_API_URL}/registry\n```\n\n\u4ece\u8fd4\u56de\u7ed3\u679c\u4e2d\u63d0\u53d6\uff1a\n- `awpToken` \u2192 `{awpTokenAddr}`\n- `stakeNFT` \u2192 `{stakeNFTAddr}`\n- `rootNet` \u2192 `{rootNetAddr}`\n\n### 3. \u68c0\u67e5\u7528\u6237\u6ce8\u518c\u72b6\u6001\n\n```\nGET {AWP_API_URL}/address/{walletAddr}/check\n```\n\n\u82e5 `isRegisteredUser` \u4e3a `false`\uff0c\u9700\u8981\u5148\u6267\u884c **S1 (Register User)** \u2014\u2014 \u8c03\u7528 `RootNet.register()`\u3002\u672c\u6d41\u7a0b\u5047\u8bbe\u7528\u6237\u5df2\u6ce8\u518c\u3002\n\n### 4. \u68c0\u67e5\u94b1\u5305 AWP \u4f59\u989d\n\n```bash\nawp-wallet balance --token {T} --chain bsc --asset {awpTokenAddr}\n```\n\n\u786e\u8ba4\u4f59\u989d >= 10,000 AWP\u3002\u82e5\u4e0d\u8db3\uff0c\u63d0\u793a\u7528\u6237\u4f59\u989d\u4e0d\u591f\uff0c\u7ec8\u6b62\u64cd\u4f5c\u3002\n\n---\n\n## \u6b65\u9aa4\u4e00\uff1aS2 \u00b7 Deposit AWP\uff08\u5b58\u5165 10,000 AWP\uff0c\u9501 26 epoch\uff09\n\n### 1a. Approve AWP \u7ed9 StakeNFT\n\n\u5411\u7528\u6237\u5c55\u793a\u4ea4\u6613\u8be6\u60c5\uff0c\u7b49\u5f85\u786e\u8ba4\uff1a\n\n> **Approve \u4ea4\u6613\u786e\u8ba4**\n>\n> - \u5408\u7ea6: AWPToken (`{shortAddr(awpTokenAddr)}`)\n> - \u64cd\u4f5c: `approve(spender, amount)`\n> - Spender: **StakeNFT** (`{shortAddr(stakeNFTAddr)}`)\n> - \u6570\u91cf: 10,000.0000 AWP\n> - \u94fe: BSC (Chain ID 56)\n>\n> \u662f\u5426\u786e\u8ba4\u6267\u884c Approve\uff1f\n\n\u7528\u6237\u786e\u8ba4\u540e\u6267\u884c\uff1a\n\n```bash\nawp-wallet approve --token {T} --asset {awpTokenAddr} --spender {stakeNFTAddr} --amount 10000 --chain bsc\n```\n\n\u8fd4\u56de\u7ed3\u679c\uff1a`{\"txHash\": \"0xAAA...\", \"status\": \"confirmed\"}`\n\n> Approve \u5df2\u786e\u8ba4: https://bscscan.com/tx/0xAAA...\n\n**\u7b49\u5f85 Approve \u4ea4\u6613\u6536\u636e\u786e\u8ba4\u540e\uff0c\u518d\u8fdb\u884c\u4e0b\u4e00\u6b65\u3002**\n\n### 1b. \u8c03\u7528 StakeNFT.deposit\n\n\u5411\u7528\u6237\u5c55\u793a\u4ea4\u6613\u8be6\u60c5\uff0c\u7b49\u5f85\u786e\u8ba4\uff1a\n\n> **Deposit \u4ea4\u6613\u786e\u8ba4**\n>\n> - \u5408\u7ea6: StakeNFT (`{shortAddr(stakeNFTAddr)}`)\n> - \u64cd\u4f5c: `deposit(amount, lockEpochs)`\n> - \u6570\u91cf: 10,000.0000 AWP (`10000000000000000000000` wei)\n> - \u9501\u5b9a\u671f: 26 epoch\uff08\u7ea6 182 \u5929 / ~6 \u4e2a\u6708\uff09\n> - \u94fe: BSC (Chain ID 56)\n>\n> \u662f\u5426\u786e\u8ba4\u6267\u884c Deposit\uff1f\n\n\u7528\u6237\u786e\u8ba4\u540e\uff0c\u901a\u8fc7\u94b1\u5305\u53d1\u9001\u4ea4\u6613\uff1a\n\n```bash\nawp-wallet send --token {T} --to {stakeNFTAddr} --chain bsc \\\n  --abi \"function deposit(uint256 amount, uint64 lockEpochs) returns (uint256)\" \\\n  --args \"10000000000000000000000\" \"26\"\n```\n\n\u8fd4\u56de\u7ed3\u679c\u5305\u542b txHash\u3002\n\n> Deposit \u5df2\u786e\u8ba4: https://bscscan.com/tx/0xBBB...\n\n### 1c. \u89e3\u6790 Deposited \u4e8b\u4ef6\n\n\u4ece\u4ea4\u6613\u56de\u6267\u7684 `Deposited` \u4e8b\u4ef6\u4e2d\u63d0\u53d6\uff1a\n- `tokenId` \u2014 \u65b0\u94f8\u9020\u7684 StakeNFT \u4ed3\u4f4d ID\n- `lockEndEpoch` \u2014 \u9501\u5b9a\u7ed3\u675f\u7684**\u7edd\u5bf9** epoch \u53f7\uff08\u6ce8\u610f\uff1a\u8fd9\u662f\u7edd\u5bf9\u503c\uff0c\u4e0d\u662f\u8f93\u5165\u7684\u76f8\u5bf9 lockEpochs=26\uff09\n\n> **\u5b58\u5165\u6210\u529f**\n>\n> | \u5b57\u6bb5 | \u503c |\n> |------|-----|\n> | \u4ed3\u4f4d | Position #{tokenId} |\n> | \u6570\u91cf | 10,000.0000 AWP |\n> | \u9501\u5b9a\u7ed3\u675f | Epoch {lockEndEpoch} |\n> | \u4ea4\u6613 | https://bscscan.com/tx/0xBBB... |\n\n---\n\n## \u6b65\u9aa4\u4e8c\uff1aS3 \u00b7 Allocate\uff08\u5c06\u5168\u90e8 10,000 AWP \u5206\u914d\u7ed9 Subnet 3 \u4e0a\u7684 Agent\uff09\n\n### 2a. \u786e\u8ba4\u672a\u5206\u914d\u4f59\u989d\n\n```\nGET {AWP_API_URL}/staking/user/{walletAddr}/balance\n```\n\n\u786e\u8ba4 `unallocated` >= `10000000000000000000000`\uff0810,000 AWP in wei\uff09\u3002\u521a\u5b58\u5165\u7684 AWP \u5e94\u8be5\u5168\u90e8\u5904\u4e8e\u672a\u5206\u914d\u72b6\u6001\u3002\n\n### 2b. \u9a8c\u8bc1\u8f93\u5165\n\n- Agent \u5730\u5740: `0xAbCdEf1234567890AbCdEf1234567890AbCdEf12` \u2014 \u683c\u5f0f\u5408\u6cd5\uff080x + 40 hex \u5b57\u7b26\uff09\n- Subnet ID: `3` \u2014 \u6b63\u6574\u6570\uff0c\u5408\u6cd5\n\n\u53ef\u9009\uff1a\u786e\u8ba4 agent \u5728 subnet 3 \u4e0a\u5b58\u5728\uff1a\n\n```\nGET {AWP_API_URL}/subnets/3/agents/0xAbCdEf1234567890AbCdEf1234567890AbCdEf12\n```\n\n### 2c. \u8c03\u7528 RootNet.allocate\n\n\u5411\u7528\u6237\u5c55\u793a\u4ea4\u6613\u8be6\u60c5\uff0c\u7b49\u5f85\u786e\u8ba4\uff1a\n\n> **Allocate \u4ea4\u6613\u786e\u8ba4**\n>\n> - \u5408\u7ea6: RootNet (`{shortAddr(rootNetAddr)}`)\n> - \u64cd\u4f5c: `allocate(agent, subnetId, amount)`\n> - Agent: `0xAbCd...Ef12`\n> - Subnet: #3\n> - \u6570\u91cf: 10,000.0000 AWP (`10000000000000000000000` wei)\n> - \u94fe: BSC (Chain ID 56)\n>\n> \u662f\u5426\u786e\u8ba4\u6267\u884c Allocate\uff1f\n\n\u7528\u6237\u786e\u8ba4\u540e\uff0c\u901a\u8fc7\u94b1\u5305\u53d1\u9001\u4ea4\u6613\uff1a\n\n```bash\nawp-wallet send --token {T} --to {rootNetAddr} --chain bsc \\\n  --abi \"function allocate(address agent, uint256 subnetId, uint256 amount)\" \\\n  --args \"0xAbCdEf1234567890AbCdEf1234567890AbCdEf12\" \"3\" \"10000000000000000000000\"\n```\n\n\u8fd4\u56de\u7ed3\u679c\u5305\u542b txHash\u3002\n\n> Allocate \u5df2\u786e\u8ba4: https://bscscan.com/tx/0xCCC...\n\n---\n\n## \u6700\u7ec8\u786e\u8ba4 \u2014 \u67e5\u8be2\u66f4\u65b0\u540e\u7684\u4f59\u989d\n\n```\nGET {AWP_API_URL}/staking/user/{walletAddr}/balance\n```\n\n> **\u64cd\u4f5c\u5b8c\u6210 \u2014 \u4f59\u989d\u6982\u89c8**\n>\n> | \u9879\u76ee | \u503c |\n> |------|-----|\n> | \u603b\u8d28\u62bc | {formatAWP(totalStaked)} |\n> | \u5df2\u5206\u914d | {formatAWP(totalAllocated)} |\n> | \u672a\u5206\u914d | {formatAWP(unallocated)} |\n\n```\nGET {AWP_API_URL}/staking/user/{walletAddr}/allocations\n```\n\n> **\u5206\u914d\u8be6\u60c5**\n>\n> | Agent | Subnet | \u6570\u91cf |\n> |-------|--------|------|\n> | `0xAbCd...Ef12` | #3 | 10,000.0000 AWP |\n\n---\n\n## \u4ea4\u6613\u6c47\u603b\n\n| # | \u64cd\u4f5c | \u5408\u7ea6 | \u51fd\u6570 | BSCScan |\n|---|------|------|------|---------|\n| 1 | Approve | AWPToken | `approve(StakeNFT, 10000 AWP)` | https://bscscan.com/tx/0xAAA... |\n| 2 | Deposit | StakeNFT | `deposit(10000 AWP, 26 epochs)` | https://bscscan.com/tx/0xBBB... |\n| 3 | Allocate | RootNet | `allocate(0xAbCd...Ef12, subnet 3, 10000 AWP)` | https://bscscan.com/tx/0xCCC... |\n\n---\n\n## \u5173\u952e\u6ce8\u610f\u4e8b\u9879\n\n- **Approve \u76ee\u6807**: Deposit \u7684 approve \u7ed9 **StakeNFT**\uff08\u4e0d\u662f RootNet\uff09\u3002\u82e5\u4f7f\u7528 `registerAndStake` \u4e00\u6b65\u5b8c\u6210\uff0capprove \u76ee\u6807\u5219\u662f RootNet\u3002\n- **lockEndEpoch \u662f\u7edd\u5bf9\u503c**: `Deposited` \u4e8b\u4ef6\u7684 `lockEndEpoch` \u5b57\u6bb5\u662f\u7edd\u5bf9 epoch \u53f7\uff0c\u4e0d\u662f\u8f93\u5165\u7684\u76f8\u5bf9 26 epoch\u3002\n- **\u6bcf\u7b14\u4ea4\u6613\u9700\u7528\u6237\u786e\u8ba4**: \u4e0d\u81ea\u52a8\u6267\u884c\u4efb\u4f55\u5199\u64cd\u4f5c\uff0c\u6bcf\u7b14\u4ea4\u6613\u5c55\u793a\u8be6\u60c5\u540e\u7b49\u5f85\u7528\u6237\u660e\u786e\u786e\u8ba4\u3002\n- **\u91d1\u989d\u5904\u7406**: \u6240\u6709\u94fe\u4e0a\u91d1\u989d\u4e3a wei \u5b57\u7b26\u4e32\uff0c\u7528 BigInt \u5904\u7406\uff0c\u663e\u793a\u65f6\u8f6c\u4e3a\u4eba\u7c7b\u53ef\u8bfb\u683c\u5f0f\uff08\u9664\u4ee5 10^18\uff0c\u4fdd\u7559 4 \u4f4d\u5c0f\u6570\uff09\u3002\n- **\u5408\u7ea6\u5730\u5740\u52a8\u6001\u83b7\u53d6**: \u6240\u6709\u5408\u7ea6\u5730\u5740\u901a\u8fc7 `GET /registry` \u83b7\u53d6\uff0c\u4e0d\u786c\u7f16\u7801\u3002\n"}], "grading": {"expectations": [{"text": "checks-wallet-dependency", "passed": true, "evidence": "Lines 9-11: Explicitly checks AWP Wallet skill is installed, provides skill URL, and checks wallet is unlocked via 'awp-wallet status' and 'awp-wallet unlock'"}, {"text": "approve-target-is-stakenft", "passed": true, "evidence": "Line 64: Spender is explicitly 'StakeNFT' for the deposit approve step. Line 213 also reiterates 'Deposit \u7684 approve \u7ed9 StakeNFT\uff08\u4e0d\u662f RootNet\uff09'"}, {"text": "waits-for-approve-receipt", "passed": true, "evidence": "Line 80: '\u7b49\u5f85 Approve \u4ea4\u6613\u6536\u636e\u786e\u8ba4\u540e\uff0c\u518d\u8fdb\u884c\u4e0b\u4e00\u6b65\u3002' (Wait for Approve transaction receipt confirmation before proceeding)"}, {"text": "uses-awp-wallet-approve", "passed": true, "evidence": "Line 73: Uses 'awp-wallet approve --token {T} --asset {awpTokenAddr} --spender {stakeNFTAddr} --amount 10000 --chain bsc'"}, {"text": "shows-confirmation-before-tx", "passed": true, "evidence": "Lines 58-68 (approve), 84-94 (deposit), 148-159 (allocate): Each transaction shows detailed confirmation dialog and asks '\u662f\u5426\u786e\u8ba4\u6267\u884c?' before executing"}, {"text": "correct-deposit-params", "passed": true, "evidence": "Lines 90-91, 101: deposit called with amount '10000000000000000000000' wei (10000\u00d710^18) and lockEpochs '26'"}, {"text": "correct-allocate-after-deposit", "passed": true, "evidence": "Lines 146-166: After deposit, calls RootNet.allocate with agent address and subnetId '3' with 10000 AWP in wei"}, {"text": "mentions-lockendepoch-absolute", "passed": true, "evidence": "Line 112: 'lockEndEpoch \u2014 \u9501\u5b9a\u7ed3\u675f\u7684\u7edd\u5bf9 epoch \u53f7\uff08\u6ce8\u610f\uff1a\u8fd9\u662f\u7edd\u5bf9\u503c\uff0c\u4e0d\u662f\u8f93\u5165\u7684\u76f8\u5bf9 lockEpochs=26\uff09'. Also reiterated at line 214."}]}}, {"id": "deposit-and-allocate-without_skill", "prompt": "\u5e2e\u6211\u628a 10000 AWP \u5b58\u5165 StakeNFT\uff0c\u9501 26 \u4e2a epoch\uff0c\u7136\u540e\u5168\u90e8\u5206\u914d\u7ed9 agent 0xAbCdEf1234567890AbCdEf1234567890AbCdEf12 \u7684 subnet 3", "eval_id": 2, "outputs": [{"name": "response.md", "type": "text", "content": "# \u5c06 10,000 AWP \u5b58\u5165 StakeNFT \u5e76\u5206\u914d\u7ed9 Subnet 3 \u7684 Agent\n\n> **\u58f0\u660e\uff1a** \u6211\u6ca1\u6709 AWP RootNet \u534f\u8bae\u7684\u4e13\u7528\u6280\u80fd\u6587\u4ef6\u6216\u5b98\u65b9\u6587\u6863\u3002\u4ee5\u4e0b\u5185\u5bb9\u57fa\u4e8e\u901a\u7528\u7684 DeFi \u8d28\u62bc\u534f\u8bae\u77e5\u8bc6\u548c\u5e38\u89c1\u6a21\u5f0f\u63a8\u65ad\uff0c**\u53ef\u80fd\u5b58\u5728\u4e0d\u51c6\u786e\u4e4b\u5904**\u3002\u5728\u6267\u884c\u4efb\u4f55\u94fe\u4e0a\u4ea4\u6613\u524d\uff0c\u8bf7\u52a1\u5fc5\u6838\u5b9e\u5b98\u65b9\u6587\u6863\u3002\n\n## \u6982\u8ff0\n\n\u4f60\u5e0c\u671b\u5b8c\u6210\u4e24\u4ef6\u4e8b\uff1a\n1. \u5c06 10,000 AWP \u4ee3\u5e01\u5b58\u5165 StakeNFT \u5408\u7ea6\uff0c\u9501\u5b9a 26 \u4e2a epoch\n2. \u5c06\u5168\u90e8\u8d28\u62bc\u5206\u914d\u7ed9 subnet 3 \u4e0a\u7684 agent `0xAbCdEf1234567890AbCdEf1234567890AbCdEf12`\n\n## \u5927\u81f4\u6b65\u9aa4\n\n### \u7b2c\u4e00\u6b65\uff1a\u83b7\u53d6\u5408\u7ea6\u5730\u5740\n\n\u4f60\u9700\u8981\u77e5\u9053\u4ee5\u4e0b\u5408\u7ea6\u7684\u5730\u5740\uff08\u6211\u65e0\u6cd5\u786e\u8ba4\u5177\u4f53\u5730\u5740\uff09\uff1a\n- **AWPToken** \u2014 AWP \u7684 ERC-20 \u4ee3\u5e01\u5408\u7ea6\n- **StakeNFT** \u2014 \u8d28\u62bc\u5408\u7ea6\n- **RootNet** \u2014 \u4e3b\u534f\u8bae\u5408\u7ea6\uff08\u53ef\u80fd\u7528\u4e8e\u5206\u914d\u64cd\u4f5c\uff09\n\n\u901a\u5e38\u8fd9\u7c7b\u534f\u8bae\u4f1a\u63d0\u4f9b\u4e00\u4e2a registry \u6216\u5b98\u65b9\u6587\u6863\u5217\u51fa\u6240\u6709\u5408\u7ea6\u5730\u5740\u3002\u8bf7\u67e5\u9605 AWP RootNet \u7684\u5b98\u65b9\u7f51\u7ad9\u6216\u6587\u6863\u83b7\u53d6\u3002\n\n### \u7b2c\u4e8c\u6b65\uff1a\u6388\u6743\uff08Approve\uff09\n\n\u5728\u5b58\u5165\u4ee3\u5e01\u4e4b\u524d\uff0c\u4f60\u9700\u8981\u5148\u6388\u6743 StakeNFT \u5408\u7ea6\u82b1\u8d39\u4f60\u7684 AWP \u4ee3\u5e01\uff1a\n\n```javascript\n// \u6388\u6743 StakeNFT \u5408\u7ea6\u4f7f\u7528 10,000 AWP\n// 10000 AWP = 10000 * 10^18 wei\nawait awpToken.approve(stakeNFTAddress, 10000n * 10n ** 18n);\n```\n\n**\u7b49\u5f85\u6388\u6743\u4ea4\u6613\u786e\u8ba4\u540e\u518d\u8fdb\u884c\u4e0b\u4e00\u6b65\u3002**\n\n### \u7b2c\u4e09\u6b65\uff1a\u5b58\u5165\uff08Deposit\uff09\n\n\u8c03\u7528 StakeNFT \u7684\u5b58\u5165\u65b9\u6cd5\uff1a\n\n```javascript\n// \u5b58\u5165 10,000 AWP\uff0c\u9501\u5b9a 26 \u4e2a epoch\nawait stakeNFT.deposit(10000n * 10n ** 18n, 26);\n```\n\n\u8fd9\u5e94\u8be5\u4f1a\u94f8\u9020\u4e00\u4e2a StakeNFT \u7ed9\u4f60\uff0c\u4ee3\u8868\u4f60\u7684\u8d28\u62bc\u5934\u5bf8\u3002\u8bb0\u5f55\u4e0b\u8fd4\u56de\u7684 tokenId\u3002\n\n### \u7b2c\u56db\u6b65\uff1a\u5206\u914d\uff08Allocate\uff09\n\n\u5c06\u8d28\u62bc\u5206\u914d\u7ed9\u6307\u5b9a subnet \u548c agent\u3002\u8fd9\u4e00\u6b65\u6211\u4e0d\u592a\u786e\u5b9a\u5177\u4f53\u7684\u51fd\u6570\u7b7e\u540d\uff0c\u53ef\u80fd\u7684\u8c03\u7528\u65b9\u5f0f\uff1a\n\n```javascript\n// \u53ef\u80fd\u9700\u8981\u8c03\u7528 RootNet \u5408\u7ea6\u7684 allocate \u65b9\u6cd5\n// \u53c2\u6570\u53ef\u80fd\u5305\u62ec\uff1atokenId\u3001subnetId\u3001agent \u5730\u5740\u3001\u5206\u914d\u6570\u91cf\nawait rootNet.allocate(\n  tokenId,           // \u7b2c\u4e8c\u6b65\u83b7\u5f97\u7684 StakeNFT tokenId\n  3,                 // subnet ID\n  \"0xAbCdEf1234567890AbCdEf1234567890AbCdEf12\", // agent \u5730\u5740\n  10000n * 10n ** 18n  // \u5206\u914d\u5168\u90e8 10,000 AWP\n);\n```\n\n## \u91cd\u8981\u63d0\u9192\n\n1. **\u6211\u4e0d\u786e\u5b9a\u4ee5\u4e0a\u51fd\u6570\u7b7e\u540d\u662f\u5426\u6b63\u786e\u3002** AWP RootNet \u662f\u4e00\u4e2a\u7279\u5b9a\u534f\u8bae\uff0c\u5408\u7ea6\u63a5\u53e3\u53ef\u80fd\u4e0e\u6211\u63a8\u65ad\u7684\u4e0d\u540c\u3002\n2. **\u9501\u5b9a\u671f\uff1a** 26 \u4e2a epoch \u7684\u5177\u4f53\u65f6\u957f\u53d6\u51b3\u4e8e\u534f\u8bae\u7684 epoch \u5b9a\u4e49\uff08\u53ef\u80fd\u662f\u5929\u3001\u5468\u6216\u5176\u4ed6\u65f6\u95f4\u5355\u4f4d\uff09\uff0c\u8bf7\u786e\u8ba4\u3002\n3. **Gas \u8d39\uff1a** \u8fd9\u4e9b\u64cd\u4f5c\u5728 BSC\uff08Chain ID 56\uff09\u4e0a\u6267\u884c\uff0c\u9700\u8981 BNB \u652f\u4ed8 gas \u8d39\u3002\n4. **\u5206\u914d\u673a\u5236\uff1a** \u6211\u4e0d\u6e05\u695a allocate \u662f\u57fa\u4e8e tokenId \u8fd8\u662f\u57fa\u4e8e\u7528\u6237\u5730\u5740\uff0c\u4e5f\u4e0d\u786e\u5b9a\u662f\u5426\u9700\u8981\u4e00\u6b21\u6027\u5206\u914d\u5168\u90e8\u6570\u91cf\u6216\u662f\u5426\u652f\u6301\u90e8\u5206\u5206\u914d\u3002\n5. **Agent \u6709\u6548\u6027\uff1a** \u5efa\u8bae\u5148\u67e5\u8be2 subnet 3 \u4e0a\u662f\u5426\u786e\u5b9e\u5b58\u5728\u8be5 agent \u5730\u5740\uff0c\u4ee5\u514d\u4ea4\u6613\u5931\u8d25\u6d6a\u8d39 gas\u3002\n\n## \u6211\u65e0\u6cd5\u786e\u8ba4\u7684\u5173\u952e\u7ec6\u8282\n\n- AWPToken\u3001StakeNFT\u3001RootNet \u7684\u5177\u4f53\u5408\u7ea6\u5730\u5740\n- `deposit` \u548c `allocate` \u7684\u786e\u5207\u51fd\u6570\u7b7e\u540d\u548c\u53c2\u6570\u987a\u5e8f\n- \u662f\u5426\u6709\u6700\u5c0f/\u6700\u5927\u8d28\u62bc\u9650\u5236\n- \u5206\u914d\u65f6\u662f\u5426\u9700\u8981\u989d\u5916\u7684\u53c2\u6570\uff08\u5982 operator \u5730\u5740\uff09\n- \u6388\u6743\uff08approve\uff09\u7684\u76ee\u6807\u5730\u5740\u662f\u5426\u4e00\u5b9a\u662f StakeNFT\uff08\u67d0\u4e9b\u534f\u8bae\u53ef\u80fd\u9700\u8981\u6388\u6743\u7ed9\u5176\u4ed6\u5408\u7ea6\uff09\n\n**\u5efa\u8bae\uff1a** \u8bf7\u63d0\u4f9b AWP RootNet \u7684\u5b98\u65b9\u6587\u6863\u6216\u5408\u7ea6 ABI\uff0c\u6211\u53ef\u4ee5\u7ed9\u51fa\u66f4\u51c6\u786e\u7684\u64cd\u4f5c\u6307\u5f15\u3002\n"}], "grading": null}, {"id": "vote-on-proposal-with_skill", "prompt": "\u6211\u8981\u7ed9 proposal 42 \u6295\u8d5e\u6210\u7968\uff0c\u7528\u6211\u6240\u6709\u7684 position NFT", "eval_id": 3, "outputs": [{"name": "response.md", "type": "text", "content": "# \u4e3a Proposal 42 \u6295\u8d5e\u6210\u7968\uff08\u4f7f\u7528\u6240\u6709 Position NFT\uff09\n\n## \u6b65\u9aa4 1\uff1a\u786e\u8ba4\u94b1\u5305\u5c31\u7eea\n\n\u68c0\u67e5 AWP Wallet \u662f\u5426\u5df2\u5b89\u88c5\u5e76\u89e3\u9501\uff1a\n\n```bash\nawp-wallet status\n```\n\n\u83b7\u53d6\u94b1\u5305\u5730\u5740\uff08\u540e\u7eed\u6b65\u9aa4\u4e2d\u7528 `{walletAddr}` \u8868\u793a\uff09\u3002\u5982\u679c\u94b1\u5305\u672a\u89e3\u9501\uff0c\u5148\u6267\u884c `awp-wallet unlock`\u3002\n\n---\n\n## \u6b65\u9aa4 2\uff1a\u83b7\u53d6\u5408\u7ea6\u5730\u5740\n\n```\nGET /registry\n```\n\n\u4ece\u8fd4\u56de\u7ed3\u679c\u4e2d\u53d6\u5f97\uff1a\n- `dao` \u2014 AWPDAO \u5408\u7ea6\u5730\u5740\uff08\u540e\u7eed\u79f0 `{daoAddr}`\uff09\n\n---\n\n## \u6b65\u9aa4 3\uff1a\u83b7\u53d6\u7528\u6237\u6240\u6709 StakeNFT \u6301\u4ed3\n\n```\nGET /staking/user/{walletAddr}/positions\n```\n\n\u793a\u4f8b\u8fd4\u56de\uff1a\n```json\n[\n  {\"token_id\": 1, \"amount\": \"5000000000000000000000\", \"lock_end_epoch\": 52, \"created_epoch\": 1},\n  {\"token_id\": 7, \"amount\": \"5000000000000000000000\", \"lock_end_epoch\": 100, \"created_epoch\": 5},\n  {\"token_id\": 15, \"amount\": \"2000000000000000000000\", \"lock_end_epoch\": 80, \"created_epoch\": 12}\n]\n```\n\n\u8bb0\u5f55\u6240\u6709 `token_id` \u548c `created_epoch`\u3002\n\n---\n\n## \u6b65\u9aa4 4\uff1a\u83b7\u53d6 proposalEpoch \u5e76\u8fc7\u6ee4\u6709\u6548 tokenId\n\n\u5728\u94fe\u4e0a\u8bfb\u53d6 proposal 42 \u5bf9\u5e94\u7684 epoch\uff1a\n\n```solidity\nfunction proposalEpoch(uint256 proposalId) view returns (uint64)\n// \u8c03\u7528: AWPDAO.proposalEpoch(42)\n```\n\n**\u8fc7\u6ee4\u89c4\u5219**\uff1a\u53ea\u6709 `createdEpoch <= proposalEpoch` \u7684\u6301\u4ed3\u624d\u6709\u6295\u7968\u8d44\u683c\uff08\u9632\u64cd\u7eb5\u673a\u5236\uff09\u3002\n\n\u5047\u8bbe `proposalEpoch(42)` \u8fd4\u56de `10`\uff0c\u5219\uff1a\n- token_id 1 (createdEpoch=1) \u2014 **\u6709\u6548**\n- token_id 7 (createdEpoch=5) \u2014 **\u6709\u6548**\n- token_id 15 (createdEpoch=12) \u2014 **\u65e0\u6548**\uff0c\u521b\u5efa\u4e8e proposal \u4e4b\u540e\n\n\u540c\u65f6\u53ef\u68c0\u67e5\u6bcf\u4e2a tokenId \u662f\u5426\u5df2\u6295\u8fc7\u7968\uff1a\n\n```solidity\nfunction hasVotedWithToken(uint256 proposalId, uint256 tokenId) view returns (bool)\n// \u8c03\u7528: AWPDAO.hasVotedWithToken(42, 1), AWPDAO.hasVotedWithToken(42, 7)\n```\n\n\u6392\u9664\u5df2\u6295\u7968\u7684 tokenId\uff0c\u5f97\u5230\u6700\u7ec8\u53ef\u7528\u5217\u8868\uff0c\u4f8b\u5982\uff1a`[1, 7]`\u3002\n\n---\n\n## \u6b65\u9aa4 5\uff1a\u7f16\u7801 params \u53c2\u6570\n\n**\u5173\u952e**\uff1a\u5fc5\u987b\u4f7f\u7528 `encodeAbiParameters`\uff0c**\u4e0d\u80fd\u4f7f\u7528 `encodePacked`**\u3002\n\n\u4f7f\u7528 viem \u7f16\u7801 tokenIds \u6570\u7ec4\uff1a\n\n```javascript\nimport { encodeAbiParameters } from 'viem'\n\nconst params = encodeAbiParameters(\n  [{ type: 'uint256[]' }],\n  [[1n, 7n]]\n)\n// \u7ed3\u679c: 0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000007\n```\n\n---\n\n## \u6b65\u9aa4 6\uff1a\u786e\u8ba4\u4ea4\u6613\u8be6\u60c5\u5e76\u7b49\u5f85\u7528\u6237\u786e\u8ba4\n\n\u5411\u7528\u6237\u5c55\u793a\uff1a\n\n> **\u6295\u7968\u4ea4\u6613\u786e\u8ba4**\n>\n> | \u9879\u76ee | \u503c |\n> |------|-----|\n> | \u5408\u7ea6 | AWPDAO (`{shortAddr(daoAddr)}`) |\n> | \u65b9\u6cd5 | `castVoteWithReasonAndParams` |\n> | Proposal ID | 42 |\n> | \u6295\u7968\u65b9\u5411 | **1 (\u8d5e\u6210 / For)** |\n> | \u7406\u7531 | (\u7a7a\u5b57\u7b26\u4e32\uff0c\u7528\u6237\u672a\u63d0\u4f9b) |\n> | \u4f7f\u7528\u7684 Position NFT | #1 (5,000.0000 AWP), #7 (5,000.0000 AWP) |\n> | \u6295\u7968\u6743\u91cd | \u5404\u6301\u4ed3: amount x sqrt(min(remainingEpochs, 54)) |\n> | \u94fe | BSC (Chain ID 56) |\n>\n> **\u6ce8\u610f**\uff1a`castVote()` \u548c `castVoteWithReason()` \u5df2\u88ab\u7981\u7528\uff0c\u5fc5\u987b\u4f7f\u7528 `castVoteWithReasonAndParams`\u3002\n>\n> \u786e\u8ba4\u6267\u884c\u6b64\u4ea4\u6613\uff1f\n\n**\u7b49\u5f85\u7528\u6237\u660e\u786e\u786e\u8ba4\u540e\u518d\u7ee7\u7eed\u3002**\n\n---\n\n## \u6b65\u9aa4 7\uff1a\u6267\u884c\u6295\u7968\u4ea4\u6613\n\n\u7528\u6237\u786e\u8ba4\u540e\uff0c\u901a\u8fc7 awp-wallet \u53d1\u9001\u4ea4\u6613\uff1a\n\n```bash\nawp-wallet send \\\n  --token {T} \\\n  --to {daoAddr} \\\n  --chain bsc \\\n  --abi \"function castVoteWithReasonAndParams(uint256 proposalId, uint8 support, string reason, bytes params)\" \\\n  --args '42' '1' '' '0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000007'\n```\n\n\u53c2\u6570\u8bf4\u660e\uff1a\n- `proposalId` = `42`\n- `support` = `1`\uff08\u8d5e\u6210\uff09\n- `reason` = `\"\"`\uff08\u7a7a\u5b57\u7b26\u4e32\uff0c\u7528\u6237\u672a\u6307\u5b9a\u7406\u7531\uff09\n- `params` = \u4e0a\u4e00\u6b65\u7f16\u7801\u7684 tokenIds \u6570\u7ec4\n\n---\n\n## \u6b65\u9aa4 8\uff1a\u5c55\u793a\u7ed3\u679c\n\n\u4ea4\u6613\u6210\u529f\u540e\uff0c\u663e\u793a\uff1a\n\n> **\u6295\u7968\u6210\u529f**\n>\n> - Proposal: #42\n> - \u6295\u7968\u65b9\u5411: \u8d5e\u6210 (For)\n> - \u4f7f\u7528\u7684 Position: #1, #7\n> - \u4ea4\u6613: https://bscscan.com/tx/{txHash}\n>\n> \u5f53\u524d\u6295\u7968\u60c5\u51b5\uff1a\n\n\u968f\u540e\u8c03\u7528\u94fe\u4e0a `proposalVotes(42)` \u67e5\u8be2\u6700\u65b0\u7968\u6570\uff1a\n\n```solidity\nfunction proposalVotes(uint256 proposalId) view returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes)\n```\n\n\u5c55\u793a\uff1a\n\n> | \u7c7b\u522b | \u7968\u6570 |\n> |------|------|\n> | \u8d5e\u6210 (For) | {formatAWP(forVotes)} |\n> | \u53cd\u5bf9 (Against) | {formatAWP(againstVotes)} |\n> | \u5f03\u6743 (Abstain) | {formatAWP(abstainVotes)} |\n"}], "grading": {"expectations": [{"text": "fetches-positions", "passed": true, "evidence": "Line 29: calls GET /staking/user/{walletAddr}/positions to get tokenIds"}, {"text": "fetches-proposal-epoch", "passed": true, "evidence": "Line 51: calls AWPDAO.proposalEpoch(42) on-chain to get the proposal's epoch"}, {"text": "filters-by-created-epoch", "passed": true, "evidence": "Line 54: explicitly filters by createdEpoch <= proposalEpoch, with worked example showing token 15 excluded"}, {"text": "uses-encode-abi-parameters", "passed": true, "evidence": "Line 79: imports and uses encodeAbiParameters from viem to encode tokenIds array"}, {"text": "does-not-use-encode-packed", "passed": true, "evidence": "Line 74: explicitly states '\u4e0d\u80fd\u4f7f\u7528 encodePacked' (must not use encodePacked)"}, {"text": "uses-cast-vote-with-params", "passed": true, "evidence": "Line 99/124: uses castVoteWithReasonAndParams as the function name"}, {"text": "does-not-use-cast-vote", "passed": true, "evidence": "Line 107: explicitly states 'castVote() \u548c castVoteWithReason() \u5df2\u88ab\u7981\u7528\uff0c\u5fc5\u987b\u4f7f\u7528 castVoteWithReasonAndParams'"}, {"text": "support-is-1-for", "passed": true, "evidence": "Line 101/130: support parameter is 1 (\u8d5e\u6210 / For)"}]}}, {"id": "vote-on-proposal-without_skill", "prompt": "\u6211\u8981\u7ed9 proposal 42 \u6295\u8d5e\u6210\u7968\uff0c\u7528\u6211\u6240\u6709\u7684 position NFT", "eval_id": 3, "outputs": [{"name": "response.md", "type": "text", "content": "# Voting on Proposal 42 \u2014 Without Specialized Skill\n\n## Understanding Your Request\n\nYou want to cast a **For** vote on **Proposal #42** in the AWP RootNet governance system on BSC (Chain ID 56), using **all of your StakeNFT position token IDs** as voting power.\n\n## What I Know (General Knowledge)\n\nAWP RootNet appears to be a staking/subnet protocol on BNB Smart Chain. Governance voting likely involves an on-chain DAO contract where staked positions (represented as NFTs) grant voting power. However, **I don't have access to the specific contract ABIs, API documentation, or endpoint details** for this protocol, so I can only provide general guidance.\n\n## General Approach\n\n### Step 1: Identify Your Position NFT Token IDs\n\nYou need to know which StakeNFT token IDs you own. Typically this would involve:\n\n- Querying the StakeNFT contract's `balanceOf(yourAddress)` to get the count\n- Then iterating with `tokenOfOwnerByIndex(yourAddress, index)` to get each token ID\n- **Caveat**: If the NFT contract is not ERC-721 Enumerable, on-chain iteration may not be possible, and you'd need an off-chain indexer or API to retrieve your token IDs\n\nI'm not sure which method AWP RootNet supports. You may need to check a block explorer like BscScan, or the project's own dashboard/API.\n\n### Step 2: Cast the Vote\n\nMost Governor-style contracts (OpenZeppelin Governor) support functions like:\n\n- `castVote(proposalId, support)` \u2014 where `support = 1` means \"For\"\n- `castVoteWithReason(proposalId, support, reason)`\n- `castVoteWithReasonAndParams(proposalId, support, reason, params)`\n\nI'm not certain which function AWP's DAO contract uses, or how position NFT token IDs are passed as parameters. It could be:\n\n- Token IDs encoded in the `params` argument\n- A custom voting function specific to AWP\n\n### Step 3: Encode Parameters\n\nIf token IDs need to be passed as `params`, the encoding would likely be something like:\n\n```javascript\n// This is speculative \u2014 I don't have the actual ABI\nconst params = ethers.utils.defaultAbiCoder.encode(\n  ['uint256[]'],\n  [tokenIds]\n);\n```\n\nBut I'm guessing at the encoding format here.\n\n## Significant Uncertainties\n\nI want to be transparent about what I **don't know**:\n\n1. **Contract addresses** \u2014 I don't have the addresses for the AWPDAO, StakeNFT, or any other contracts in this protocol.\n2. **Exact function signature** \u2014 I'm not sure whether `castVote`, `castVoteWithReason`, or `castVoteWithReasonAndParams` is the correct function to call, or if there's a custom function.\n3. **Parameter encoding** \u2014 I'm guessing that token IDs go into a `params` bytes field, but I don't know the exact encoding scheme.\n4. **API endpoints** \u2014 If there's a REST API to look up your positions or proposal details, I don't have the URLs or response schemas.\n5. **Proposal status** \u2014 I can't verify whether Proposal 42 is currently in an active voting period.\n\n## My Recommendation\n\nSince I lack the specific protocol documentation, I'd recommend:\n\n1. **Check the AWP RootNet documentation or dashboard** to find your position token IDs and verify Proposal 42 is active.\n2. **Use the project's official frontend** if one exists \u2014 this is the safest way to vote without risking a malformed transaction.\n3. **If you need to do this programmatically**, share the contract ABI or point me to the documentation, and I can help you construct the exact transaction.\n\n## Honest Assessment\n\nWithout access to the AWP RootNet protocol specification, contract ABIs, or API documentation, **I cannot safely construct the actual transaction for you**. Governance votes are important, and sending a malformed transaction could waste gas or fail silently. I'd rather be upfront about my limitations than give you incorrect instructions.\n\nIf you can provide the contract addresses and ABIs, or if there's a skill/plugin available for this protocol, I can give you much more precise and actionable guidance.\n"}], "grading": null}], "previous_feedback": {}, "previous_outputs": {}, "benchmark": {"skill_name": "awp", "iteration": 1, "configurations": [{"name": "with_skill", "evals": [{"eval_name": "query-subnet-info", "assertions_passed": 5, "assertions_total": 5, "pass_rate": 1.0, "total_tokens": 28312, "duration_seconds": 69.4}, {"eval_name": "deposit-and-allocate", "assertions_passed": 8, "assertions_total": 8, "pass_rate": 1.0, "total_tokens": 29342, "duration_seconds": 76.1}, {"eval_name": "vote-on-proposal", "assertions_passed": 8, "assertions_total": 8, "pass_rate": 1.0, "total_tokens": 28516, "duration_seconds": 63.7}], "aggregate": {"mean_pass_rate": 1.0, "stddev_pass_rate": 0.0, "mean_tokens": 28723, "mean_duration_seconds": 69.7}}, {"name": "without_skill", "evals": [{"eval_name": "query-subnet-info", "assertions_passed": 0, "assertions_total": 5, "pass_rate": 0.0, "total_tokens": 30833, "duration_seconds": 86.9}, {"eval_name": "deposit-and-allocate", "assertions_passed": 0, "assertions_total": 8, "pass_rate": 0.0, "total_tokens": 15194, "duration_seconds": 73.0}, {"eval_name": "vote-on-proposal", "assertions_passed": 0, "assertions_total": 8, "pass_rate": 0.0, "total_tokens": 14165, "duration_seconds": 51.5}], "aggregate": {"mean_pass_rate": 0.0, "stddev_pass_rate": 0.0, "mean_tokens": 20064, "mean_duration_seconds": 70.5}}], "delta": {"pass_rate": "+100%", "tokens": "+43%", "duration": "-1%"}}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

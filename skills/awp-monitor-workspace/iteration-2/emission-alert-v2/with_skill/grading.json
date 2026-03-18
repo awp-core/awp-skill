@@ -1,0 +1,39 @@
+{
+  "expectations": [
+    {
+      "text": "subscribes-EpochSettled",
+      "passed": true,
+      "evidence": "Subscribe message includes \"EpochSettled\" in the array; processing logic extracts epoch, totalEmission, recipientCount from this event."
+    },
+    {
+      "text": "subscribes-RecipientAWPDistributed",
+      "passed": true,
+      "evidence": "Subscribe message includes \"RecipientAWPDistributed\"; step 3 accumulates awpAmount per recipient address."
+    },
+    {
+      "text": "subscribes-DAOMatchDistributed",
+      "passed": true,
+      "evidence": "Subscribe message includes \"DAOMatchDistributed\"; step 2 extracts epoch and amount for DAO match."
+    },
+    {
+      "text": "shows-top-recipients",
+      "passed": true,
+      "evidence": "Step 3 sorts recipients by amount descending and the display template shows top 3 with ranked amounts."
+    },
+    {
+      "text": "shows-dao-match",
+      "passed": true,
+      "evidence": "Display template shows \"DAO: 7,900,000.0000 AWP\" from DAOMatchDistributed event; polling mode also shows dao_emission."
+    },
+    {
+      "text": "has-polling-fallback",
+      "passed": true,
+      "evidence": "Section 2 describes polling GET /emission/current every 60 seconds, comparing epoch values to detect settlements."
+    },
+    {
+      "text": "notes-recipientcount-unavailable",
+      "passed": true,
+      "evidence": "Explicitly states: \"轮询模式下 recipientCount 不可用（该字段仅在 WebSocket EpochSettled 事件中提供），显示为 N/A\"."
+    }
+  ]
+}

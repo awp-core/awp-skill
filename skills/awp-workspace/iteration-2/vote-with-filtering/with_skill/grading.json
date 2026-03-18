@@ -1,0 +1,44 @@
+{
+  "expectations": [
+    {
+      "text": "fetches-positions",
+      "passed": true,
+      "evidence": "Line 20: calls GET {API_BASE}/staking/user/$WALLET_ADDR/positions"
+    },
+    {
+      "text": "fetches-proposalCreatedAt",
+      "passed": true,
+      "evidence": "Line 34: cast call $DAO_ADDR \"proposalCreatedAt(uint256)\" 55"
+    },
+    {
+      "text": "correct-filter-rule",
+      "passed": true,
+      "evidence": "Line 40: states created_at >= proposalCreatedAt positions are blocked; line 52-53 filters .created_at >= ($pc | tonumber) as blocked"
+    },
+    {
+      "text": "uses-encodeAbiParameters",
+      "passed": true,
+      "evidence": "Line 72: uses cast abi-encode (equivalent to encodeAbiParameters); line 75 explicitly warns not to use encodePacked"
+    },
+    {
+      "text": "uses-castVoteWithReasonAndParams",
+      "passed": true,
+      "evidence": "Line 84 and 102: uses castVoteWithReasonAndParams(uint256,uint8,string,bytes)"
+    },
+    {
+      "text": "castVote-is-blocked",
+      "passed": true,
+      "evidence": "Line 92: explicitly states castVote() and castVoteWithReason() are blocked and will revert"
+    },
+    {
+      "text": "support-is-1",
+      "passed": true,
+      "evidence": "Line 88: Support = 1 (For / 赞成); line 103: passes 1 as support argument"
+    },
+    {
+      "text": "has-complete-bash-command",
+      "passed": true,
+      "evidence": "Lines 100-107: complete awp-wallet send command with --to, --data using cast calldata, all arguments (55, 1, \"\", $PARAMS), and --chain bsc"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"eval_id": 2, "eval_name": "deposit-and-allocate", "prompt": "帮我把 10000 AWP 存入 StakeNFT，锁 26 个 epoch，然后全部分配给 agent 0xAbCdEf1234567890AbCdEf1234567890AbCdEf12 的 subnet 3", "assertions": []}

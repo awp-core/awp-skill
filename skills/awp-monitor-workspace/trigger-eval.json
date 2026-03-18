@@ -1,0 +1,22 @@
+[
+  {"query": "帮我实时监控 AWP 上所有 staking 相关的事件，有人 deposit 或者 allocate 的时候通知我，显示金额和地址", "should_trigger": true},
+  {"query": "i want to set up an alert that fires every time a new epoch settles on AWP RootNet — show me the total emission, DAO share, and top 5 earners for each epoch", "should_trigger": true},
+  {"query": "can you watch for new subnet registrations on AWP? i'm tracking which projects are launching and want to see their coordinator URLs and skills URIs in real time", "should_trigger": true},
+  {"query": "我想订阅 AWP 的 emission 事件流，特别是 EpochSettled 和 RecipientAWPDistributed，用 WebSocket 接收", "should_trigger": true},
+  {"query": "帮我监控 AWP RootNet 上的所有链上活动，包括 staking、subnet 变动、user 注册、emission 分发，全部实时显示", "should_trigger": true},
+  {"query": "set up a live feed of AWP governance weight changes and allocation submissions — i want to see when the oracle submits new weights", "should_trigger": true},
+  {"query": "我需要一个 AWP 的事件监控，如果有人 deallocate 或者 remove agent 就提醒我，这些可能影响我的 subnet 收益", "should_trigger": true},
+  {"query": "can you monitor when my AWP subnet (id 12) gets any activity? like if someone allocates stake, or if the metadata gets updated, or agents get added/removed", "should_trigger": true},
+  {"query": "我想追踪每个 epoch 的 AWP 排放量变化趋势，设置一个持续监听，epoch 结算时自动显示对比上一个 epoch 的变化", "should_trigger": true},
+  {"query": "watch for any AWP staking events where the amount is over 100,000 AWP — big deposits, large allocations, whale movements", "should_trigger": true},
+  {"query": "帮我查一下 AWP subnet 5 的信息，包括状态、owner、alpha token 地址", "should_trigger": false},
+  {"query": "i want to stake 10000 AWP and lock it for 26 epochs, then allocate to subnet 3", "should_trigger": false},
+  {"query": "帮我写一个 WebSocket 服务端，用 Node.js 实现，支持 pub/sub 模式", "should_trigger": false},
+  {"query": "can you set up Grafana alerts for our Kubernetes cluster? i want to monitor CPU usage and pod restarts on our BSC nodes", "should_trigger": false},
+  {"query": "我想监控 PancakeSwap 上 AWP/BNB 池子的价格变动，有大的滑点时通知我", "should_trigger": false},
+  {"query": "help me create a proposal on AWP DAO to change the emission split to 60/40", "should_trigger": false},
+  {"query": "i need to track Ethereum block confirmations for my bridge transactions — can you set up a listener for finalized blocks?", "should_trigger": false},
+  {"query": "帮我用 ethers.js 监听一个 ERC-20 合约的 Transfer 事件，合约地址是 0xABC123", "should_trigger": false},
+  {"query": "can you check the current AWP emission rate and show me the 30/90/365 day projections?", "should_trigger": false},
+  {"query": "我想给 BSC 上的智能合约加一个事件日志功能，用 Solidity 的 event 和 emit", "should_trigger": false}
+]

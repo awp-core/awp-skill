@@ -1,0 +1,54 @@
+{
+  "expectations": [
+    {
+      "text": "has-erc2612-permit-signature",
+      "passed": true,
+      "evidence": "Step 4 includes a full ERC-2612 Permit EIP-712 typed data JSON with domain (AWP Token, version 1, chainId 56, verifyingContract AWPToken) and Permit type (owner, spender, value, nonce, deadline)."
+    },
+    {
+      "text": "has-registersubnet-eip712",
+      "passed": true,
+      "evidence": "Step 5 includes a RegisterSubnet EIP-712 typed data JSON with domain name 'AWPRootNet', version '1', chainId 56, verifyingContract RootNet."
+    },
+    {
+      "text": "registersubnet-has-nonce",
+      "passed": true,
+      "evidence": "The RegisterSubnet EIP-712 type definition includes {name: 'nonce', type: 'uint256'} and the message includes 'nonce': '$NONCE' fetched from RootNet.nonces(address)."
+    },
+    {
+      "text": "calls-relay-register-subnet",
+      "passed": true,
+      "evidence": "Step 6 POSTs to $API_BASE/relay/register-subnet with user, params, permitSignature, and registerSignature."
+    },
+    {
+      "text": "subnetmanager-is-zero",
+      "passed": true,
+      "evidence": "SUBNET_MANAGER is set to '0x0000000000000000000000000000000000000000' in Step 3, with explanation that address(0) auto-deploys a SubnetManager proxy."
+    },
+    {
+      "text": "minstake-is-100-awp",
+      "passed": true,
+      "evidence": "MIN_STAKE_WEI is set to '100000000000000000000' (100 * 10^18 wei = 100 AWP) in Step 3."
+    },
+    {
+      "text": "no-skillsuri-in-params",
+      "passed": true,
+      "evidence": "SubnetParams in Steps 3/5/6 do not include skillsURI. The response explicitly states 'skillsURI is NOT part of SubnetParams — it must be set separately after registration via M4.'"
+    },
+    {
+      "text": "calls-setskillsuri-m4",
+      "passed": true,
+      "evidence": "Step 8 calls SubnetNFT.setSkillsURI(uint256,string) with subnetId and the skills URI via awp-wallet send."
+    },
+    {
+      "text": "setskillsuri-needs-gas",
+      "passed": true,
+      "evidence": "Step 8 explicitly warns: 'M4 (setSkillsURI) is a direct on-chain call to SubnetNFT. It is NOT covered by the gasless relay. You need a small amount of BNB for gas.'"
+    },
+    {
+      "text": "lp-cost-calculated",
+      "passed": true,
+      "evidence": "Step 0 fetches initialAlphaPrice on-chain and computes LP_COST_WEI = INITIAL_ALPHA_PRICE * 100_000_000 (100M Alpha tokens)."
+    }
+  ]
+}

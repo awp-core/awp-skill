@@ -1,0 +1,39 @@
+{
+  "expectations": [
+    {
+      "text": "correct-ws-url",
+      "passed": true,
+      "evidence": "Line 10: ws://ec2-100-31-107-3.compute-1.amazonaws.com/ws/live"
+    },
+    {
+      "text": "subscribes-11-subnet-events",
+      "passed": true,
+      "evidence": "Subscribe message lists exactly 11 events (lines 19-31): SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, MetadataUpdated, LPCreated, SkillsURIUpdated, MinStakeUpdated"
+    },
+    {
+      "text": "includes-SkillsURIUpdated",
+      "passed": true,
+      "evidence": "Line 29: SkillsURIUpdated is in the subscribe list"
+    },
+    {
+      "text": "includes-MinStakeUpdated",
+      "passed": true,
+      "evidence": "Line 30: MinStakeUpdated is in the subscribe list"
+    },
+    {
+      "text": "display-example-skillsuri",
+      "passed": true,
+      "evidence": "Lines 81-85: SkillsURIUpdated display example showing '# SkillsURIUpdated · #7 skills → https://example.com/skills/subnet7/SKILL.md · bscscan.com/tx/...'"
+    },
+    {
+      "text": "display-example-minstake",
+      "passed": true,
+      "evidence": "Lines 88-92: MinStakeUpdated display example showing '# MinStakeUpdated · #7 min stake → 5,000.0000 AWP · bscscan.com/tx/...'"
+    },
+    {
+      "text": "uses-hash-emoji",
+      "passed": true,
+      "evidence": "All display examples use '#' prefix (lines 54, 60-65, 71, 77, 83, 90); line 50 states 'displayed with the # emoji prefix (subnet category)'"
+    }
+  ]
+}
