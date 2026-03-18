@@ -74,12 +74,17 @@ If remote version > 1.5.0, show: "Update available! Run: `openclaw skill install
 - **protocol.md** — Data structures, 27 event types, shared endpoints, constants
   Local: `references/protocol.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/protocol.md`
 
+**Gasless relay scripts** (handle EIP-712 signing + relay submission in one command):
+- `scripts/relay-register.sh` — gasless user registration
+- `scripts/relay-bind.sh` — gasless agent binding
+- `scripts/relay-register-subnet.sh` — gasless subnet registration (dual signature)
+
 **Loading rules**:
 - Q1-Q7, G3, G4, W1, W2 — this SKILL.md has enough info.
 - S1-S3 — ALWAYS load commands-staking.md first.
 - M1-M4 — ALWAYS load commands-subnet.md first.
 - G1-G2 — ALWAYS load commands-governance.md first.
-- Never guess commands; use the templates in the reference files.
+- Gasless operations — use the scripts above instead of manually constructing EIP-712 JSON.
 
 ## Wallet Dependency
 
@@ -98,17 +103,16 @@ Before register/bind/registerSubnet, check BNB:
 awp-wallet balance --token {T} --chain bsc
 ```
 - **Has BNB** — direct on-chain tx via awp-wallet
-- **No BNB** — Gasless Relay (EIP-712 sign then POST /relay/*). Limit: 100/IP/1h
-  - Register: `POST /relay/register`
-  - Bind: `POST /relay/bind`
-  - Subnet: `POST /relay/register-subnet` (two signatures)
+- **No BNB** — use the gasless relay scripts (handle EIP-712 signing automatically):
+  - Register: `bash scripts/relay-register.sh --token {T}`
+  - Bind: `bash scripts/relay-bind.sh --token {T} --principal {addr}`
+  - Subnet: `bash scripts/relay-register-subnet.sh --token {T} --name {name} --symbol {sym}`
+  - Rate limit: 100/IP/1h
 - deposit/allocate always need BNB — no gasless option
 
 ### Inline High-Frequency Commands (S1)
 
-These are used so often they belong here. For full EIP-712 templates and gasless flows, load commands-staking.md.
-
-**Check registration** (replace `{addr}` with wallet address):
+**Check registration:**
 ```bash
 curl -s https://tapi.awp.sh/api/address/{addr}/check
 ```
@@ -118,9 +122,14 @@ curl -s https://tapi.awp.sh/api/address/{addr}/check
 ROOT_NET=$(curl -s https://tapi.awp.sh/api/registry | jq -r '.rootNet')
 ```
 
-**Bind** (on-chain, has BNB — replace `{T}` with session token, `{addr}` with target):
+**Bind (on-chain, has BNB):**
 ```bash
 awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "bind(address)" {addr}) --chain bsc
+```
+
+**Bind (gasless, no BNB):**
+```bash
+bash scripts/relay-bind.sh --token {T} --principal {addr}
 ```
 
 ## Quick Start: Agent Mining
@@ -213,7 +222,7 @@ Check `GET /address/{addr}/check` first. Use Gas Routing.
 **Agent**: bind(principalAddr) — auto-registers Principal
 - unbind() anytime, rebind(newPrincipal) directly
 
-**Gasless**: EIP-712 -> relay. Templates in commands-staking.md S1.
+**Gasless**: `bash scripts/relay-register.sh --token {T}` and `bash scripts/relay-bind.sh --token {T} --principal {addr}` — handles EIP-712 signing + relay submission automatically.
 
 ### S2 · Deposit AWP
 1. approve AWP -> StakeNFT (not RootNet!)
@@ -233,7 +242,7 @@ Check `GET /address/{addr}/check` first. Use Gas Routing.
 ### M1 · Register Subnet
 1. LP cost = initialAlphaPrice x 100M. Optional: `POST /vanity/compute-salt`
 2. approve AWP -> RootNet, then registerSubnet(5 params: name, symbol, subnetManager=0x0 for auto-deploy, salt, minStake)
-3. **Gasless**: `POST /relay/register-subnet` (ERC-2612 permit + EIP-712). See commands-subnet.md M1.
+3. **Gasless**: `bash scripts/relay-register-subnet.sh --token {T} --name {name} --symbol {sym} [--salt {hex}] [--min-stake {wei}]` — handles both signatures + relay automatically.
 
 ### M2 · Lifecycle
 Check `GET /subnets/{id}` -> activateSubnet / pauseSubnet / resumeSubnet
