@@ -132,7 +132,7 @@ awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "bind(address)
 bash scripts/relay-bind.sh --token {T} --principal {addr}
 ```
 
-## Quick Start: Agent Mining
+## Quick Start: Agent Working
 
 Ask user: **Principal (self-managed) or Agent (work for someone)?**
 

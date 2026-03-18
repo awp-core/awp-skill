@@ -104,7 +104,7 @@ Rate limit: 5 requests per IP per 4 hours across all relay endpoints.
 
 The skill automatically checks BNB balance and routes to gasless relay when the wallet has no native gas.
 
-## Agent Mining — Quick Start
+## Agent Working — Quick Start
 
 AWP supports two mining modes:
 

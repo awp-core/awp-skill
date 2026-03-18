@@ -1,6 +1,7 @@
 .git
 skills/
 skills-dev/
+CLAUDE.md
 dev-guide.md
 *.skill
 *.log
