@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
 # Fully gasless subnet registration via dual EIP-712 signatures
-# Usage: ./relay-register-subnet.sh --token <session_token> --name <name> --symbol <symbol> [options]
+# Usage: ./relay-register-subnet.sh --token <T> --name <name> --symbol <sym> [options]
 #
 # Required: --token, --name, --symbol
 # Optional: --salt <hex>, --min-stake <wei>, --subnet-manager <address>
 #
-# Prerequisites: awp-wallet installed and unlocked, cast (foundry) installed
-# The script will:
-#   1. Fetch contract addresses from /registry
-#   2. Calculate LP cost from initialAlphaPrice
-#   3. Get nonces (RootNet EIP-712 nonce + AWPToken permit nonce)
-#   4. Sign ERC-2612 Permit (authorize AWP spend)
-#   5. Sign EIP-712 RegisterSubnet (authorize registration params)
-#   6. Submit both signatures to POST /relay/register-subnet
-#   7. Output the txHash
+# Prerequisites: awp-wallet, curl, jq, python3
+# No cast/foundry required.
 
 set -euo pipefail
 
@@ -24,10 +17,9 @@ TOKEN=""
 NAME=""
 SYMBOL=""
 SALT="0x0000000000000000000000000000000000000000000000000000000000000000"
-MIN_STAKE="0"
+MIN_STAKE=0
 SUBNET_MANAGER="0x0000000000000000000000000000000000000000"
 
-# Parse args
 while [[ $# -gt 0 ]]; do
   case $1 in
     --token) TOKEN="$2"; shift 2 ;;
@@ -38,16 +30,23 @@ while [[ $# -gt 0 ]]; do
     --subnet-manager) SUBNET_MANAGER="$2"; shift 2 ;;
     --api) API_BASE="$2"; shift 2 ;;
     --rpc) RPC_URL="$2"; shift 2 ;;
-    *) echo "Unknown arg: $1"; exit 1 ;;
+    *) echo '{"error": "Unknown arg: '"$1"'"}' >&2; exit 1 ;;
   esac
 done
 
-if [[ -z "$TOKEN" || -z "$NAME" || -z "$SYMBOL" ]]; then
-  echo '{"error": "Missing required args: --token, --name, --symbol"}' >&2
-  exit 1
-fi
+[[ -z "$TOKEN" || -z "$NAME" || -z "$SYMBOL" ]] && {
+  echo '{"error": "Missing required: --token, --name, --symbol"}' >&2; exit 1
+}
 
-# Step 1: Fetch contract addresses
+eth_call() {
+  local to="$1" data="$2"
+  curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" \
+    -d '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"'"$to"'","data":"'"$data"'"},"latest"],"id":1}' | jq -r '.result'
+}
+
+hex_to_dec() { python3 -c "print(int('$1', 16))"; }
+
+# Step 1: Fetch registry
 REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
 echo "$REGISTRY" | jq -e '.rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
 ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
@@ -56,20 +55,25 @@ AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
 # Step 2: Get wallet address
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 
-# Step 3: Calculate LP cost
-INITIAL_ALPHA_PRICE=$(cast call "$ROOT_NET" "initialAlphaPrice()(uint256)" --rpc-url "$RPC_URL" 2>/dev/null)
-INITIAL_ALPHA_PRICE=$(echo "$INITIAL_ALPHA_PRICE" | tr -d '[:space:]')
-# LP_COST = INITIAL_ALPHA_MINT (100M * 10^18) * initialAlphaPrice / 10^18
+# Step 3: Get initialAlphaPrice — selector = 0x8a5c7899 (keccak256("initialAlphaPrice()"))
+PRICE_HEX=$(eth_call "$ROOT_NET" "0x8a5c7899")
+INITIAL_ALPHA_PRICE=$(hex_to_dec "$PRICE_HEX")
+
+# LP_COST = 100M * 10^18 * initialAlphaPrice / 10^18
 LP_COST=$(python3 -c "print(100_000_000 * 10**18 * $INITIAL_ALPHA_PRICE // 10**18)")
 
 # Step 4: Get nonces
-ROOTNET_NONCE=$(cast call "$ROOT_NET" "nonces(address)(uint256)" "$WALLET_ADDR" --rpc-url "$RPC_URL" 2>/dev/null || echo "0")
-ROOTNET_NONCE=$(echo "$ROOTNET_NONCE" | tr -d '[:space:]')
+ADDR_PADDED=$(python3 -c "print('${WALLET_ADDR#0x}'.lower().zfill(64))")
 
-PERMIT_NONCE=$(cast call "$AWP_TOKEN" "nonces(address)(uint256)" "$WALLET_ADDR" --rpc-url "$RPC_URL" 2>/dev/null || echo "0")
-PERMIT_NONCE=$(echo "$PERMIT_NONCE" | tr -d '[:space:]')
+# RootNet nonce (for RegisterSubnet signature)
+ROOTNET_NONCE_HEX=$(eth_call "$ROOT_NET" "0x7ecebe00${ADDR_PADDED}")
+ROOTNET_NONCE=$(hex_to_dec "$ROOTNET_NONCE_HEX")
 
-# Step 5: Set deadline (1 hour from now)
+# AWPToken permit nonce (for ERC-2612 Permit signature)
+PERMIT_NONCE_HEX=$(eth_call "$AWP_TOKEN" "0x7ecebe00${ADDR_PADDED}")
+PERMIT_NONCE=$(hex_to_dec "$PERMIT_NONCE_HEX")
+
+# Step 5: Deadline
 DEADLINE=$(( $(date +%s) + 3600 ))
 
 # Step 6: Sign ERC-2612 Permit (authorize AWP spend to RootNet)

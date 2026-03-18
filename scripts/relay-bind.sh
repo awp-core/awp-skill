@@ -2,13 +2,8 @@
 # Gasless agent binding via EIP-712 relay
 # Usage: ./relay-bind.sh --token <session_token> --principal <address>
 #
-# Prerequisites: awp-wallet installed and unlocked, cast (foundry) installed
-# The script will:
-#   1. Fetch RootNet address from /registry
-#   2. Get wallet address (agent) and nonce
-#   3. Construct and sign EIP-712 Bind typed data
-#   4. Submit to POST /relay/bind
-#   5. Output the txHash
+# Prerequisites: awp-wallet, curl, jq, python3
+# No cast/foundry required.
 
 set -euo pipefail
 
@@ -18,27 +13,28 @@ CHAIN_ID=56
 TOKEN=""
 PRINCIPAL=""
 
-# Parse args
 while [[ $# -gt 0 ]]; do
   case $1 in
     --token) TOKEN="$2"; shift 2 ;;
     --principal) PRINCIPAL="$2"; shift 2 ;;
     --api) API_BASE="$2"; shift 2 ;;
     --rpc) RPC_URL="$2"; shift 2 ;;
-    *) echo "Unknown arg: $1"; exit 1 ;;
+    *) echo '{"error": "Unknown arg: '"$1"'"}' >&2; exit 1 ;;
   esac
 done
 
-if [[ -z "$TOKEN" ]]; then
-  echo '{"error": "Missing --token <session_token>"}' >&2
-  exit 1
-fi
-if [[ -z "$PRINCIPAL" ]]; then
-  echo '{"error": "Missing --principal <address>"}' >&2
-  exit 1
-fi
+[[ -z "$TOKEN" ]] && { echo '{"error": "Missing --token"}' >&2; exit 1; }
+[[ -z "$PRINCIPAL" ]] && { echo '{"error": "Missing --principal"}' >&2; exit 1; }
 
-# Step 1: Fetch contract addresses
+eth_call() {
+  local to="$1" data="$2"
+  curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" \
+    -d '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"'"$to"'","data":"'"$data"'"},"latest"],"id":1}' | jq -r '.result'
+}
+
+hex_to_dec() { python3 -c "print(int('$1', 16))"; }
+
+# Step 1: Fetch registry
 REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
 echo "$REGISTRY" | jq -e '.rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
 ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
@@ -46,11 +42,12 @@ ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
 # Step 2: Get wallet address (this is the agent)
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 
-# Step 3: Get nonce (bind uses the AGENT's nonce, not principal's)
-NONCE=$(cast call "$ROOT_NET" "nonces(address)(uint256)" "$WALLET_ADDR" --rpc-url "$RPC_URL" 2>/dev/null || echo "0")
-NONCE=$(echo "$NONCE" | tr -d '[:space:]')
+# Step 3: Get nonce — bind uses the AGENT's nonce (not principal's)
+ADDR_PADDED=$(python3 -c "print('${WALLET_ADDR#0x}'.lower().zfill(64))")
+NONCE_HEX=$(eth_call "$ROOT_NET" "0x7ecebe00${ADDR_PADDED}")
+NONCE=$(hex_to_dec "$NONCE_HEX")
 
-# Step 4: Set deadline (1 hour from now)
+# Step 4: Deadline
 DEADLINE=$(( $(date +%s) + 3600 ))
 
 # Step 5: Sign EIP-712
@@ -88,8 +85,7 @@ EIPJSON
 )
 
 SIG_RESULT=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$EIP712_DATA") || {
-  echo '{"error": "EIP-712 signing failed"}' >&2
-  exit 1
+  echo '{"error": "EIP-712 signing failed"}' >&2; exit 1
 }
 SIGNATURE=$(echo "$SIG_RESULT" | jq -r '.signature')
 
