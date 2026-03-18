@@ -33,9 +33,7 @@ function initialAlphaPrice() view returns (uint256)   // on RootNet
 struct SubnetParams {
     string name;               // Alpha token name (1-64 bytes)
     string symbol;             // Alpha token symbol (1-16 bytes)
-    string metadataURI;        // IPFS metadata URI
     address subnetManager;     // address(0) = auto-deploy SubnetManager proxy
-    string coordinatorURL;     // Subnet coordinator endpoint
     bytes32 salt;              // CREATE2 salt; bytes32(0) = use subnetId as salt
     uint128 minStake;          // Minimum stake for agents (0 = no minimum)
 }
@@ -138,9 +136,9 @@ SALT=$(echo $VANITY | jq -r '.salt')  # or use 0x0000...0000 for auto-salt
 awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $ROOT_NET --amount {lpCostHuman} --chain bsc
 
 # Step 2: Register subnet (SubnetParams encoded as tuple)
-# params: (name, symbol, metadataURI, subnetManager, coordinatorURL, salt, minStake)
+# params: (name, symbol, subnetManager, salt, minStake)
 # subnetManager = 0x0000...0000 for auto-deploy SubnetManager proxy
-awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "registerSubnet((string,string,string,address,string,bytes32,uint128))" "({name},{symbol},{metadataURI},0x0000000000000000000000000000000000000000,{coordinatorURL},$SALT,{minStakeWei})") --chain bsc
+awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "registerSubnet((string,string,address,bytes32,uint128))" "({name},{symbol},0x0000000000000000000000000000000000000000,$SALT,{minStakeWei})") --chain bsc
 ```
 
 ### Gasless Subnet Registration — EIP-712 Template
@@ -203,9 +201,7 @@ awp-wallet sign-typed-data --token {T} --data '{
       {"name": "user", "type": "address"},
       {"name": "name", "type": "string"},
       {"name": "symbol", "type": "string"},
-      {"name": "metadataURI", "type": "string"},
       {"name": "subnetManager", "type": "address"},
-      {"name": "coordinatorURL", "type": "string"},
       {"name": "salt", "type": "bytes32"},
       {"name": "minStake", "type": "uint128"},
       {"name": "deadline", "type": "uint256"},
@@ -223,9 +219,7 @@ awp-wallet sign-typed-data --token {T} --data '{
     "user": "'$WALLET_ADDR'",
     "name": "{subnetName}",
     "symbol": "{subnetSymbol}",
-    "metadataURI": "{metadataURI}",
     "subnetManager": "0x0000000000000000000000000000000000000000",
-    "coordinatorURL": "{coordinatorURL}",
     "salt": "'$SALT'",
     "minStake": "{minStakeWei}",
     "deadline": '$DEADLINE',
@@ -241,9 +235,7 @@ curl -X POST {API_BASE}/relay/register-subnet \
   -d '{
     "user": "'$WALLET_ADDR'",
     "name": "{subnetName}", "symbol": "{subnetSymbol}",
-    "metadataURI": "{metadataURI}",
     "subnetManager": "0x0000000000000000000000000000000000000000",
-    "coordinatorURL": "{coordinatorURL}",
     "salt": "'$SALT'", "minStake": "{minStakeWei}",
     "deadline": '$DEADLINE',
     "permitSignature": "{permitSigHex}",
@@ -255,9 +247,18 @@ curl -X POST {API_BASE}/relay/register-subnet \
 
 | Code | Body | Meaning |
 |------|------|---------|
-| 400 | `{"error": "..."}` | Invalid params, expired deadline, bad signature format |
-| 429 | `{"error": "rate limit exceeded: max 5 requests per 4 hours"}` | IP rate limit exceeded |
-| 500 | `{"error": "relay transaction failed"}` | On-chain transaction submission failed |
+| 400 | `{"error": "invalid user address"}` | Malformed Ethereum address |
+| 400 | `{"error": "deadline is missing or expired"}` | Deadline is 0 or in the past |
+| 400 | `{"error": "missing signature"}` | Signature field empty |
+| 400 | `{"error": "invalid signature"}` | EIP-712 signature verification failed |
+| 400 | `{"error": "signature expired"}` | On-chain deadline check failed |
+| 400 | `{"error": "invalid subnet params (name 1-64 bytes, symbol 1-16 bytes)"}` | Name/symbol length violation |
+| 400 | `{"error": "subnet manager address required (auto-deploy not available)"}` | No default SubnetManager impl set |
+| 400 | `{"error": "insufficient AWP balance"}` | User lacks AWP for subnet registration |
+| 400 | `{"error": "insufficient AWP allowance"}` | Permit signature did not authorize enough AWP |
+| 400 | `{"error": "contract is paused"}` | RootNet is in emergency pause state |
+| 400 | `{"error": "relay transaction failed"}` | Unrecognized on-chain revert |
+| 429 | `{"error": "rate limit exceeded: max 100 requests per 3600s"}` | IP rate limit exceeded |
 
 ---
 
@@ -283,28 +284,7 @@ awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "resumeSubnet(
 
 ---
 
-## M3 · Update Metadata
-
-### Contract Call
-
-```solidity
-function updateMetadata(uint256 subnetId, string metadataURI, string coordinatorURL)
-// BOTH strings required — pass current values for unchanged fields
-// NFT owner only
-// skillsURI is now set separately via SubnetNFT.setSkillsURI() — see M4
-```
-
-Fetch current values first: `GET /subnets/{subnetId}` -> use `metadata_uri`, `coordinator_url`.
-
-### Complete Command Template
-
-```bash
-awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "updateMetadata(uint256,string,string)" {subnetId} "{metadataURI}" "{coordinatorURL}") --chain bsc
-```
-
----
-
-## M4 · Update Skills URI
+## M3 · Update Skills URI
 
 ### Contract Call
 
@@ -324,7 +304,7 @@ awp-wallet send --token {T} --to $SUBNET_NFT --data $(cast calldata "setSkillsUR
 
 ---
 
-## M5 · Set Minimum Stake
+## M4 · Set Minimum Stake
 
 ### Contract Call
 

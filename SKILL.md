@@ -5,7 +5,7 @@ description: >
   stake AWP via StakeNFT, allocate to agents, register/manage subnets
   (auto-deploy SubnetManager with Merkle distribution), set skills URI
   and min stake, create governance proposals, vote with position NFTs,
-  and monitor real-time on-chain events via WebSocket (28 event types).
+  and monitor real-time on-chain events via WebSocket (27 event types).
   ALWAYS use when the user mentions AWP, RootNet, subnet, staking AWP,
   AWP emission, AWP governance, alpha token, StakeNFT, SubnetNFT, or
   any AWP RootNet on-chain interaction — including monitoring, watching,
@@ -15,14 +15,14 @@ metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]
 
 # AWP RootNet
 
-**Skill version: 1.4.0**
+**Skill version: 1.5.0**
 
 ## On Skill Load (do this FIRST)
 
 **Step 1 — Show welcome** (first session only, skip if already shown):
 > **Welcome to AWP RootNet!**
 >
-> AWP RootNet is a decentralized Agent Mining protocol on BSC. Agents register on subnets, execute tasks, and earn AWP emissions. Each subnet auto-deploys a SubnetManager with Merkle distribution and AWP strategies.
+> AWP RootNet is a decentralized Agent Working protocol on BSC. Agents register on subnets, execute tasks, and earn AWP emissions. Each subnet auto-deploys a SubnetManager with Merkle distribution and AWP strategies.
 >
 > I can help you: **query** protocol state, **mine** (register + stake + work), **manage** subnets, **govern** via proposals, and **monitor** real-time events via WebSocket.
 >
@@ -32,7 +32,7 @@ metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 1.4.0, show: "Update available! Run: `openclaw skill install https://github.com/awp-core/awp-skill`"
+If remote version > 1.5.0, show: "Update available! Run: `openclaw skill install https://github.com/awp-core/awp-skill`"
 
 **Step 3 — Route to action** using the Intent Routing table below.
 
@@ -42,25 +42,24 @@ If remote version > 1.4.0, show: "Update available! Run: `openclaw skill install
 |-------------------|--------|------------------------|
 | Query subnet info | Q1 | None |
 | Check balance / positions | Q2 | None |
-| View emission / epoch info | Q3 | None |
+| View emission / epoch info | Q3 [DRAFT] | None |
 | Look up agent info | Q4 | None |
 | Browse subnets | Q5 | None |
 | Find / install subnet skill | Q6 | None |
-| View epoch history | Q7 | None |
+| View epoch history | Q7 [DRAFT] | None |
 | Register / bind / start mining | S1 | **commands-staking.md** |
 | Deposit / stake AWP | S2 | **commands-staking.md** |
 | Allocate / deallocate / reallocate | S3 | **commands-staking.md** |
 | Register a new subnet | M1 | **commands-subnet.md** |
 | Activate / pause / resume subnet | M2 | **commands-subnet.md** |
-| Update subnet metadata | M3 | **commands-subnet.md** |
-| Update skills URI | M4 | **commands-subnet.md** |
-| Set minimum stake | M5 | **commands-subnet.md** |
+| Update skills URI | M3 | **commands-subnet.md** |
+| Set minimum stake | M4 | **commands-subnet.md** |
 | Create governance proposal | G1 | **commands-governance.md** |
 | Vote on proposal | G2 | **commands-governance.md** |
 | Query proposals | G3 | None |
 | Check treasury | G4 | None |
 | Watch / monitor events | W1 | None (presets below) |
-| Emission settlement alerts | W2 | None (workflow below) |
+| Emission settlement alerts | W2 [DRAFT] | None (workflow below) |
 
 ## Reference Files
 
@@ -68,17 +67,17 @@ If remote version > 1.4.0, show: "Update available! Run: `openclaw skill install
   Local: `references/api-reference.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/api-reference.md`
 - **commands-staking.md** — S1-S3 command templates, EIP-712, relay
   Local: `references/commands-staking.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/commands-staking.md`
-- **commands-subnet.md** — M1-M5 command templates, vanity, gasless
+- **commands-subnet.md** — M1-M4 command templates, vanity, gasless
   Local: `references/commands-subnet.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/commands-subnet.md`
 - **commands-governance.md** — G1-G4 commands, supplementary endpoints
   Local: `references/commands-governance.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/commands-governance.md`
-- **protocol.md** — Data structures, 28 event types, shared endpoints, constants
+- **protocol.md** — Data structures, 27 event types, shared endpoints, constants
   Local: `references/protocol.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/protocol.md`
 
 **Loading rules**:
 - Q1-Q7, G3, G4, W1, W2 — this SKILL.md has enough info.
 - S1-S3 — ALWAYS load commands-staking.md first.
-- M1-M5 — ALWAYS load commands-subnet.md first.
+- M1-M4 — ALWAYS load commands-subnet.md first.
 - G1-G2 — ALWAYS load commands-governance.md first.
 - Never guess commands; use the templates in the reference files.
 
@@ -99,7 +98,7 @@ Before register/bind/registerSubnet, check BNB:
 awp-wallet balance --token {T} --chain bsc
 ```
 - **Has BNB** — direct on-chain tx via awp-wallet
-- **No BNB** — Gasless Relay (EIP-712 sign then POST /relay/*). Limit: 5/IP/4h
+- **No BNB** — Gasless Relay (EIP-712 sign then POST /relay/*). Limit: 100/IP/1h
   - Register: `POST /relay/register`
   - Bind: `POST /relay/bind`
   - Subnet: `POST /relay/register-subnet` (two signatures)
@@ -175,7 +174,7 @@ Track these across the conversation to avoid redundant checks:
 >   Position #1: 5,000 AWP, lock ends 2025-06-15
 >   Position #7: 5,000 AWP, lock ends 2025-12-01
 
-### Q3 · Query Emission
+### Q3 · Query Emission [DRAFT]
 1. Parallel fetch: `GET /emission/current` + `/schedule` + `/epochs`
 2. Display: epoch, daily emission, decay ~0.3156%/epoch (1-day epochs)
 
@@ -196,7 +195,7 @@ Track these across the conversation to avoid redundant checks:
 2. Fetch SKILL.md, show frontmatter
 3. Install: `mkdir -p skills/awp-subnet-{id}` -> download -> restart session
 
-### Q7 · Epoch History
+### Q7 · Epoch History [DRAFT]
 1. `GET /emission/epochs?page={p}&limit={n}`
 2. Display: epoch_id, `{tsToDate(start_time)}`, daily_emission, dao_emission
 
@@ -233,19 +232,16 @@ Check `GET /address/{addr}/check` first. Use Gas Routing.
 
 ### M1 · Register Subnet
 1. LP cost = initialAlphaPrice x 100M. Optional: `POST /vanity/compute-salt`
-2. approve AWP -> RootNet, then registerSubnet(7 params: name, symbol, metadataURI, subnetManager=0x0 for auto-deploy, coordinatorURL, salt, minStake)
+2. approve AWP -> RootNet, then registerSubnet(5 params: name, symbol, subnetManager=0x0 for auto-deploy, salt, minStake)
 3. **Gasless**: `POST /relay/register-subnet` (ERC-2612 permit + EIP-712). See commands-subnet.md M1.
 
 ### M2 · Lifecycle
 Check `GET /subnets/{id}` -> activateSubnet / pauseSubnet / resumeSubnet
 
-### M3 · Update Metadata
-updateMetadata(subnetId, metadataURI, coordinatorURL) — BOTH strings required. skillsURI is separate (M4).
-
-### M4 · Update Skills URI
+### M3 · Update Skills URI
 SubnetNFT.setSkillsURI(subnetId, skillsURI) — NFT owner only. Emits SkillsURIUpdated.
 
-### M5 · Set Min Stake
+### M4 · Set Min Stake
 SubnetNFT.setMinStake(subnetId, minStake_wei) — NFT owner only. 0 = no minimum.
 
 ---
@@ -279,15 +275,15 @@ proposeWithTokens (executable, Timelock) or signalPropose (vote-only). Needs >= 
 3. Format: `{emoji} {type} · {fields} · bscscan.com/tx/{shortTxHash}`
 4. On disconnect: reconnect with exponential backoff (1s -> 2s -> 4s -> ... -> max 30s), re-subscribe
 
-#### Presets (28 events = 6 + 11 + 6 + 5)
+#### Presets (27 events = 6 + 10 + 6 + 5)
 
 | Preset | Events | Emoji |
 |--------|--------|-------|
 | staking | Deposited, Withdrawn, PositionIncreased, Allocated, Deallocated, Reallocated | `$` |
-| subnets | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, MetadataUpdated, LPCreated, SkillsURIUpdated, MinStakeUpdated | `#` |
+| subnets | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, LPCreated, SkillsURIUpdated, MinStakeUpdated | `#` |
 | emission | EpochSettled, RecipientAWPDistributed, DAOMatchDistributed, GovernanceWeightUpdated, AllocationsSubmitted, OracleConfigUpdated | `~` |
 | users | UserRegistered, AgentBound, AgentUnbound, AgentRemoved, DelegationUpdated | `@` |
-| all | All 28 | (by category) |
+| all | All 27 | (by category) |
 
 #### Display Examples
 - `$ Deposited · {shortAddr(user)} deposited {formatAWP(amount)} · lock ends {tsToDate(lockEndTime)} · bscscan.com/tx/{shortTxHash}`
@@ -303,7 +299,7 @@ $ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2025-12-01 | bs
 ~ EpochSettled | Epoch 42 | 15,800,000.0000 AWP to 150 recipients | bscscan.com/tx/0x123...
 ```
 
-### W2 · Emission Alert
+### W2 · Emission Alert [DRAFT]
 
 1. Subscribe: `EpochSettled` + `RecipientAWPDistributed` + `DAOMatchDistributed`
 2. On EpochSettled: show summary + fetch `GET /emission/current`
@@ -324,7 +320,7 @@ $ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2025-12-01 | bs
 |-------|-----|
 | 400 Bad Request | Check address format (0x+40hex), amount > 0, subnetId > 0 |
 | 404 Not Found | `GET /subnets` or `GET /agents/by-owner` to find valid IDs |
-| 429 Rate Limit | Auto-retry: wait 60s then retry. If still 429, inform user of the 5/IP/4h limit. |
+| 429 Rate Limit | Auto-retry: wait 60s then retry. If still 429, inform user of the 100/IP/1h limit. |
 | "not registered" | Run S1: bind(myAddress) or bind(principalAddr) |
 | "insufficient balance" | Q2 to check -> S2 to deposit more AWP |
 | "not subnet owner" | Check SubnetNFT ownership via `GET /subnets/{id}` owner field |

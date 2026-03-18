@@ -133,16 +133,23 @@ POST /relay/bind
 {"txHash": "0x..."}
 ```
 
-> Rate limit: 5 requests per IP per 4 hours (shared across all relay endpoints).
+> Rate limit: 100 requests per IP per 1 hour (shared across all relay endpoints).
 > Signature format: Standard EIP-712 signature (r[32] + s[32] + v[1] = 65 bytes), hex-encoded with `0x` prefix.
 
 **Error responses:**
 
 | Code | Body | Meaning |
 |------|------|---------|
-| 400 | `{"error": "..."}` | Invalid params, expired deadline, bad signature format |
-| 429 | `{"error": "rate limit exceeded: max 5 requests per 4 hours"}` | IP rate limit exceeded |
-| 500 | `{"error": "relay transaction failed"}` | On-chain transaction submission failed |
+| 400 | `{"error": "invalid user address"}` | Malformed Ethereum address |
+| 400 | `{"error": "deadline is missing or expired"}` | Deadline is 0 or in the past |
+| 400 | `{"error": "missing signature"}` | Signature field empty |
+| 400 | `{"error": "invalid signature"}` | EIP-712 signature verification failed |
+| 400 | `{"error": "signature expired"}` | On-chain deadline check failed |
+| 400 | `{"error": "user already registered"}` | User is already registered on-chain |
+| 400 | `{"error": "agent already bound"}` | Agent is already bound to a principal |
+| 400 | `{"error": "contract is paused"}` | RootNet is in emergency pause state |
+| 400 | `{"error": "relay transaction failed"}` | Unrecognized on-chain revert |
+| 429 | `{"error": "rate limit exceeded: max 100 requests per 3600s"}` | IP rate limit exceeded |
 
 ### Complete Command Templates
 

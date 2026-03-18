@@ -26,7 +26,7 @@ Returned by `RootNet.getSubnet(subnetId)`. Lifecycle state only — identity dat
 | createdAt | uint64 | Unix timestamp when subnet was registered |
 | activatedAt | uint64 | Unix timestamp when activated (0 if never activated) |
 
-> **Important**: On-chain SubnetInfo does NOT include `name`, `symbol`, `metadataURI`, `coordinatorURL`, `skillsURI`, `subnetManager`, `alphaToken`, `minStake`, or `owner`. Use `getSubnetFull()` or the REST API for those fields.
+> **Important**: On-chain SubnetInfo does NOT include `name`, `symbol`, `skillsURI`, `subnetManager`, `alphaToken`, `minStake`, or `owner`. Use `getSubnetFull()` or the REST API for those fields.
 
 ### SubnetFullInfo (on-chain struct)
 
@@ -53,9 +53,7 @@ Used in `RootNet.registerSubnet(params)`.
 |-------|------|-------------|
 | name | string | Alpha token name, 1–64 bytes |
 | symbol | string | Alpha token symbol, 1–16 bytes |
-| metadataURI | string | IPFS metadata URI |
 | subnetManager | address | `address(0)` = auto-deploy SubnetManager proxy |
-| coordinatorURL | string | Subnet coordinator endpoint |
 | salt | bytes32 | CREATE2 salt; `bytes32(0)` = use subnetId as salt |
 | minStake | uint128 | Minimum stake for agents (0 = no minimum) |
 
@@ -86,7 +84,7 @@ Returned by `StakeNFT.positions(tokenId)`.
 
 ---
 
-## Event Field Table (28 types)
+## Event Field Table (27 types)
 
 All events arrive via WebSocket (`wss://tapi.awp.sh/ws/live`) with envelope:
 ```json
@@ -118,9 +116,8 @@ All events arrive via WebSocket (`wss://tapi.awp.sh/ws/live`) with envelope:
 
 | Event | Source | Data Fields | Pitfall |
 |-------|--------|-------------|---------|
-| SubnetRegistered | RootNet | `{subnetId, owner, name, symbol, metadataURI, subnetManager, alphaToken, coordinatorURL}` | `subnetManager` (not subnetContract); does NOT include skillsURI |
+| SubnetRegistered | RootNet | `{subnetId, owner, name, symbol, subnetManager, alphaToken}` | `subnetManager` (not subnetContract); does NOT include skillsURI |
 | LPCreated | RootNet | `{subnetId, poolId, awpAmount, alphaAmount}` | — |
-| MetadataUpdated | RootNet | `{subnetId, metadataURI, coordinatorURL}` | Only 2 string fields (no skillsURI) |
 | SkillsURIUpdated | SubnetNFT | `{subnetId, skillsURI}` | Emitted by SubnetNFT, not RootNet |
 | MinStakeUpdated | SubnetNFT | `{subnetId, minStake}` | Emitted by SubnetNFT, not RootNet |
 | SubnetActivated | RootNet | `{subnetId}` | — |
