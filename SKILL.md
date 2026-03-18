@@ -84,7 +84,7 @@ If remote version > 1.5.0, show: "Update available! Run: `openclaw skill install
 - S1-S3 — ALWAYS load commands-staking.md first.
 - M1-M4 — ALWAYS load commands-subnet.md first.
 - G1-G2 — ALWAYS load commands-governance.md first.
-- Gasless operations — use the scripts above instead of manually constructing EIP-712 JSON.
+- Gasless operations — ALWAYS use the bundled scripts above. NEVER manually construct EIP-712 JSON — the field order and nonce handling are error-prone. The scripts handle everything correctly (fetch registry, get nonce, sign, submit).
 
 ## Wallet Dependency
 
@@ -222,7 +222,9 @@ Check `GET /address/{addr}/check` first. Use Gas Routing.
 **Agent**: bind(principalAddr) — auto-registers Principal
 - unbind() anytime, rebind(newPrincipal) directly
 
-**Gasless**: `bash scripts/relay-register.sh --token {T}` and `bash scripts/relay-bind.sh --token {T} --principal {addr}` — handles EIP-712 signing + relay submission automatically.
+**Gasless**: Use the bundled scripts — do not construct EIP-712 JSON manually.
+- Register: `bash scripts/relay-register.sh --token {T}`
+- Bind: `bash scripts/relay-bind.sh --token {T} --principal {addr}`
 
 ### S2 · Deposit AWP
 1. approve AWP -> StakeNFT (not RootNet!)
@@ -242,7 +244,8 @@ Check `GET /address/{addr}/check` first. Use Gas Routing.
 ### M1 · Register Subnet
 1. LP cost = initialAlphaPrice x 100M. Optional: `POST /vanity/compute-salt`
 2. approve AWP -> RootNet, then registerSubnet(5 params: name, symbol, subnetManager=0x0 for auto-deploy, salt, minStake)
-3. **Gasless**: `bash scripts/relay-register-subnet.sh --token {T} --name {name} --symbol {sym} [--salt {hex}] [--min-stake {wei}]` — handles both signatures + relay automatically.
+3. **Gasless**: Use the bundled script — do not construct EIP-712 JSON manually.
+   `bash scripts/relay-register-subnet.sh --token {T} --name {name} --symbol {sym} [--salt {hex}] [--min-stake {wei}]`
 
 ### M2 · Lifecycle
 Check `GET /subnets/{id}` -> activateSubnet / pauseSubnet / resumeSubnet
