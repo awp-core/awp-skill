@@ -61,23 +61,28 @@ If remote version > 1.5.0, show: "Update available! Run: `openclaw skill install
 | Watch / monitor events | W1 | None (presets below) |
 | Emission settlement alerts | W2 [DRAFT] | None (workflow below) |
 
-## Reference Files
+## Bundled Files
 
-- **api-reference.md** — Q1-Q7 REST endpoint index
-  Local: `references/api-reference.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/api-reference.md`
-- **commands-staking.md** — S1-S3 command templates, EIP-712, relay
-  Local: `references/commands-staking.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/commands-staking.md`
-- **commands-subnet.md** — M1-M4 command templates, vanity, gasless
-  Local: `references/commands-subnet.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/commands-subnet.md`
-- **commands-governance.md** — G1-G4 commands, supplementary endpoints
-  Local: `references/commands-governance.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/commands-governance.md`
-- **protocol.md** — Data structures, 27 event types, shared endpoints, constants
-  Local: `references/protocol.md` | Remote: `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/protocol.md`
+This skill ships with reference docs and executable scripts. They are installed alongside SKILL.md:
 
-**Gasless relay scripts** (handle EIP-712 signing + relay submission in one command):
-- `scripts/relay-register.sh` — gasless user registration
-- `scripts/relay-bind.sh` — gasless agent binding
-- `scripts/relay-register-subnet.sh` — gasless subnet registration (dual signature)
+```
+awp-skill/
+├── SKILL.md                          ← you are here
+├── references/                       ← documentation (load on demand)
+│   ├── api-reference.md                Q1-Q7 REST endpoint index
+│   ├── commands-staking.md             S1-S3 command templates + EIP-712
+│   ├── commands-subnet.md              M1-M4 command templates + gasless
+│   ├── commands-governance.md          G1-G4 commands + supplementary endpoints
+│   └── protocol.md                     Data structures, 27 events, constants
+└── scripts/                          ← executable bash scripts (run directly)
+    ├── relay-register.sh               Gasless user registration
+    ├── relay-bind.sh                   Gasless agent binding
+    └── relay-register-subnet.sh        Gasless subnet registration (dual signature)
+```
+
+**Remote fallback** (if local files are missing, fetch from GitHub):
+- `https://raw.githubusercontent.com/awp-core/awp-skill/main/references/{filename}`
+- `https://raw.githubusercontent.com/awp-core/awp-skill/main/scripts/{filename}`
 
 **Loading rules**:
 - Q1-Q7, G3, G4, W1, W2 — this SKILL.md has enough info.
