@@ -109,12 +109,17 @@ awp-wallet balance --token {T} --chain bsc
 
 These are used so often they belong here. For full EIP-712 templates and gasless flows, load commands-staking.md.
 
-**Check registration:**
+**Check registration** (replace `{addr}` with wallet address):
 ```bash
-curl -s {API_BASE}/address/{addr}/check
+curl -s https://tapi.awp.sh/api/address/{addr}/check
 ```
 
-**Bind (on-chain, has BNB):**
+**Get RootNet address** (run once per session, cache in `$ROOT_NET`):
+```bash
+ROOT_NET=$(curl -s https://tapi.awp.sh/api/registry | jq -r '.rootNet')
+```
+
+**Bind** (on-chain, has BNB — replace `{T}` with session token, `{addr}` with target):
 ```bash
 awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "bind(address)" {addr}) --chain bsc
 ```

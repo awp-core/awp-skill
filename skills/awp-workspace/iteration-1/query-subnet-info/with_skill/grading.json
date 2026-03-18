@@ -1,9 +1,0 @@
-{
-  "expectations": [
-    {"text": "uses-correct-subnet-endpoint", "passed": true, "evidence": "Step 2a calls `GET {AWP_API_URL}/subnets/5`"},
-    {"text": "uses-skills-uri-endpoint", "passed": true, "evidence": "Step 2b calls `GET {AWP_API_URL}/subnets/5/skills`"},
-    {"text": "uses-alpha-price-endpoint", "passed": true, "evidence": "Step 2c calls `GET {AWP_API_URL}/tokens/alpha/5/price`"},
-    {"text": "formats-amounts-human-readable", "passed": true, "evidence": "Formatting Rules state: 'All wei values converted via amount / 10^18, displayed to 4 decimal places ({formatAWP(amount)})'"},
-    {"text": "no-hardcoded-addresses", "passed": true, "evidence": "Step 1 fetches addresses from `GET {AWP_API_URL}/registry`; all contract addresses shown as '0x...' placeholders, none hardcoded"}
-  ]
-}
