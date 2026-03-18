@@ -8,9 +8,9 @@
 
 ## Overview
 
-AWP RootNet is a decentralized **Agent Mining** protocol on BNB Smart Chain (BSC). Agents register on subnets, execute tasks for subnet coordinators, and earn AWP token emissions as rewards. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
+AWP RootNet is a decentralized **Agent Working** protocol on BNB Smart Chain (BSC). Agents register on subnets, execute tasks for subnet coordinators, and earn AWP token emissions as rewards. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
-This repository is a single OpenClaw skill with **23 actions** covering Query, Staking, Subnet Management, Governance, and real-time WebSocket Monitoring (28 event types).
+This repository is a single OpenClaw skill with **22 actions** covering Query, Staking, Subnet Management, Governance, and real-time WebSocket Monitoring (27 event types).
 
 ## Quick Install
 
@@ -20,18 +20,18 @@ openclaw skill install https://github.com/awp-core/awp-skill
 
 The skill automatically installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) dependency when needed for write operations.
 
-## Features — 23 Actions
+## Features — 22 Actions
 
 #### Query (read-only, no wallet needed)
 | ID | Action | Description |
 |----|--------|-------------|
 | Q1 | Query Subnet | Get subnet info by ID (name, status, owner, alpha token, skills URI, min stake) |
 | Q2 | Query Balance | Full staking overview — positions, allocations, unallocated balance |
-| Q3 | Query Emission | Current epoch, daily emission rate, decay projections (30/90/365 days) |
+| Q3 | Query Emission [DRAFT] | Current epoch, daily emission rate, decay projections (30/90/365 days) |
 | Q4 | Query Agent | Agent info by subnet — stake, owner, reward recipient |
 | Q5 | List Subnets | Browse active subnets with pagination, flag those with published skills |
 | Q6 | Install Subnet Skill | Fetch a subnet's SKILL.md and install it for the agent to use |
-| Q7 | Epoch History | Historical epoch settlements with emission amounts |
+| Q7 | Epoch History [DRAFT] | Historical epoch settlements with emission amounts |
 
 #### Staking (wallet required)
 | ID | Action | Description |
@@ -45,9 +45,8 @@ The skill automatically installs the [AWP Wallet](https://github.com/awp-core/aw
 |----|--------|-------------|
 | M1 | Register Subnet | Deploy new subnet with Alpha token + LP pool. Gasless option available. |
 | M2 | Subnet Lifecycle | Activate, pause, or resume a subnet |
-| M3 | Update Metadata | Update metadataURI and coordinatorURL |
-| M4 | Update Skills URI | Set the subnet's SKILL.md URL via SubnetNFT |
-| M5 | Set Min Stake | Set minimum stake requirement for agents on the subnet |
+| M3 | Update Skills URI | Set the subnet's SKILL.md URL via SubnetNFT |
+| M4 | Set Min Stake | Set minimum stake requirement for agents on the subnet |
 
 #### Governance (wallet + StakeNFT positions)
 | ID | Action | Description |
@@ -61,17 +60,17 @@ The skill automatically installs the [AWP Wallet](https://github.com/awp-core/aw
 | ID | Action | Description |
 |----|--------|-------------|
 | W1 | Watch Events | Subscribe to real-time events via WebSocket with 5 presets |
-| W2 | Emission Alert | Get notified on epoch settlements with top earner ranking |
+| W2 | Emission Alert [DRAFT] | Get notified on epoch settlements with top earner ranking |
 
-### 28 Event Types (5 presets)
+### 27 Event Types (5 presets)
 
 | Preset | Events | Count |
 |--------|--------|-------|
 | `staking` | Deposited, Withdrawn, PositionIncreased, Allocated, Deallocated, Reallocated | 6 |
-| `subnets` | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, MetadataUpdated, LPCreated, SkillsURIUpdated, MinStakeUpdated | 11 |
+| `subnets` | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, LPCreated, SkillsURIUpdated, MinStakeUpdated | 10 |
 | `emission` | EpochSettled, RecipientAWPDistributed, DAOMatchDistributed, GovernanceWeightUpdated, AllocationsSubmitted, OracleConfigUpdated | 6 |
 | `users` | UserRegistered, AgentBound, AgentUnbound, AgentRemoved, DelegationUpdated | 5 |
-| `all` | All of the above | 28 |
+| `all` | All of the above | 27 |
 
 ## Architecture
 
@@ -81,10 +80,10 @@ awp-skill/
 ├── references/
 │   ├── api-reference.md                    # Q1-Q7 REST endpoint index
 │   ├── commands-staking.md                 # S1-S3 command templates + EIP-712
-│   ├── commands-subnet.md                  # M1-M5 command templates + gasless
+│   ├── commands-subnet.md                  # M1-M4 command templates + gasless
 │   ├── commands-governance.md              # G1-G4 commands + supplementary endpoints
 │   ├── monitor-api-reference.md            # WebSocket protocol, presets, polling
-│   └── protocol.md                         # Shared structs, 28 events, constants
+│   └── protocol.md                         # Shared structs, 27 events, constants
 ├── README.md
 └── skills-dev/                             # Source protocol specifications
 ```
@@ -188,7 +187,8 @@ The `skills-dev/` directory contains the authoritative protocol specifications u
 
 | Version | Changes |
 |---------|---------|
-| 1.4.0 | Merged awp + awp-monitor into single skill (23 actions). SKILL.md at repo root for one-command install. |
+| 1.5.0 | Remove updateMetadata (SubnetParams now 5 fields), 27 events, relay 100/IP/1h, emission [DRAFT], Agent Working |
+| 1.4.0 | Merged awp + awp-monitor into single skill. SKILL.md at repo root for one-command install. |
 | 1.3.0 | Split api-reference into focused command files, inline high-frequency commands, session state tracking, response format templates, auto-retry on 429 |
 | 1.2.0 | On Skill Load protocol, intent routing with reference file mapping, version check mechanism |
 | 1.1.0 | Welcome messages, executable command templates, EIP-712 JSON templates with AWPRootNet domain |
