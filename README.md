@@ -187,6 +187,7 @@ The `skills-dev/` directory contains the authoritative protocol specifications u
 
 | Version | Changes |
 |---------|---------|
+| 1.6.1 | Remove cast/foundry dependency from scripts, remove evals/dev files from install, dev branch separation |
 | 1.6.0 | Bundled gasless relay scripts, file structure map, enforce script usage over manual EIP-712, no-cache contract addresses |
 | 1.5.0 | Remove updateMetadata (SubnetParams now 5 fields), 27 events, relay 100/IP/1h, emission [DRAFT], Agent Working |
 | 1.4.0 | Merged awp + awp-monitor into single skill. SKILL.md at repo root for one-command install. |
