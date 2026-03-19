@@ -123,7 +123,7 @@ awp-wallet balance --token $TOKEN --chain bsc
   - Onboarding (Agent): `bash scripts/relay-start.sh --token $TOKEN --mode agent --principal {addr}`
   - Subnet registration: `bash scripts/relay-register-subnet.sh --token $TOKEN --name {name} --symbol {sym}`
   - Rate limit: 100/IP/1h
-  - bind() auto-registers — do NOT call register() separately
+  - Choose register (Principal) OR bind (Agent) — not both
 - deposit/allocate always need BNB — no gasless option
 
 ### Inline High-Frequency Commands (S1)
@@ -233,11 +233,15 @@ Track these across the conversation to avoid redundant checks:
 
 ### S1 · Register & Bind
 
-**IMPORTANT**: bind() auto-registers the principal. Do NOT call register() and bind() as two separate steps — this wastes a relay call and breaks the nonce. Use ONE call:
+To participate in subnet work, a wallet address needs ONE of these (not both):
+- **register()** — become a Principal (self-managed account, can stake and earn directly)
+- **bind(principal)** — become an Agent bound to a Principal (work for them)
 
-**Principal** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data $(bind calldata) --chain bsc`
+Pick one based on the user's role. Do NOT call both register() and bind() for the same address.
+
+**Principal** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data $(cast calldata "register()") --chain bsc`
 **Principal** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode principal`
-**Agent** (has BNB): same bind call with principal's address
+**Agent** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data $(cast calldata "bind(address)" {principalAddr}) --chain bsc`
 **Agent** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode agent --principal {addr}`
 
 - setRewardRecipient(addr), setDelegation(agent, true) — optional, after binding
