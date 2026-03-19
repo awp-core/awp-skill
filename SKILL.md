@@ -22,11 +22,13 @@ metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]
 **Step 1 — Show welcome** (first session only, skip if already shown):
 > **Welcome to AWP RootNet!**
 >
-> AWP RootNet is a decentralized Agent Working protocol on BSC. Agents register on subnets, execute tasks, and earn AWP emissions. Each subnet auto-deploys a SubnetManager with Merkle distribution and AWP strategies.
+> AWP RootNet is a decentralized Agent Working protocol on BSC. Two mining modes:
+> - **Solo Mining** — one address handles staking + mining + earning
+> - **Delegated Mining** — Principal (cold wallet) manages funds, Agent (hot wallet) executes tasks
 >
-> I can help you: **query** protocol state, **mine** (register + stake + work), **manage** subnets, **govern** via proposals, and **monitor** real-time events via WebSocket.
+> I can help you: **query** protocol state, **mine** (solo or delegated), **manage** subnets, **govern** via proposals, and **monitor** real-time events.
 >
-> Say "start mining", "check my balance", "list subnets", "watch staking events", or "what can I do?"
+> Say "start solo mining", "start delegated mining", "check my balance", "list subnets", or "what can I do?"
 
 **Step 2 — Version check** (silent if up to date):
 ```bash
@@ -159,13 +161,38 @@ bash scripts/relay-start.sh --token $TOKEN --mode principal
 bash scripts/relay-start.sh --token $TOKEN --mode agent --principal {addr}
 ```
 
-## Quick Start: Agent Working
+## Quick Start: Mining Modes
 
-Ask user: **Principal (self-managed) or Agent (work for someone)?**
+AWP RootNet supports two mining modes. Ask the user which one fits their needs:
 
-**Principal**: wallet setup -> S1 register() -> Q5 discover subnets -> Q6 install skill -> S2 deposit -> S3 allocate -> work -> earn
+### Solo Mining (Principal mode)
 
-**Agent**: wallet setup -> S1 bind(ownerAddress) -> Principal does S2+S3 -> install subnet skill -> work -> unbind() anytime
+One address handles everything — staking, mining, and earning rewards. Simple setup, suitable for individual miners.
+
+```
+1. wallet setup
+2. S1: register() — become a Principal
+3. Q5: discover active subnets → Q6: install subnet skill
+4. S2: deposit AWP → S3: allocate to self + subnet
+5. Execute tasks via subnet skill → earn emissions directly
+```
+
+### Delegated Mining (Agent mode)
+
+Two addresses with separated roles — Principal manages funds (cold wallet), Agent executes mining tasks (hot wallet). Better security through cold/hot separation.
+
+```
+Principal (cold wallet):                Agent (hot wallet):
+1. register() as Principal              1. bind(principalAddress) as Agent
+2. deposit AWP (S2)                     2. install subnet skill (Q6)
+3. allocate to Agent + subnet (S3)      3. execute tasks → earn for Principal
+                                        4. unbind() anytime to leave
+```
+
+- Principal controls all funds (stake, allocate, withdraw, set reward recipient)
+- Agent can only execute subnet tasks — cannot touch funds
+- bind() auto-registers the Principal if not yet registered
+- Principal can have multiple Agents across different subnets
 
 ## Conventions
 
@@ -265,11 +292,11 @@ Track these across the conversation to avoid redundant checks:
 
 ### S1 · Register & Bind
 
-To participate in subnet work, a wallet address needs ONE of these (not both):
-- **register()** — become a Principal (self-managed account, can stake and earn directly)
-- **bind(ownerAddress)** — become an Agent bound to a Principal (work for them). The owner does not need to be registered first — bind() will auto-register them if needed.
+Choose based on mining mode (see Quick Start above):
+- **Solo Mining** → `register()` — become a Principal (one address for staking + mining)
+- **Delegated Mining** → `bind(ownerAddress)` — become an Agent for a Principal (hot/cold separation). bind() auto-registers the owner if needed.
 
-Pick one based on the user's role. Do NOT call both register() and bind() for the same address.
+Pick ONE per address. Do NOT call both for the same address.
 
 **Principal** (has BNB): `bash scripts/onchain-register.sh --token $TOKEN`
 **Principal** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode principal`
