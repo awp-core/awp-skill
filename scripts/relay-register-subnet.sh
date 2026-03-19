@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 # Fully gasless subnet registration via dual EIP-712 signatures
-# Usage: ./relay-register-subnet.sh --token <T> --name <name> --symbol <sym> [options]
+# Usage: ./relay-register-subnet.sh --name <name> --symbol <sym> [options]
 #
-# Required: --token, --name, --symbol
+# Required: --name, --symbol
 # Optional: --salt <hex>, --min-stake <wei>, --subnet-manager <address>
 #
+# Environment:
+#   WALLET_PASSWORD  — required (awp-wallet password, auto-unlocks)
+#   AWP_API_URL      — optional (default: https://tapi.awp.sh/api)
+#   BSC_RPC_URL      — optional (default: https://bsc-dataseed.binance.org)
+#
 # Prerequisites: awp-wallet, curl, jq, python3
-# No cast/foundry required.
 
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
 RPC_URL="${BSC_RPC_URL:-https://bsc-dataseed.binance.org}"
 CHAIN_ID=56
-TOKEN=""
 NAME=""
 SYMBOL=""
 SALT="0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -22,7 +25,6 @@ SUBNET_MANAGER="0x0000000000000000000000000000000000000000"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --token) TOKEN="$2"; shift 2 ;;
     --name) NAME="$2"; shift 2 ;;
     --symbol) SYMBOL="$2"; shift 2 ;;
     --salt) SALT="$2"; shift 2 ;;
@@ -34,9 +36,23 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -z "$TOKEN" || -z "$NAME" || -z "$SYMBOL" ]] && {
-  echo '{"error": "Missing required: --token, --name, --symbol"}' >&2; exit 1
+[[ -z "$NAME" || -z "$SYMBOL" ]] && {
+  echo '{"error": "Missing required: --name, --symbol"}' >&2; exit 1
 }
+
+# Auto-manage wallet
+if [[ -z "${WALLET_PASSWORD:-}" ]]; then
+  echo '{"error": "WALLET_PASSWORD env var required"}' >&2; exit 1
+fi
+
+awp-wallet status > /dev/null 2>&1 || {
+  WALLET_PASSWORD="$WALLET_PASSWORD" awp-wallet init > /dev/null 2>&1 || true
+}
+
+UNLOCK_RESULT=$(WALLET_PASSWORD="$WALLET_PASSWORD" awp-wallet unlock --scope full --duration 3600 2>&1) || {
+  echo '{"error": "Wallet unlock failed"}' >&2; exit 1
+}
+TOKEN=$(echo "$UNLOCK_RESULT" | jq -r '.sessionToken')
 
 eth_call() {
   local to="$1" data="$2"
@@ -112,7 +128,7 @@ PERMIT_DATA=$(cat <<EIPJSON
 EIPJSON
 )
 
-PERMIT_SIG=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$PERMIT_DATA") || {
+PERMIT_SIG=$(WALLET_PASSWORD="$WALLET_PASSWORD" awp-wallet sign-typed-data --token "$TOKEN" --data "$PERMIT_DATA") || {
   echo '{"error": "Permit signing failed"}' >&2; exit 1
 }
 PERMIT_SIGNATURE=$(echo "$PERMIT_SIG" | jq -r '.signature')
@@ -159,7 +175,7 @@ REGISTER_DATA=$(cat <<EIPJSON
 EIPJSON
 )
 
-REGISTER_SIG=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$REGISTER_DATA") || {
+REGISTER_SIG=$(WALLET_PASSWORD="$WALLET_PASSWORD" awp-wallet sign-typed-data --token "$TOKEN" --data "$REGISTER_DATA") || {
   echo '{"error": "RegisterSubnet signing failed"}' >&2; exit 1
 }
 REGISTER_SIGNATURE=$(echo "$REGISTER_SIG" | jq -r '.signature')

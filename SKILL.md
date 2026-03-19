@@ -111,13 +111,13 @@ Write actions (S/M/G sections) require the **AWP Wallet** skill.
 
 Before register/bind/registerSubnet, check BNB:
 ```bash
-awp-wallet balance --token {T} --chain bsc
+awp-wallet balance --chain bsc
 ```
 - **Has BNB** — direct on-chain tx via awp-wallet
 - **No BNB** — use the gasless relay scripts:
-  - Onboarding (Principal): `bash scripts/relay-start.sh --token {T} --mode principal`
-  - Onboarding (Agent): `bash scripts/relay-start.sh --token {T} --mode agent --principal {addr}`
-  - Subnet registration: `bash scripts/relay-register-subnet.sh --token {T} --name {name} --symbol {sym}`
+  - Onboarding (Principal): `bash scripts/relay-start.sh --mode principal`
+  - Onboarding (Agent): `bash scripts/relay-start.sh --mode agent --principal {addr}`
+  - Subnet registration: `bash scripts/relay-register-subnet.sh --name {name} --symbol {sym}`
   - Rate limit: 100/IP/1h
   - bind() auto-registers — do NOT call register() separately
 - deposit/allocate always need BNB — no gasless option
@@ -136,15 +136,15 @@ ROOT_NET=$(curl -s https://tapi.awp.sh/api/registry | jq -r '.rootNet')
 
 **Bind (on-chain, has BNB):**
 ```bash
-awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "bind(address)" {addr}) --chain bsc
+awp-wallet send --to $ROOT_NET --data $(cast calldata "bind(address)" {addr}) --chain bsc
 ```
 
 **Gasless onboarding (no BNB — register + bind in ONE call):**
 ```bash
 # Principal mode (self-bind):
-bash scripts/relay-start.sh --token {T} --mode principal
+bash scripts/relay-start.sh --mode principal
 # Agent mode (bind to someone):
-bash scripts/relay-start.sh --token {T} --mode agent --principal {addr}
+bash scripts/relay-start.sh --mode agent --principal {addr}
 ```
 
 ## Quick Start: Agent Working
@@ -232,9 +232,9 @@ Track these across the conversation to avoid redundant checks:
 **IMPORTANT**: bind() auto-registers the principal. Do NOT call register() and bind() as two separate steps — this wastes a relay call and breaks the nonce. Use ONE call:
 
 **Principal** (has BNB): `awp-wallet send --to $ROOT_NET --data $(bind calldata) --chain bsc`
-**Principal** (no BNB): `bash scripts/relay-start.sh --token {T} --mode principal`
+**Principal** (no BNB): `bash scripts/relay-start.sh --mode principal`
 **Agent** (has BNB): same bind call with principal's address
-**Agent** (no BNB): `bash scripts/relay-start.sh --token {T} --mode agent --principal {addr}`
+**Agent** (no BNB): `bash scripts/relay-start.sh --mode agent --principal {addr}`
 
 - setRewardRecipient(addr), setDelegation(agent, true) — optional, after binding
 - registerAndStake(depositAmount, lockDuration, agent, subnetId, allocateAmount) — one-click alternative, needs gas
@@ -259,7 +259,7 @@ Track these across the conversation to avoid redundant checks:
 1. LP cost = initialAlphaPrice x 100M. Optional: `POST /vanity/compute-salt`
 2. approve AWP -> RootNet, then registerSubnet(5 params: name, symbol, subnetManager=0x0 for auto-deploy, salt, minStake)
 3. **Gasless**: Use the bundled script — do not construct EIP-712 JSON manually.
-   `bash scripts/relay-register-subnet.sh --token {T} --name {name} --symbol {sym} [--salt {hex}] [--min-stake {wei}]`
+   `bash scripts/relay-register-subnet.sh --name {name} --symbol {sym} [--salt {hex}] [--min-stake {wei}]`
 
 ### M2 · Lifecycle
 Check `GET /subnets/{id}` -> activateSubnet / pauseSubnet / resumeSubnet
