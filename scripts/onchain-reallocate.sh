@@ -25,7 +25,7 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 [[ -z "$WALLET_ADDR" || "$WALLET_ADDR" == "null" ]] && { echo '{"error": "Invalid token"}' >&2; exit 1; }
 
 REGISTRY=$(curl -s "$API_BASE/registry")
-AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
 
 # Validate numeric inputs (shell regex, no python injection risk)
 [[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }

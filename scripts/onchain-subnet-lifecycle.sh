@@ -29,7 +29,7 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 [[ -z "$WALLET_ADDR" || "$WALLET_ADDR" == "null" ]] && { echo '{"error": "Invalid token"}' >&2; exit 1; }
 
 REGISTRY=$(curl -s "$API_BASE/registry")
-AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
 
 # Check current subnet status
 SUBNET_INFO=$(curl -s "$API_BASE/subnets/$SUBNET")

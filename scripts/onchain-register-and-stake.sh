@@ -39,7 +39,7 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 # Fetch registry addresses
 REGISTRY=$(curl -s "$API_BASE/registry")
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
-AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
 
 # Convert units: human-readable amounts to wei, days to seconds
 AMOUNT_WEI=$(python3 -c "print(int(float('$AMOUNT') * 10**18))")

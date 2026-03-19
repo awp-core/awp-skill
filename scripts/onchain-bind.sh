@@ -19,10 +19,13 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 [[ -z "$WALLET_ADDR" || "$WALLET_ADDR" == "null" ]] && { echo '{"error": "Invalid token"}' >&2; exit 1; }
 
 REGISTRY=$(curl -s "$API_BASE/registry")
-AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
 
 CHECK=$(curl -s "$API_BASE/address/$WALLET_ADDR/check")
-BOUND_TO=$(echo "$CHECK" | jq -r '.boundTo')
+# V2: .boundTo field; V1: .isRegisteredAgent + .ownerAddress
+BOUND_TO=$(echo "$CHECK" | jq -r '.boundTo // empty' 2>/dev/null)
+IS_AGENT=$(echo "$CHECK" | jq -r '.isRegisteredAgent // false' 2>/dev/null)
+[[ "$IS_AGENT" == "true" ]] && BOUND_TO=$(echo "$CHECK" | jq -r '.ownerAddress // empty' 2>/dev/null)
 [[ "$BOUND_TO" != "" && "$BOUND_TO" != "null" && "$BOUND_TO" != "0x0000000000000000000000000000000000000000" ]] && {
   echo '{"status": "already_bound", "address": "'"$WALLET_ADDR"'", "boundTo": "'"$BOUND_TO"'"}'; exit 0
 }

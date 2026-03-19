@@ -399,13 +399,15 @@ Print the routing decision:
 ```bash
 curl -s {API_BASE}/api/address/{addr}/check
 ```
-Response: `{"isRegistered": true, "boundTo": "0x...", "recipient": "0x..."}`
-> `isRegistered` = `boundTo != 0x0 || recipient != 0x0`. No mandatory registration — every address is implicitly a root.
+V2 response: `{"isRegistered": true, "boundTo": "0x...", "recipient": "0x..."}`
+V1 response: `{"isRegisteredUser": false, "isRegisteredAgent": false, "isManager": false}`
+> Scripts handle both formats automatically. V2: `isRegistered` = `boundTo != 0x0 || recipient != 0x0`.
 
 **Get registry** (run before every write action — do not cache):
 ```bash
 REGISTRY=$(curl -s {API_BASE}/api/registry)
-AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
+# V1 API returns .rootNet; V2 returns .awpRegistry — the // operator handles both
 ```
 
 **Bind (on-chain, has gas):**

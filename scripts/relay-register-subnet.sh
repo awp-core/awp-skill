@@ -57,14 +57,17 @@ hex_to_dec() {
 
 # Step 1: Fetch registry (fresh, never cached)
 REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
-echo "$REGISTRY" | jq -e '.awpRegistry' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
-AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
+echo "$REGISTRY" | jq -e '.awpRegistry // .rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
 
-# Get chainId from RPC (not in /registry response)
-CHAIN_ID_HEX=$(curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' | jq -r '.result')
-CHAIN_ID=$(hex_to_dec "$CHAIN_ID_HEX")
+# Get chainId — try registry first, fallback to RPC
+CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId // empty')
+if [[ -z "$CHAIN_ID" || "$CHAIN_ID" == "null" ]]; then
+  CHAIN_ID_HEX=$(curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" \
+    -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' | jq -r '.result')
+  CHAIN_ID=$(hex_to_dec "$CHAIN_ID_HEX")
+fi
 
 # Step 2: Get wallet address
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address') || {

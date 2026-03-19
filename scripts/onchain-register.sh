@@ -19,11 +19,13 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 [[ -z "$WALLET_ADDR" || "$WALLET_ADDR" == "null" ]] && { echo '{"error": "Invalid token"}' >&2; exit 1; }
 
 REGISTRY=$(curl -s "$API_BASE/registry")
-AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
 
 CHECK=$(curl -s "$API_BASE/address/$WALLET_ADDR/check")
-IS_REGISTERED=$(echo "$CHECK" | jq -r '.isRegistered')
-RECIPIENT=$(echo "$CHECK" | jq -r '.recipient')
+# V2: .isRegistered; V1: .isRegisteredUser
+IS_REGISTERED=$(echo "$CHECK" | jq -r '.isRegistered // empty' 2>/dev/null)
+[[ -z "$IS_REGISTERED" || "$IS_REGISTERED" == "null" ]] && IS_REGISTERED=$(echo "$CHECK" | jq -r '.isRegisteredUser // "false"' 2>/dev/null)
+RECIPIENT=$(echo "$CHECK" | jq -r '.recipient // empty' 2>/dev/null)
 [[ "$IS_REGISTERED" == "true" ]] && { echo '{"status": "already_registered", "address": "'"$WALLET_ADDR"'", "recipient": "'"$RECIPIENT"'"}'; exit 0; }
 
 # register() selector = 0x1aa3a008
