@@ -83,7 +83,7 @@ PROPOSAL_CREATED=$(cast call $DAO_ADDR "proposalCreatedAt(uint256)" {proposalId}
 PARAMS=$(cast abi-encode "(uint256[])" "([{tokenId1},{tokenId2},...])")
 
 # Step 3: Cast vote (support: 0=Against, 1=For, 2=Abstain)
-awp-wallet send --token {T} --to $DAO_ADDR --data $(cast calldata "castVoteWithReasonAndParams(uint256,uint8,string,bytes)" {proposalId} {support} "{reason}" $PARAMS) --chain bsc
+awp-wallet send --token {T} --to $DAO_ADDR --data $(cast calldata "castVoteWithReasonAndParams(uint256,uint8,string,bytes)" {proposalId} {support} "{reason}" $PARAMS) --chain base
 ```
 
 ---

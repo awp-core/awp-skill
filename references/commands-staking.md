@@ -25,14 +25,14 @@ WALLET_ADDR=$(awp-wallet status --token {T} | jq -r '.address')
 
 - `--token {T}` = wallet session token from `awp-wallet unlock`
 - `--asset` = token **contract address** (e.g. awpTokenAddr from `/registry`), NOT a symbol like "AWP"
-- `--chain bsc` = always use BSC for AWP
+- `--chain base` = always use Base for AWP
 
 ### Approve Pattern (used by S1, S2)
 
 ```bash
 # Approve AWP spending — spender varies by action (see each section)
 # --asset must be the AWP token contract address from GET /registry -> awpToken
-awp-wallet approve --token {T} --asset {awpTokenAddr} --spender {targetAddr} --amount {humanAmount} --chain bsc
+awp-wallet approve --token {T} --asset {awpTokenAddr} --spender {targetAddr} --amount {humanAmount} --chain base
 # -> {"txHash": "0x...", "status": "confirmed"}
 ```
 
@@ -40,7 +40,7 @@ awp-wallet approve --token {T} --asset {awpTokenAddr} --spender {targetAddr} --a
 
 ```bash
 # Check AWP balance in wallet (supplements REST API staking balance)
-awp-wallet balance --token {T} --chain bsc --asset {awpTokenAddr}
+awp-wallet balance --token {T} --chain base --asset {awpTokenAddr}
 ```
 
 ### EIP-712 Signing (for gasless bindFor / setRecipientFor)
@@ -123,7 +123,7 @@ POST /relay/bind
 ```
 **Request:**
 ```json
-{"user": "0xUser...", "target": "0xTarget...", "deadline": 1742400000, "signature": "0x...65 bytes hex (130 chars)"}
+{"agent": "0xAgent...", "target": "0xTarget...", "deadline": 1742400000, "signature": "0x...65 bytes hex (130 chars)"}
 ```
 **Response:**
 ```json
@@ -170,22 +170,22 @@ POST /relay/set-recipient
 NONCE=$(cast call $AWP_REGISTRY "nonces(address)" $WALLET_ADDR --rpc-url $RPC_URL | cast --to-dec)
 ```
 
-**On-chain bind (has BNB gas):**
+**On-chain bind (has ETH gas):**
 ```bash
 # Bind to target (self-bind: TARGET=WALLET_ADDR)
 TARGET={targetAddress}
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "bind(address)" $TARGET) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "bind(address)" $TARGET) --chain base
 ```
 
-**On-chain registerAndStake (has BNB gas):**
+**On-chain registerAndStake (has ETH gas):**
 ```bash
 # Step 1: Approve AWP to AWPRegistry
-awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $AWP_REGISTRY --amount {depositAmountHuman} --chain bsc
+awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $AWP_REGISTRY --amount {depositAmountHuman} --chain base
 # Step 2: registerAndStake
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "registerAndStake(uint256,uint64,address,uint256,uint256)" {depositAmountWei} {lockDurationSeconds} {agentAddr} {subnetId} {allocateAmountWei}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "registerAndStake(uint256,uint64,address,uint256,uint256)" {depositAmountWei} {lockDurationSeconds} {agentAddr} {subnetId} {allocateAmountWei}) --chain base
 ```
 
-**Gasless bind (no BNB) — EIP-712 template:**
+**Gasless bind (no ETH) — EIP-712 template:**
 ```bash
 TARGET={targetAddress}
 DEADLINE=$(date -d '+1 hour' +%s)
@@ -222,10 +222,10 @@ awp-wallet sign-typed-data --token {T} --data '{
 
 curl -X POST {API_BASE}/api/relay/bind \
   -H "Content-Type: application/json" \
-  -d '{"user": "'$WALLET_ADDR'", "target": "'$TARGET'", "deadline": '$DEADLINE', "signature": "{signatureHex}"}'
+  -d '{"agent": "'$WALLET_ADDR'", "target": "'$TARGET'", "deadline": '$DEADLINE', "signature": "{signatureHex}"}'
 ```
 
-**Gasless set-recipient (no BNB) — EIP-712 template:**
+**Gasless set-recipient (no ETH) — EIP-712 template:**
 ```bash
 RECIPIENT={recipientAddress}
 DEADLINE=$(date -d '+1 hour' +%s)
@@ -268,13 +268,13 @@ curl -X POST {API_BASE}/api/relay/set-recipient \
 **Delegation management:**
 ```bash
 # Grant delegate
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "grantDelegate(address)" {delegateAddr}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "grantDelegate(address)" {delegateAddr}) --chain base
 
 # Revoke delegate
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "revokeDelegate(address)" {delegateAddr}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "revokeDelegate(address)" {delegateAddr}) --chain base
 
 # Set reward recipient (on-chain)
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "setRecipient(address)" {recipientAddr}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "setRecipient(address)" {recipientAddr}) --chain base
 ```
 
 ---
@@ -320,18 +320,18 @@ function getPositionForVoting(uint256 tokenId) view returns (address owner, uint
 
 ```bash
 # Step 1: Approve AWP to StakeNFT
-awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $STAKE_NFT --amount {humanAmount} --chain bsc
+awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $STAKE_NFT --amount {humanAmount} --chain base
 # Wait for {"status": "confirmed"}
 
 # Step 2: Deposit (lockDuration in seconds, e.g. 182 days = 15724800)
-awp-wallet send --token {T} --to $STAKE_NFT --data $(cast calldata "deposit(uint256,uint64)" {amountWei} {lockDurationSeconds}) --chain bsc
+awp-wallet send --token {T} --to $STAKE_NFT --data $(cast calldata "deposit(uint256,uint64)" {amountWei} {lockDurationSeconds}) --chain base
 
 # Withdraw (after lock expires)
-awp-wallet send --token {T} --to $STAKE_NFT --data $(cast calldata "withdraw(uint256)" {tokenId}) --chain bsc
+awp-wallet send --token {T} --to $STAKE_NFT --data $(cast calldata "withdraw(uint256)" {tokenId}) --chain base
 
 # Add to position (approve first, then addToPosition — check remainingTime > 0 first!)
-awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $STAKE_NFT --amount {addAmountHuman} --chain bsc
-awp-wallet send --token {T} --to $STAKE_NFT --data $(cast calldata "addToPosition(uint256,uint256,uint64)" {tokenId} {addAmountWei} {newLockEndTimestamp}) --chain bsc
+awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $STAKE_NFT --amount {addAmountHuman} --chain base
+awp-wallet send --token {T} --to $STAKE_NFT --data $(cast calldata "addToPosition(uint256,uint256,uint64)" {tokenId} {addAmountWei} {newLockEndTimestamp}) --chain base
 ```
 
 ---
@@ -371,11 +371,11 @@ Verify `unallocated >= amount` before allocating.
 
 ```bash
 # Allocate (staker = WALLET_ADDR for self-allocation)
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "allocate(address,address,uint256,uint256)" $WALLET_ADDR {agentAddr} {subnetId} {amountWei}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "allocate(address,address,uint256,uint256)" $WALLET_ADDR {agentAddr} {subnetId} {amountWei}) --chain base
 
 # Deallocate
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "deallocate(address,address,uint256,uint256)" $WALLET_ADDR {agentAddr} {subnetId} {amountWei}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "deallocate(address,address,uint256,uint256)" $WALLET_ADDR {agentAddr} {subnetId} {amountWei}) --chain base
 
 # Reallocate (immediate, no cooldown)
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "reallocate(address,address,uint256,address,uint256,uint256)" $WALLET_ADDR {fromAgent} {fromSubnetId} {toAgent} {toSubnetId} {amountWei}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "reallocate(address,address,uint256,address,uint256,uint256)" $WALLET_ADDR {fromAgent} {fromSubnetId} {toAgent} {toSubnetId} {amountWei}) --chain base
 ```

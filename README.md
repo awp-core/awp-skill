@@ -1,14 +1,14 @@
 # AWP Skill
 
 [![Skill Compatible](https://img.shields.io/badge/Skill-Compatible-blue)](https://openclaw.ai)
-[![BSC](https://img.shields.io/badge/BSC-EVM-yellow)](https://bscscan.com)
+[![BSC](https://img.shields.io/badge/Base-EVM-yellow)](https://basescan.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-**Skill for interacting with the AWP (Agent Working Protocol) on BSC/EVM.** Query protocol state, bind and delegate, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
+**Skill for interacting with the AWP (Agent Working Protocol) on Base/EVM.** Query protocol state, bind and delegate, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
 
 ## Overview
 
-AWP is a decentralized **Agent Working** protocol on EVM (deployed on BSC). Users bind to a tree-based hierarchy, stake AWP via position NFTs, allocate to agents on subnets, and earn emissions. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
+AWP is a decentralized **Agent Working** protocol on EVM (deployed on Base). Users bind to a tree-based hierarchy, stake AWP via position NFTs, allocate to agents on subnets, and earn emissions. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
 This repository is a single skill with **20 actions**, **14 bundled scripts**, and **26 real-time event types** — covering Query, Staking, Subnet Management, Governance, and WebSocket Monitoring.
 
@@ -123,7 +123,7 @@ Three operations support fully gasless execution via EIP-712 signatures and rela
 
 Rate limit: 100 requests per IP per 1 hour across all relay endpoints.
 
-The skill automatically checks BNB balance and routes to gasless relay when the wallet has no native gas.
+The skill automatically checks ETH balance and routes to gasless relay when the wallet has no native gas.
 
 ## UX Features
 
@@ -136,7 +136,7 @@ The skill provides a polished user experience with:
 - **Write safety** — confirmation preview before every transaction with `Proceed? (y/n)`
 - **Balance notifications** — auto-show +/- delta after balance-changing operations
 - **Tagged output** — 11 prefixes: `[QUERY]`, `[STAKE]`, `[TX]`, `[NEXT]`, `[!]`, etc.
-- **Transaction links** — every write shows txHash + BSCScan link
+- **Transaction links** — every write shows txHash + BaseScan link
 - **Session recovery** — auto-restore wallet, offer to resume WebSocket subscriptions
 - **Monitor statistics** — 5-minute summaries during WebSocket watching
 - **Error recovery** — clear messages with auto-recovery actions
@@ -170,7 +170,7 @@ Root (cold wallet):                    Agent (hot wallet):
 
 | Parameter | Value |
 |-----------|-------|
-| Chain | EVM (deployed on BSC, Chain ID 56) |
+| Chain | EVM (deployed on Base, Chain ID 56) |
 | Epoch Duration | 1 day (86,400 seconds) |
 | Initial Daily Emission | 15,800,000 AWP |
 | Decay Factor | ~0.3156% per epoch |

@@ -47,4 +47,4 @@ AMOUNT_PADDED=$(python3 -c "print(hex($AMOUNT_WEI)[2:].zfill(64))")
 CALLDATA="0xd5d5278d${STAKER_PADDED}${FROM_AGENT_PADDED}${FROM_SUBNET_PADDED}${TO_AGENT_PADDED}${TO_SUBNET_PADDED}${AMOUNT_PADDED}"
 
 echo '{"step": "reallocate", "staker": "'"$WALLET_ADDR"'", "fromAgent": "'"$FROM_AGENT"'", "fromSubnet": '"$FROM_SUBNET"', "toAgent": "'"$TO_AGENT"'", "toSubnet": '"$TO_SUBNET"', "amount": "'"$AMOUNT"' AWP"}' >&2
-awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "$CALLDATA" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "$CALLDATA" --chain base

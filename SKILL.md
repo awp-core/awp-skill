@@ -1,7 +1,7 @@
 ---
 name: awp
 description: >
-  Interact with the AWP (Agent Working Protocol) on BSC/EVM. This skill handles
+  Interact with the AWP (Agent Working Protocol) on Base/EVM. This skill handles
   ALL AWP operations: check staking balances and positions, stake/deposit AWP tokens,
   allocate stake to agents on subnets, register and manage subnets (gasless or on-chain),
   create DAO governance proposals, vote on proposals with position NFTs, query emission
@@ -97,8 +97,8 @@ subnets:        <list of allocated subnets>
 ```
 ── wallet ────────────────────────
 address:    <address>
-network:    BSC
-BNB:        <balance>
+network:    Base
+ETH:        <balance>
 AWP:        <balance>
 ──────────────────────────────────
 ```
@@ -174,12 +174,12 @@ curl -s {API_BASE}/api/address/{addr}/check
 
 **Option A** (Solo Mining):
 1. Wallet created in Step 1
-2. Check gas → has BNB: on-chain `setRecipient(self)` / no BNB: `bash scripts/relay-start.sh --token $TOKEN --mode principal`
+2. Check gas → has ETH: on-chain `setRecipient(self)` / no ETH: `bash scripts/relay-start.sh --token $TOKEN --mode principal`
 3. Proceed to Step 3
 
 **Option B** (Delegated Mining):
 1. Ask for their existing wallet address (0x...)
-2. Check gas → has BNB: on-chain `bind(existingWalletAddr)` / no BNB: `bash scripts/relay-start.sh --token $TOKEN --mode agent --target {addr}`
+2. Check gas → has ETH: on-chain `bind(existingWalletAddr)` / no ETH: `bash scripts/relay-start.sh --token $TOKEN --mode agent --target {addr}`
 3. Proceed to Step 3
 
 Print: `[2/4] registered   ✓`
@@ -280,7 +280,7 @@ Use tagged prefixes for all operations so the user can follow along:
 ```
 [TX] <action description>
 [TX] hash: <txHash>
-[TX] view: https://bscscan.com/tx/<txHash>
+[TX] view: https://basescan.org/tx/<txHash>
 [TX] confirmed ✓
 ```
 
@@ -292,7 +292,7 @@ Every write operation (S1-S3, M1-M4, G1-G2) must show a confirmation preview bef
 [<TAG>] About to <action description>:
         <param1>:   <value>
         <param2>:   <value>
-        gas est:    ~<amount> BNB
+        gas est:    ~<amount> ETH
         Proceed? (y/n)
 ```
 
@@ -359,7 +359,7 @@ Write actions (S/M/G sections) require the **AWP Wallet** skill.
    TOKEN=$(awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
    ```
 4. Pass `--token $TOKEN` to all awp-wallet commands and relay scripts
-5. All commands use `--chain bsc`.
+5. All commands use `--chain base`.
 6. Read-only Q/W actions do not need the wallet.
 
 When setting up the wallet for the first time, print progress:
@@ -376,12 +376,12 @@ Ready.
 
 Before bind/setRecipient/registerSubnet, check native balance:
 ```bash
-awp-wallet balance --token $TOKEN --chain bsc
+awp-wallet balance --token $TOKEN --chain base
 ```
 
 Print the routing decision:
 ```
-[GAS] BNB balance: <amount>
+[GAS] ETH balance: <amount>
 [GAS] routing: <direct / gasless relay>
 ```
 
@@ -415,7 +415,7 @@ AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
 # bind(address target) — selector 0x81bac14f
 TARGET_ADDR={addr}
 BIND_DATA="0x81bac14f$(python3 -c "print('${TARGET_ADDR#0x}'.lower().zfill(64))")"
-awp-wallet send --token $TOKEN --to $AWP_REGISTRY --data "$BIND_DATA" --chain bsc
+awp-wallet send --token $TOKEN --to $AWP_REGISTRY --data "$BIND_DATA" --chain base
 ```
 
 **Set recipient (on-chain, has gas):**
@@ -423,7 +423,7 @@ awp-wallet send --token $TOKEN --to $AWP_REGISTRY --data "$BIND_DATA" --chain bs
 # setRecipient(address) — selector 0x3bbed4a0
 RECIPIENT={addr}
 SET_DATA="0x3bbed4a0$(python3 -c "print('${RECIPIENT#0x}'.lower().zfill(64))")"
-awp-wallet send --token $TOKEN --to $AWP_REGISTRY --data "$SET_DATA" --chain bsc
+awp-wallet send --token $TOKEN --to $AWP_REGISTRY --data "$SET_DATA" --chain base
 ```
 
 **Gasless bind / set recipient (no gas):**
@@ -466,7 +466,7 @@ bash scripts/relay-start.sh --token $TOKEN --mode principal
 3. Wallet address?      → WALLET_ADDR=$(awp-wallet status --token $TOKEN | jq -r '.address')
 4. Registry fresh?      → REGISTRY=$(curl -s {API_BASE}/api/registry)
 5. Registration status? → curl -s {API_BASE}/api/address/$WALLET_ADDR/check
-6. Has gas?             → awp-wallet balance --token $TOKEN --chain bsc
+6. Has gas?             → awp-wallet balance --token $TOKEN --chain base
 ```
 
 ## Session State
@@ -475,7 +475,7 @@ Track these across the conversation:
 - `registered`: set to true after successful S1 — Pre-Flight step 5 can be skipped if true
 - `wallet_addr`: cache after first awp-wallet status call
 - `registry`: DO NOT cache. Always call `GET /registry` before each write action.
-- `has_gas`: cache BNB balance — re-check only if a tx fails with insufficient gas
+- `has_gas`: cache ETH balance — re-check only if a tx fails with insufficient gas
 - `ws_connected`: true after WebSocket connect — don't reconnect unless disconnected
 - `subscribed_events`: current WebSocket subscription — re-use for reconnection
 - `last_balance`: cache last balance query — show delta on changes
@@ -618,7 +618,7 @@ Print after deposit:
 [STAKE] deposited <amount> AWP → position #<tokenId>
 [STAKE] lock ends <date>
 [TX]    hash: <txHash>
-[TX]    view: https://bscscan.com/tx/<txHash>
+[TX]    view: https://basescan.org/tx/<txHash>
 [TX]    confirmed ✓
 ── balance updated ───────────────
 total staked:   <amount> AWP  (+<deposited>)
@@ -658,7 +658,7 @@ Print after registration:
 ```
 [SUBNET] registered subnet #<id> "<name>" ✓
 [SUBNET] alpha token: <address>
-[TX]     view: https://bscscan.com/tx/<txHash>
+[TX]     view: https://basescan.org/tx/<txHash>
 [NEXT]   Activate: say "activate subnet #<id>"
 ```
 
@@ -728,9 +728,9 @@ Print on connect:
 
 #### Display Examples
 ```
-$ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2025-12-01 | bscscan.com/tx/0xabc...
-# SubnetRegistered | #12 "DataMiner" by 0x5678...efgh | bscscan.com/tx/0xdef...
-~ EpochSettled | Epoch 42 | 15,800,000.0000 AWP to 150 recipients | bscscan.com/tx/0x123...
+$ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2025-12-01 | basescan.org/tx/0xabc...
+# SubnetRegistered | #12 "DataMiner" by 0x5678...efgh | basescan.org/tx/0xdef...
+~ EpochSettled | Epoch 42 | 15,800,000.0000 AWP to 150 recipients | basescan.org/tx/0x123...
 ```
 
 #### Monitor Statistics
@@ -774,4 +774,4 @@ Every 5 minutes during active monitoring, print:
 | Session expired | `[!] wallet session expired. re-unlocking...` | Auto re-unlock |
 | Wallet not found | `[!] wallet not found. initializing...` | Auto init + unlock |
 | WS disconnected | `[WATCH] disconnected. reconnecting...` | Backoff reconnect |
-| Relay 500 | `[!] relay server error. try again, or fund wallet with BNB for direct tx.` | Suggest alternative |
+| Relay 500 | `[!] relay server error. try again, or fund wallet with ETH for direct tx.` | Suggest alternative |

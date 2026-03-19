@@ -141,12 +141,12 @@ VANITY=$(curl -s -X POST {API_BASE}/api/vanity/compute-salt)
 SALT=$(echo $VANITY | jq -r '.salt')  # or use 0x0000...0000 for auto-salt
 
 # Step 1: Approve AWP to AWPRegistry for LP cost
-awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $AWP_REGISTRY --amount {lpCostHuman} --chain bsc
+awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $AWP_REGISTRY --amount {lpCostHuman} --chain base
 
 # Step 2: Register subnet (SubnetParams encoded as tuple)
 # params: (name, symbol, subnetManager, salt, minStake, skillsUri)
 # subnetManager = 0x0000...0000 for auto-deploy SubnetManager proxy
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "registerSubnet((string,string,address,bytes32,uint128,string))" "({name},{symbol},0x0000000000000000000000000000000000000000,$SALT,{minStakeWei},{skillsUri})") --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "registerSubnet((string,string,address,bytes32,uint128,string))" "({name},{symbol},0x0000000000000000000000000000000000000000,$SALT,{minStakeWei},{skillsUri})") --chain base
 ```
 
 ### Gasless Subnet Registration — EIP-712 Template
@@ -309,9 +309,9 @@ Always check current status via `GET /subnets/{id}` before calling.
 ### Complete Command Templates
 
 ```bash
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "activateSubnet(uint256)" {subnetId}) --chain bsc
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "pauseSubnet(uint256)" {subnetId}) --chain bsc
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "resumeSubnet(uint256)" {subnetId}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "activateSubnet(uint256)" {subnetId}) --chain base
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "pauseSubnet(uint256)" {subnetId}) --chain base
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "resumeSubnet(uint256)" {subnetId}) --chain base
 ```
 
 ---
@@ -331,7 +331,7 @@ function setSkillsURI(uint256 tokenId, string skillsURI)   // on SubnetNFT
 
 ```bash
 # SUBNET_NFT from GET /registry -> subnetNFT
-awp-wallet send --token {T} --to $SUBNET_NFT --data $(cast calldata "setSkillsURI(uint256,string)" {subnetId} "{skillsURI}") --chain bsc
+awp-wallet send --token {T} --to $SUBNET_NFT --data $(cast calldata "setSkillsURI(uint256,string)" {subnetId} "{skillsURI}") --chain base
 ```
 
 ---
@@ -351,5 +351,5 @@ function setMinStake(uint256 tokenId, uint128 minStake)   // on SubnetNFT
 
 ```bash
 # SUBNET_NFT from GET /registry -> subnetNFT
-awp-wallet send --token {T} --to $SUBNET_NFT --data $(cast calldata "setMinStake(uint256,uint128)" {subnetId} {minStakeWei}) --chain bsc
+awp-wallet send --token {T} --to $SUBNET_NFT --data $(cast calldata "setMinStake(uint256,uint128)" {subnetId} {minStakeWei}) --chain base
 ```

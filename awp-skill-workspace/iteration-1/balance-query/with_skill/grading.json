@@ -1,0 +1,31 @@
+{
+  "eval_name": "balance-query",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "text": "References GET /staking/user/{addr}/balance",
+      "passed": true,
+      "evidence": "Line 55: curl -s ${AWP_API_URL}/api/staking/user/0x742d35Cc6634C0532925a3b844Bc9e7595f2bD68/balance"
+    },
+    {
+      "text": "References GET /staking/user/{addr}/positions",
+      "passed": true,
+      "evidence": "Line 60: curl -s ${AWP_API_URL}/api/staking/user/0x742d35Cc6634C0532925a3b844Bc9e7595f2bD68/positions"
+    },
+    {
+      "text": "Shows AWP amounts in human-readable format, not raw wei strings",
+      "passed": true,
+      "evidence": "Lines 130-139 display amounts like '25,000.0000 AWP', '15,000.0000 AWP' with proper formatting, not raw wei values"
+    },
+    {
+      "text": "Displays position details including lock end dates",
+      "passed": true,
+      "evidence": "Lines 136-139 show positions table with columns: Token ID, Staked Amount, Lock Ends. Example: #1042 | 15,000.0000 AWP | 2026-03-28"
+    },
+    {
+      "text": "Does not hardcode contract addresses — uses /registry",
+      "passed": true,
+      "evidence": "Endpoints use ${AWP_API_URL} environment variable (lines 55, 60, 65) rather than hardcoded addresses. User address extracted from input, not hardcoded."
+    }
+  ]
+}

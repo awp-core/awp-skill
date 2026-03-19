@@ -17,7 +17,7 @@
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
-RPC_URL="${BSC_RPC_URL:-https://bsc-dataseed.binance.org}"
+RPC_URL="${BASE_RPC_URL:-https://mainnet.base.org}"
 CHAIN_ID=""
 TOKEN=""
 MODE=""
@@ -240,13 +240,9 @@ else
 EIPJSON
 )
 
-  if [[ "$API_VERSION" == "v2" ]]; then
-    RELAY_ENDPOINT="$API_BASE/relay/bind"
-    RELAY_BODY="{\"user\": \"$WALLET_ADDR\", \"target\": \"$TARGET\", \"deadline\": $DEADLINE, \"signature\": \"__SIG__\"}"
-  else
-    RELAY_ENDPOINT="$API_BASE/relay/bind"
-    RELAY_BODY="{\"agent\": \"$WALLET_ADDR\", \"principal\": \"$TARGET\", \"deadline\": $DEADLINE, \"signature\": \"__SIG__\"}"
-  fi
+  # API accepts {agent, target} for relay/bind (confirmed by testing)
+  RELAY_ENDPOINT="$API_BASE/relay/bind"
+  RELAY_BODY="{\"agent\": \"$WALLET_ADDR\", \"target\": \"$TARGET\", \"deadline\": $DEADLINE, \"signature\": \"__SIG__\"}"
 fi
 
 # Sign

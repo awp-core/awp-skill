@@ -48,7 +48,7 @@ ALLOCATE_WEI=$(python3 -c "print(int(float('$ALLOCATE_AMOUNT') * 10**18))")
 
 # Step 1: Approve AWP to AWP_REGISTRY (NOT StakeNFT — registerAndStake pulls tokens via AWPRegistry)
 echo '{"step": "approve", "spender": "'"$AWP_REGISTRY"'", "note": "Approve target is AWP_REGISTRY, NOT StakeNFT", "amount": "'"$AMOUNT"' AWP"}' >&2
-awp-wallet approve --token "$TOKEN" --asset "$AWP_TOKEN" --spender "$AWP_REGISTRY" --amount "$AMOUNT" --chain bsc
+awp-wallet approve --token "$TOKEN" --asset "$AWP_TOKEN" --spender "$AWP_REGISTRY" --amount "$AMOUNT" --chain base
 
 # Step 2: registerAndStake(uint256 depositAmount, uint64 lockDuration, address agent, uint256 subnetId, uint256 allocateAmount)
 # selector = keccak256("registerAndStake(uint256,uint64,address,uint256,uint256)")[:4] = 0x34426564
@@ -69,4 +69,4 @@ print(selector
 ")
 
 echo '{"step": "registerAndStake", "to": "'"$AWP_REGISTRY"'", "deposit_amount_wei": "'"$AMOUNT_WEI"'", "lock_seconds": '"$LOCK_SECONDS"', "agent": "'"$AGENT"'", "subnet": '"$SUBNET"', "allocate_amount_wei": "'"$ALLOCATE_WEI"'"}' >&2
-awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "$CALLDATA" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "$CALLDATA" --chain base

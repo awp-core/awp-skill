@@ -7,7 +7,7 @@
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
-RPC_URL="${RPC_URL:-https://bsc-dataseed.binance.org}"
+RPC_URL="${RPC_URL:-https://mainnet.base.org}"
 TOKEN=""
 PROPOSAL=""
 SUPPORT=""
@@ -146,4 +146,4 @@ case "$SUPPORT" in
 esac
 
 echo '{"step": "castVote", "proposalId": '"$PROPOSAL"', "support": "'"$SUPPORT_LABEL"'", "reason": "'"$REASON"'", "dao": "'"$DAO_ADDR"'"}' >&2
-awp-wallet send --token "$TOKEN" --to "$DAO_ADDR" --data "$CALLDATA" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$DAO_ADDR" --data "$CALLDATA" --chain base

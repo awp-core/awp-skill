@@ -187,7 +187,7 @@ Check registration status for any address.
 
 | Constant | Value |
 |----------|-------|
-| Chain | EVM chain (configured at deployment) |
+| Chain | Base (EVM, Chain ID 8453) |
 | Epoch Duration | 1 day (86,400 seconds) |
 | Initial Daily Emission | 15,800,000 AWP |
 | Decay Factor | 0.996844 per epoch (~0.3156% daily decay) |

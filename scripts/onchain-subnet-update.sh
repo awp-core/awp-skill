@@ -67,4 +67,4 @@ elif [[ -n "$MIN_STAKE" ]]; then
   echo '{"step": "setMinStake", "subnet": '"$SUBNET"', "minStake": "'"$MIN_STAKE"'", "target": "SubnetNFT ('"$SUBNET_NFT"')"}' >&2
 fi
 
-awp-wallet send --token "$TOKEN" --to "$SUBNET_NFT" --data "$CALLDATA" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$SUBNET_NFT" --data "$CALLDATA" --chain base

@@ -29,4 +29,4 @@ RECIPIENT=$(echo "$CHECK" | jq -r '.recipient // empty' 2>/dev/null)
 [[ "$IS_REGISTERED" == "true" ]] && { echo '{"status": "already_registered", "address": "'"$WALLET_ADDR"'", "recipient": "'"$RECIPIENT"'"}'; exit 0; }
 
 # register() selector = 0x1aa3a008
-awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "0x1aa3a008" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "0x1aa3a008" --chain base

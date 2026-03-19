@@ -59,4 +59,4 @@ SUBNET_PADDED=$(python3 -c "print(hex($SUBNET)[2:].zfill(64))")
 CALLDATA="${SELECTOR}${SUBNET_PADDED}"
 
 echo '{"step": "'"$ACTION"'Subnet", "subnet": '"$SUBNET"', "currentStatus": "'"$STATUS"'"}' >&2
-awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "$CALLDATA" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "$CALLDATA" --chain base

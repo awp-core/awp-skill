@@ -5,7 +5,7 @@
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
-RPC_URL="${BSC_RPC_URL:-https://bsc-dataseed.binance.org}"
+RPC_URL="${BASE_RPC_URL:-https://mainnet.base.org}"
 TOKEN=""
 POSITION=""
 AMOUNT=""
@@ -111,7 +111,7 @@ AMOUNT_WEI=$(python3 -c "print(int(float('$AMOUNT') * 10**18))")
 
 # Step 4: Approve AWP to StakeNFT
 echo '{"step": "approve", "spender": "'"$STAKE_NFT"'", "amount": "'"$AMOUNT"' AWP"}' >&2
-awp-wallet approve --token "$TOKEN" --asset "$AWP_TOKEN" --spender "$STAKE_NFT" --amount "$AMOUNT" --chain bsc
+awp-wallet approve --token "$TOKEN" --asset "$AWP_TOKEN" --spender "$STAKE_NFT" --amount "$AMOUNT" --chain base
 
 # Step 5: Build calldata for addToPosition(uint256 tokenId, uint256 amount, uint64 newLockEndTime)
 # selector = keccak256("addToPosition(uint256,uint256,uint64)")[:4] = 0xd2845e7d
@@ -125,4 +125,4 @@ print(calldata)
 ")
 
 echo '{"step": "addToPosition", "tokenId": '"$POSITION"', "amount_wei": "'"$AMOUNT_WEI"'", "newLockEndTime": '"$NEW_LOCK_END"', "remainingTime": '"$REMAINING"'}' >&2
-awp-wallet send --token "$TOKEN" --to "$STAKE_NFT" --data "$ADD_DATA" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$STAKE_NFT" --data "$ADD_DATA" --chain base

@@ -1,0 +1,36 @@
+{
+  "eval_name": "gasless-subnet",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "text": "Reads commands-subnet.md reference file",
+      "passed": true,
+      "evidence": "Step 0 states 'Load `references/commands-subnet.md` — read the full M1-M4 command reference' and Step 2 confirms 'Per the Gas Routing section in SKILL.md'. Evaluation Checklist confirms 'YES — loaded `commands-subnet.md` as required by M1 in the intent routing table.'"
+    },
+    {
+      "text": "Uses bash scripts/relay-register-subnet.sh",
+      "passed": true,
+      "evidence": "Step 5 executes: 'bash scripts/relay-register-subnet.sh --token mytoken123 --name \"AlphaNet\" --symbol \"ANET\" --skills-uri \"ipfs://QmSkillsHash\"'. Evaluation Checklist confirms 'YES — invoked `bash scripts/relay-register-subnet.sh --token mytoken123 --name \"AlphaNet\" --symbol \"ANET\" --skills-uri \"ipfs://QmSkillsHash\"` directly.'"
+    },
+    {
+      "text": "Does NOT manually construct EIP-712 JSON",
+      "passed": true,
+      "evidence": "Step 5 explicitly states 'The agent delegates ALL EIP-712 construction and signing to the bundled script. The agent NEVER manually constructs EIP-712 JSON.' Step 2 emphasizes 'NEVER manually construct EIP-712 JSON — use the bundled script.' Evaluation Checklist confirms 'YES — all EIP-712 construction is handled inside the bundled script.'"
+    },
+    {
+      "text": "Passes --name AlphaNet --symbol ANET --skills-uri ipfs://QmSkillsHash",
+      "passed": true,
+      "evidence": "Step 5 shows the exact command: 'bash scripts/relay-register-subnet.sh --token mytoken123 --name \"AlphaNet\" --symbol \"ANET\" --skills-uri \"ipfs://QmSkillsHash\"' with all required flags and correct values."
+    },
+    {
+      "text": "Explains the LP cost for subnet registration",
+      "passed": true,
+      "evidence": "Step 3 explicitly informs: 'Registering a subnet requires an LP cost of `initialAlphaPrice x 100,000,000 AWP tokens` (100M alpha tokens minted at the initial alpha price)... The script will calculate the exact cost automatically by reading `initialAlphaPrice()` from the AWPRegistry contract on-chain.' Evaluation Checklist confirms 'YES — informed the user that subnet registration requires an LP cost.'"
+    },
+    {
+      "text": "Explains the two required signatures (permit + register)",
+      "passed": true,
+      "evidence": "Step 5 details both signatures: 'Constructs and signs the **ERC-2612 Permit** EIP-712 typed data (authorizes AWPRegistry to spend the LP cost in AWP)' and 'Constructs and signs the **RegisterSubnet** EIP-712 typed data (authorizes the subnet parameters...)' showing both permit and register signatures are required."
+    }
+  ]
+}

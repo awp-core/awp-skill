@@ -1,0 +1,22 @@
+[
+  {"query": "hey can you check how much AWP i have staked? my address is 0x742d35Cc6634C0532925a3b844Bc9e7595f2bD68 and i want to see all my positions and what's unallocated", "should_trigger": true},
+  {"query": "i want to stake 5000 AWP for 90 days, wallet is already unlocked. go ahead", "should_trigger": true},
+  {"query": "register a new subnet called DataMiner with symbol DMIN, i need the gasless option since i dont have BNB. also set skills uri to ipfs://QmHash123", "should_trigger": true},
+  {"query": "can you show me all active subnets on AWP? i want to find one that has a good skills file so i can start mining", "should_trigger": true},
+  {"query": "i need to allocate 2000 AWP from my stake to agent 0xABCD on subnet 3, my wallet token is tok123", "should_trigger": true},
+  {"query": "what's the current AWP emission rate? and show me the epoch history for the last 10 epochs", "should_trigger": true},
+  {"query": "i want to create a governance proposal on AWP to change the emission split. need to use my stakeNFT positions to meet the threshold", "should_trigger": true},
+  {"query": "set up delegated mining for me — i have a cold wallet as root and a hot wallet as agent. the agent needs to bind to my root address 0x1234 and i want to use the gasless relay since the agent has no BNB", "should_trigger": true},
+  {"query": "watch all staking events on AWP in real time — deposits, withdrawals, allocations. use the websocket connection", "should_trigger": true},
+  {"query": "i want to vote FOR proposal 42 on the AWP DAO using my position NFTs #1 and #7. show me how to encode the vote params correctly", "should_trigger": true},
+  {"query": "can you help me write a smart contract that implements ERC-721 staking with time-locked positions? i want something similar to how Uniswap V3 does LP NFTs", "should_trigger": false},
+  {"query": "i need to deploy a new ERC-20 token on BSC with a max supply of 10 billion. can you write the Solidity code and help me deploy it with hardhat?", "should_trigger": false},
+  {"query": "how do i set up a PancakeSwap V4 liquidity pool? i have two tokens and want to create a concentrated liquidity position", "should_trigger": false},
+  {"query": "can you explain how EIP-712 typed data signing works? i'm building a gasless relay for my own protocol and need to understand the domain separator and type hashes", "should_trigger": false},
+  {"query": "i'm trying to debug why my SubnetManager contract is reverting on the Merkle claim function. here's my test file, can you look at it?", "should_trigger": false},
+  {"query": "help me build a governance dashboard that shows proposal status and voting power. i'm using React and ethers.js. the DAO contract is already deployed at 0x1234", "should_trigger": false},
+  {"query": "i want to set up a cron job that monitors BSC blockchain events and sends Slack notifications when certain contract events fire. can you help with the node.js code?", "should_trigger": false},
+  {"query": "what's the best way to implement a staking rewards mechanism with decay? i'm designing tokenomics for a new project and want something like a half-life emission curve", "should_trigger": false},
+  {"query": "can you read my subnet_manager.sol file and audit it for security vulnerabilities? it's in the contracts/ directory", "should_trigger": false},
+  {"query": "i need to transfer my StakeNFT position to another wallet. the NFT is token ID 7 on BSC. how do i do a safe transfer?", "should_trigger": false}
+]

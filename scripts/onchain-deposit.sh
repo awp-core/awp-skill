@@ -30,11 +30,11 @@ LOCK_SECONDS=$(python3 -c "print(int(float('$LOCK_DAYS') * 86400))")
 
 # Step 1: Approve AWP to StakeNFT
 echo '{"step": "approve", "spender": "'"$STAKE_NFT"'", "amount": "'"$AMOUNT"' AWP"}' >&2
-awp-wallet approve --token "$TOKEN" --asset "$AWP_TOKEN" --spender "$STAKE_NFT" --amount "$AMOUNT" --chain bsc
+awp-wallet approve --token "$TOKEN" --asset "$AWP_TOKEN" --spender "$STAKE_NFT" --amount "$AMOUNT" --chain base
 
 # Step 2: Deposit
 # deposit(uint256,uint64) selector = 0x7d552ea6
 DEPOSIT_DATA=$(python3 -c "print('0x7d552ea6' + hex($AMOUNT_WEI)[2:].zfill(64) + hex($LOCK_SECONDS)[2:].zfill(64))")
 
 echo '{"step": "deposit", "amount_wei": "'"$AMOUNT_WEI"'", "lock_seconds": '"$LOCK_SECONDS"'}' >&2
-awp-wallet send --token "$TOKEN" --to "$STAKE_NFT" --data "$DEPOSIT_DATA" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$STAKE_NFT" --data "$DEPOSIT_DATA" --chain base

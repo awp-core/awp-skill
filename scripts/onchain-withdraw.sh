@@ -2,11 +2,11 @@
 # On-chain withdraw from expired StakeNFT position (V2)
 # withdraw(uint256 tokenId) — burns the position NFT, returns AWP
 # Usage: ./onchain-withdraw.sh --token <T> --position <tokenId>
-# Requires BNB for gas. Only callable when lock has expired (remainingTime == 0).
+# Requires ETH for gas. Only callable when lock has expired (remainingTime == 0).
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
-RPC_URL="${BSC_RPC_URL:-https://bsc-dataseed.binance.org}"
+RPC_URL="${BASE_RPC_URL:-https://mainnet.base.org}"
 TOKEN=""
 POSITION=""
 while [[ $# -gt 0 ]]; do
@@ -52,4 +52,4 @@ REMAINING=$(python3 -c "print(int('$REMAINING_HEX', 16))")
 CALLDATA="0x2e1a7d4d${POSITION_PADDED}"
 
 echo '{"step": "withdraw", "position": '"$POSITION"', "target": "'"$STAKE_NFT"'"}' >&2
-awp-wallet send --token "$TOKEN" --to "$STAKE_NFT" --data "$CALLDATA" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$STAKE_NFT" --data "$CALLDATA" --chain base

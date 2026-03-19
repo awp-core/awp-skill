@@ -32,4 +32,4 @@ IS_AGENT=$(echo "$CHECK" | jq -r '.isRegisteredAgent // false' 2>/dev/null)
 
 # bind(address) selector = 0x81bac14f + ABI-encoded address
 ADDR_PADDED=$(python3 -c "print('${TARGET#0x}'.lower().zfill(64))")
-awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "0x81bac14f${ADDR_PADDED}" --chain bsc
+awp-wallet send --token "$TOKEN" --to "$AWP_REGISTRY" --data "0x81bac14f${ADDR_PADDED}" --chain base

@@ -13,7 +13,7 @@
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
-RPC_URL="${BSC_RPC_URL:-https://bsc-dataseed.binance.org}"
+RPC_URL="${BASE_RPC_URL:-https://mainnet.base.org}"
 CHAIN_ID=""
 TOKEN=""
 NAME=""
