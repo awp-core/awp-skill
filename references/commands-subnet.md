@@ -1,6 +1,6 @@
 # AWP Subnet Commands
 
-**API Base URL**: `https://tapi.awp.sh/api`
+**API Base URL**: `{API_BASE}/api` (deployment-specific — do not hardcode)
 
 > **Note**: On-chain command templates below use `cast` (Foundry) for calldata encoding.
 > For gasless operations, use the bundled scripts instead — they require only curl+jq+python3.
@@ -9,9 +9,8 @@
 ## Setup (run once per session)
 
 ```bash
-REGISTRY=$(curl -s {API_BASE}/registry)
-CHAIN_ID=$(echo $REGISTRY | jq -r '.chainId')
-ROOT_NET=$(echo $REGISTRY | jq -r '.rootNet')
+REGISTRY=$(curl -s {API_BASE}/api/registry)
+AWP_REGISTRY=$(echo $REGISTRY | jq -r '.awpRegistry')
 AWP_TOKEN=$(echo $REGISTRY | jq -r '.awpToken')
 STAKE_NFT=$(echo $REGISTRY | jq -r '.stakeNFT')
 SUBNET_NFT=$(echo $REGISTRY | jq -r '.subnetNFT')
@@ -27,12 +26,12 @@ WALLET_ADDR=$(awp-wallet status --token {T} | jq -r '.address')
 ### LP Cost Calculation
 
 ```solidity
-function initialAlphaPrice() view returns (uint256)   // on RootNet
+function initialAlphaPrice() view returns (uint256)   // on AWPRegistry
 // INITIAL_ALPHA_MINT = 100,000,000 x 10^18
 // lpCost = INITIAL_ALPHA_MINT x initialAlphaPrice / 10^18
 ```
 
-### SubnetParams Struct
+### SubnetParams Struct (6 fields — skillsURI is back!)
 
 ```solidity
 struct SubnetParams {
@@ -41,6 +40,7 @@ struct SubnetParams {
     address subnetManager;     // address(0) = auto-deploy SubnetManager proxy
     bytes32 salt;              // CREATE2 salt; bytes32(0) = use subnetId as salt
     uint128 minStake;          // Minimum stake for agents (0 = no minimum)
+    string skillsURI;          // Skills file URI (IPFS/HTTPS)
 }
 ```
 
@@ -49,16 +49,16 @@ struct SubnetParams {
 ### Contract Calls
 
 ```solidity
-// Step 1: Approve AWP to RootNet (NOT StakeNFT)
+// Step 1: Approve AWP to AWPRegistry (NOT StakeNFT)
 function approve(address spender, uint256 amount) returns (bool)   // on AWPToken
-// spender = rootNet address
+// spender = awpRegistry address
 
 // Step 2: Register subnet (after approve receipt)
-function registerSubnet(SubnetParams params) returns (uint256 subnetId)   // on RootNet
+function registerSubnet(SubnetParams params) returns (uint256 subnetId)   // on AWPRegistry
 // params.salt = bytes32(0) uses subnetId as CREATE2 salt
 // params.subnetManager = address(0) auto-deploys SubnetManager proxy
 
-// Gasless (requires prior AWP approve to RootNet)
+// Gasless (requires prior AWP approve to AWPRegistry)
 function registerSubnetFor(address user, SubnetParams params, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
 
 // Fully gasless (ERC-2612 permit + EIP-712 — no prior approve needed)
@@ -90,9 +90,12 @@ POST /vanity/compute-salt
 
 Use the returned `salt` as `SubnetParams.salt` in `registerSubnet()` to deploy the Alpha token at the vanity address. `source` is `"pool"` (from pre-mined salt pool) or `"mined"` (real-time mining fallback).
 
+> Rate limit: compute-salt **20 requests per IP per hour**; upload-salts **5 requests per IP per hour**.
+
 | Code | Body | Meaning |
 |------|------|---------|
 | 408 | `{"error": "search timed out..."}` | No match found within 120s timeout |
+| 429 | `{"error": "rate limit exceeded"}` | IP rate limit exceeded |
 | 500 | `{"error": "..."}` | Mining engine error |
 
 ### Vanity Salt Pool System
@@ -134,26 +137,26 @@ GET /vanity/salts/count
 
 ```bash
 # Optional: get vanity salt first
-VANITY=$(curl -s -X POST {API_BASE}/vanity/compute-salt)
+VANITY=$(curl -s -X POST {API_BASE}/api/vanity/compute-salt)
 SALT=$(echo $VANITY | jq -r '.salt')  # or use 0x0000...0000 for auto-salt
 
-# Step 1: Approve AWP to RootNet for LP cost
-awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $ROOT_NET --amount {lpCostHuman} --chain bsc
+# Step 1: Approve AWP to AWPRegistry for LP cost
+awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $AWP_REGISTRY --amount {lpCostHuman} --chain bsc
 
 # Step 2: Register subnet (SubnetParams encoded as tuple)
-# params: (name, symbol, subnetManager, salt, minStake)
+# params: (name, symbol, subnetManager, salt, minStake, skillsUri)
 # subnetManager = 0x0000...0000 for auto-deploy SubnetManager proxy
-awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "registerSubnet((string,string,address,bytes32,uint128))" "({name},{symbol},0x0000000000000000000000000000000000000000,$SALT,{minStakeWei})") --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "registerSubnet((string,string,address,bytes32,uint128,string))" "({name},{symbol},0x0000000000000000000000000000000000000000,$SALT,{minStakeWei},{skillsUri})") --chain bsc
 ```
 
 ### Gasless Subnet Registration — EIP-712 Template
 
 For fully gasless registration via `POST /relay/register-subnet`, the user signs two messages:
 
-**1. ERC-2612 Permit signature** (authorizes RootNet to spend AWP):
+**1. ERC-2612 Permit signature** (authorizes AWPRegistry to spend AWP):
 ```bash
 # Get permit nonce
-PERMIT_NONCE=$(cast call $AWP_TOKEN "nonces(address)" $WALLET_ADDR --rpc-url https://bsc-dataseed.binance.org | cast --to-dec)
+PERMIT_NONCE=$(cast call $AWP_TOKEN "nonces(address)" $WALLET_ADDR --rpc-url $RPC_URL | cast --to-dec)
 DEADLINE=$(date -d '+1 hour' +%s)
 
 awp-wallet sign-typed-data --token {T} --data '{
@@ -181,8 +184,8 @@ awp-wallet sign-typed-data --token {T} --data '{
   },
   "message": {
     "owner": "'$WALLET_ADDR'",
-    "spender": "'$ROOT_NET'",
-    "value": "'$LP_COST_WEI'",
+    "spender": "'$AWP_REGISTRY'",
+    "value": '$LP_COST_WEI',
     "nonce": '$PERMIT_NONCE',
     "deadline": '$DEADLINE'
   }
@@ -191,8 +194,8 @@ awp-wallet sign-typed-data --token {T} --data '{
 
 **2. EIP-712 RegisterSubnet signature** (authorizes registration parameters):
 ```bash
-# Get RootNet nonce
-NONCE=$(cast call $ROOT_NET "nonces(address)" $WALLET_ADDR --rpc-url https://bsc-dataseed.binance.org | cast --to-dec)
+# Get AWPRegistry nonce
+NONCE=$(cast call $AWP_REGISTRY "nonces(address)" $WALLET_ADDR --rpc-url $RPC_URL | cast --to-dec)
 
 awp-wallet sign-typed-data --token {T} --data '{
   "types": {
@@ -209,16 +212,17 @@ awp-wallet sign-typed-data --token {T} --data '{
       {"name": "subnetManager", "type": "address"},
       {"name": "salt", "type": "bytes32"},
       {"name": "minStake", "type": "uint128"},
+      {"name": "skillsURI", "type": "string"},
       {"name": "nonce", "type": "uint256"},
       {"name": "deadline", "type": "uint256"}
     ]
   },
   "primaryType": "RegisterSubnet",
   "domain": {
-    "name": "AWPRootNet",
+    "name": "AWPRegistry",
     "version": "1",
     "chainId": '$CHAIN_ID',
-    "verifyingContract": "'$ROOT_NET'"
+    "verifyingContract": "'$AWP_REGISTRY'"
   },
   "message": {
     "user": "'$WALLET_ADDR'",
@@ -227,6 +231,7 @@ awp-wallet sign-typed-data --token {T} --data '{
     "subnetManager": "0x0000000000000000000000000000000000000000",
     "salt": "'$SALT'",
     "minStake": {minStakeWei},
+    "skillsURI": "{skillsUri}",
     "nonce": '$NONCE',
     "deadline": '$DEADLINE'
   }
@@ -235,13 +240,14 @@ awp-wallet sign-typed-data --token {T} --data '{
 
 **3. Submit to relay:**
 ```bash
-curl -X POST {API_BASE}/relay/register-subnet \
+curl -X POST {API_BASE}/api/relay/register-subnet \
   -H "Content-Type: application/json" \
   -d '{
     "user": "'$WALLET_ADDR'",
     "name": "{subnetName}", "symbol": "{subnetSymbol}",
     "subnetManager": "0x0000000000000000000000000000000000000000",
-    "salt": "'$SALT'", "minStake": {minStakeWei},
+    "salt": "'$SALT'", "minStake": "{minStakeWei}",
+    "skillsUri": "{skillsUri}",
     "deadline": '$DEADLINE',
     "permitSignature": "{permitSigHex}",
     "registerSignature": "{registerSigHex}"
@@ -261,7 +267,7 @@ curl -X POST {API_BASE}/relay/register-subnet \
 | 400 | `{"error": "subnet manager address required (auto-deploy not available)"}` | No default SubnetManager impl set |
 | 400 | `{"error": "insufficient AWP balance"}` | User lacks AWP for subnet registration |
 | 400 | `{"error": "insufficient AWP allowance"}` | Permit signature did not authorize enough AWP |
-| 400 | `{"error": "contract is paused"}` | RootNet is in emergency pause state |
+| 400 | `{"error": "contract is paused"}` | AWPRegistry is in emergency pause state |
 | 400 | `{"error": "relay transaction failed"}` | Unrecognized on-chain revert |
 | 429 | `{"error": "rate limit exceeded: max 100 requests per 3600s"}` | IP rate limit exceeded |
 
@@ -279,12 +285,33 @@ function resumeSubnet(uint256 subnetId)     // Paused -> Active, NFT owner only
 
 Always check current status via `GET /subnets/{id}` before calling.
 
+### Subnet REST Response
+
+```json
+{
+  "subnet_id": 1,
+  "owner": "0x...",
+  "name": "My Subnet",
+  "symbol": "MSUB",
+  "subnet_contract": "0x...",
+  "skills_uri": "ipfs://QmSkills...",
+  "alpha_token": "0x...",
+  "lp_pool": "0x...",
+  "status": "Active",
+  "created_at": 1710000000,
+  "activated_at": 1710000100,
+  "min_stake": 0,
+  "immunity_ends_at": null,
+  "burned": false
+}
+```
+
 ### Complete Command Templates
 
 ```bash
-awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "activateSubnet(uint256)" {subnetId}) --chain bsc
-awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "pauseSubnet(uint256)" {subnetId}) --chain bsc
-awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "resumeSubnet(uint256)" {subnetId}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "activateSubnet(uint256)" {subnetId}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "pauseSubnet(uint256)" {subnetId}) --chain bsc
+awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "resumeSubnet(uint256)" {subnetId}) --chain bsc
 ```
 
 ---

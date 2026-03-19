@@ -1,16 +1,16 @@
-# AWP RootNet Skill
+# AWP Skill
 
 [![Skill Compatible](https://img.shields.io/badge/Skill-Compatible-blue)](https://openclaw.ai)
 [![BSC Mainnet](https://img.shields.io/badge/BSC-Mainnet-yellow)](https://bscscan.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-**Skill for interacting with the AWP RootNet protocol on BSC.** Query protocol state, register and bind agents, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
+**Skill for interacting with the AWP protocol on BSC.** Query protocol state, bind and delegate, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
 
 ## Overview
 
-AWP RootNet is a decentralized **Agent Working** protocol on BNB Smart Chain (BSC). Agents register on subnets, execute tasks for subnet coordinators, and earn AWP token emissions as rewards. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
+AWP is a decentralized **Agent Working** protocol on BNB Smart Chain (BSC). Users bind to a tree-based hierarchy, stake AWP via position NFTs, allocate to agents on subnets, and earn emissions. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
-This repository is a single skill with **20 actions** covering Query, Staking, Subnet Management, Governance, and real-time WebSocket Monitoring (27 event types).
+This repository is a single skill with **20 actions** covering Query, Staking, Subnet Management, Governance, and real-time WebSocket Monitoring (26 event types).
 
 ## Quick Install
 
@@ -28,7 +28,7 @@ The skill automatically installs the [AWP Wallet](https://github.com/awp-core/aw
 | Q1 | Query Subnet | Get subnet info by ID (name, status, owner, alpha token, skills URI, min stake) |
 | Q2 | Query Balance | Full staking overview — positions, allocations, unallocated balance |
 | Q3 | Query Emission [DRAFT] | Current epoch, daily emission rate, decay projections (30/90/365 days) |
-| Q4 | Query Agent | Agent info by subnet — stake, owner, reward recipient |
+| Q4 | Query Agent | Agent info by subnet — stake, binding, reward recipient |
 | Q5 | List Subnets | Browse active subnets with pagination, flag those with published skills |
 | Q6 | Install Subnet Skill | Fetch a subnet's SKILL.md and install it for the agent to use |
 | Q7 | Epoch History [DRAFT] | Historical epoch settlements with emission amounts |
@@ -36,8 +36,8 @@ The skill automatically installs the [AWP Wallet](https://github.com/awp-core/aw
 #### Staking (wallet required)
 | ID | Action | Description |
 |----|--------|-------------|
-| S1 | Register & Bind | Register as Principal or bind as Agent. Supports gasless via EIP-712 relay. |
-| S2 | Deposit AWP | Mint StakeNFT position with time-based lock. Approve → deposit flow. |
+| S1 | Bind & Set Recipient | Tree-based binding or set reward recipient. Supports gasless via EIP-712 relay. |
+| S2 | Deposit AWP | Mint StakeNFT position with time-based lock. Approve -> deposit flow. |
 | S3 | Allocate / Deallocate / Reallocate | Direct stake to agents on subnets. Reallocate is immediate, no cooldown. |
 
 #### Subnet Management (wallet + SubnetNFT ownership)
@@ -59,18 +59,18 @@ The skill automatically installs the [AWP Wallet](https://github.com/awp-core/aw
 #### Monitor (real-time WebSocket, no wallet needed)
 | ID | Action | Description |
 |----|--------|-------------|
-| W1 | Watch Events | Subscribe to real-time events via WebSocket with 5 presets |
+| W1 | Watch Events | Subscribe to real-time events via WebSocket with 4 presets |
 | W2 | Emission Alert [DRAFT] | Get notified on epoch settlements with top earner ranking |
 
-### 27 Event Types (5 presets)
+### 26 Event Types (4 presets)
 
 | Preset | Events | Count |
 |--------|--------|-------|
 | `staking` | Deposited, Withdrawn, PositionIncreased, Allocated, Deallocated, Reallocated | 6 |
 | `subnets` | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, LPCreated, SkillsURIUpdated, MinStakeUpdated | 10 |
 | `emission` | EpochSettled, RecipientAWPDistributed, DAOMatchDistributed, GovernanceWeightUpdated, AllocationsSubmitted, OracleConfigUpdated | 6 |
-| `users` | UserRegistered, AgentBound, AgentUnbound, AgentRemoved, DelegationUpdated | 5 |
-| `all` | All of the above | 27 |
+| `users` | Bound, RecipientUpdated, DelegateGranted, DelegateRevoked | 4 |
+| `all` | All of the above | 26 |
 
 ## Architecture
 
@@ -78,15 +78,15 @@ The skill automatically installs the [AWP Wallet](https://github.com/awp-core/aw
 awp-skill/
 ├── SKILL.md                                # Single skill file (20 actions)
 ├── references/
-│   ├── api-reference.md                    # Q1-Q7 REST endpoint index
+│   ├── api-reference.md                    # Q1-Q7 REST endpoint index + contract quick reference
 │   ├── commands-staking.md                 # S1-S3 command templates + EIP-712
 │   ├── commands-subnet.md                  # M1-M4 command templates + gasless
 │   ├── commands-governance.md              # G1-G4 commands + supplementary endpoints
-│   └── protocol.md                         # Shared structs, 27 events, constants
+│   └── protocol.md                         # Shared structs, 26 events, constants
 ├── scripts/
-│   ├── relay-start.sh                      # Gasless onboarding (register or bind)
-│   ├── relay-register-subnet.sh            # Gasless subnet registration
-│   ├── onchain-register.sh                 # On-chain register (has BNB)
+│   ├── relay-start.sh                      # Gasless onboarding (bind or set-recipient)
+│   ├── relay-register-subnet.sh            # Gasless subnet registration (dual signature)
+│   ├── onchain-register.sh                 # On-chain register (optional, has BNB)
 │   ├── onchain-bind.sh                     # On-chain bind (has BNB)
 │   ├── onchain-deposit.sh                  # On-chain deposit AWP (has BNB)
 │   └── onchain-allocate.sh                 # On-chain allocate stake (has BNB)
@@ -102,8 +102,8 @@ Three operations support fully gasless execution via EIP-712 signatures and rela
 
 | Operation | Relay Endpoint | Signatures |
 |-----------|---------------|------------|
-| User Registration | `POST /relay/register` | 1 (EIP-712 Register) |
-| Agent Binding | `POST /relay/bind` | 1 (EIP-712 Bind) |
+| Bind (tree-based) | `POST /relay/bind` | 1 (EIP-712 Bind) |
+| Set Recipient | `POST /relay/set-recipient` | 1 (EIP-712 SetRecipient) |
 | Subnet Registration | `POST /relay/register-subnet` | 2 (ERC-2612 Permit + EIP-712 RegisterSubnet) |
 
 Rate limit: 100 requests per IP per 1 hour across all relay endpoints.
@@ -114,26 +114,26 @@ The skill automatically checks BNB balance and routes to gasless relay when the 
 
 AWP supports two mining modes:
 
-### Principal Mode (self-managed)
-Own your funds, earn your own rewards.
+### Solo Mining
+One address handles everything — staking, mining, and earning. No mandatory registration needed.
 
 ```
 1. Install wallet skill
-2. register() — register as a self-managed Principal
-3. Discover active subnets → install subnet skill
-4. Deposit AWP → allocate to agent + subnet
-5. Execute tasks via subnet skill → earn emissions
+2. setRecipient(addr) — optional, only if you want rewards to a different address
+3. Discover active subnets -> install subnet skill
+4. Deposit AWP -> allocate to self + subnet
+5. Execute tasks via subnet skill -> earn emissions
 ```
 
-### Agent Mode (work for a Principal)
-Bind to someone else's account. They stake, you work.
+### Delegated Mining (tree-based binding)
+Two addresses with separated roles. Root manages funds (cold wallet), Agent executes tasks (hot wallet).
 
 ```
-1. Install wallet skill
-2. bind(ownerAddress) — auto-registers the owner if not yet registered
-3. Principal stakes + allocates
-4. Install subnet skill → execute tasks
-5. unbind() anytime to leave
+Root (cold wallet):                    Agent (hot wallet):
+1. setRecipient(addr) if needed        1. bind(rootAddress) — tree-based
+2. deposit AWP (S2)                    2. install subnet skill (Q6)
+3. allocate to Agent + subnet (S3)     3. execute tasks -> earn for Root
+4. grantDelegate(agent) if needed
 ```
 
 ## Key Protocol Details
@@ -154,18 +154,18 @@ Bind to someone else's account. They stake, you work.
 
 | Service | URL |
 |---------|-----|
-| REST API | `https://tapi.awp.sh/api` |
-| WebSocket | `wss://tapi.awp.sh/ws/live` |
+| REST API | Deployment-specific (`AWP_API_URL` env var) |
+| WebSocket | Deployment-specific (`wss://{API_HOST}/ws/live`) |
 | Health Check | `GET /health` |
-| Contract Registry | `GET /registry` (chainId + 11 addresses) |
+| Contract Registry | `GET /registry` (10 contract addresses) |
 
 ## Smart Contracts
 
 | Contract | Role |
 |----------|------|
-| **RootNet** | Unified entry point — registration, binding, allocation, subnet lifecycle |
+| **AWPRegistry** | Unified entry point — binding, delegation, allocation, subnet lifecycle |
 | **StakeNFT** | ERC721 position NFTs — deposit AWP with time-based lock |
-| **AWPEmission** | Emission engine — daily epoch settlement via oracle |
+| **AWPEmission** | Emission engine — daily epoch settlement via oracle [DRAFT] |
 | **StakingVault** | Pure allocation logic — allocate, deallocate, reallocate |
 | **SubnetNFT** | Subnet identity — on-chain name, skillsURI, minStake |
 | **SubnetManager** | Auto-deployed per subnet — Merkle distribution + AWP strategies |
@@ -188,6 +188,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 1.8.0 | V2 API overhaul: AWPRegistry (renamed from RootNet), Account System V2 (tree-based binding, grantDelegate/revokeDelegate, no mandatory registration), 26 events, SubnetParams 6 fields (skillsURI added back), EIP-712 domain "AWPRegistry", deployment-agnostic URLs |
 | 1.7.0 | Anti-hallucination: on-chain scripts (register/bind/deposit/allocate), pre-flight checklist, DO NOT list, fixed bind selector 0x81bac14f, dynamic chainId |
 | 1.6.1 | Remove cast/foundry dependency from scripts, remove evals/dev files from install, dev branch separation |
 | 1.6.0 | Bundled gasless relay scripts, file structure map, enforce script usage over manual EIP-712, no-cache contract addresses |
@@ -195,7 +196,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 | 1.4.0 | Merged awp + awp-monitor into single skill. SKILL.md at repo root for one-command install. |
 | 1.3.0 | Split api-reference into focused command files, inline high-frequency commands, session state tracking, response format templates, auto-retry on 429 |
 | 1.2.0 | On Skill Load protocol, intent routing with reference file mapping, version check mechanism |
-| 1.1.0 | Welcome messages, executable command templates, EIP-712 JSON templates with AWPRootNet domain |
+| 1.1.0 | Welcome messages, executable command templates, EIP-712 JSON templates |
 | 1.0.0 | Initial release — 21 actions + 28 event types |
 
 ## Contributing

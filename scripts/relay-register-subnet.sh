@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Fully gasless subnet registration via dual EIP-712 signatures
+# Fully gasless subnet registration via dual EIP-712 signatures (V2)
 # Usage: ./relay-register-subnet.sh --token <session_token> --name <name> --symbol <sym> [options]
 #
 # Required: --token, --name, --symbol
-# Optional: --salt <hex>, --min-stake <wei>, --subnet-manager <address>
+# Optional: --salt <hex>, --min-stake <wei>, --subnet-manager <address>, --skills-uri <uri>
 #
 # --token is the awp-wallet session token from `awp-wallet unlock`.
 # The agent manages the wallet password and provides the token.
@@ -21,6 +21,7 @@ SYMBOL=""
 SALT="0x0000000000000000000000000000000000000000000000000000000000000000"
 MIN_STAKE=0
 SUBNET_MANAGER="0x0000000000000000000000000000000000000000"
+SKILLS_URI=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -30,6 +31,7 @@ while [[ $# -gt 0 ]]; do
     --salt) SALT="$2"; shift 2 ;;
     --min-stake) MIN_STAKE="$2"; shift 2 ;;
     --subnet-manager) SUBNET_MANAGER="$2"; shift 2 ;;
+    --skills-uri) SKILLS_URI="$2"; shift 2 ;;
     --api) API_BASE="$2"; shift 2 ;;
     --rpc) RPC_URL="$2"; shift 2 ;;
     *) echo '{"error": "Unknown arg: '"$1"'"}' >&2; exit 1 ;;
@@ -39,6 +41,7 @@ done
 [[ -z "$TOKEN" || -z "$NAME" || -z "$SYMBOL" ]] && {
   echo '{"error": "Missing required: --token, --name, --symbol"}' >&2; exit 1
 }
+[[ "$MIN_STAKE" =~ ^[0-9]+$ ]] || { echo '{"error": "Invalid --min-stake: must be a non-negative integer (wei)"}' >&2; exit 1; }
 
 eth_call() {
   local to="$1" data="$2"
@@ -46,14 +49,22 @@ eth_call() {
     -d '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"'"$to"'","data":"'"$data"'"},"latest"],"id":1}' | jq -r '.result'
 }
 
-hex_to_dec() { python3 -c "print(int('$1', 16))"; }
+hex_to_dec() {
+  local val="$1"
+  [[ -z "$val" || "$val" == "null" || "$val" == "0x" ]] && { echo '{"error": "RPC returned empty/null value"}' >&2; exit 1; }
+  python3 -c "print(int('$val', 16))"
+}
 
 # Step 1: Fetch registry (fresh, never cached)
 REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
-echo "$REGISTRY" | jq -e '.rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
-ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
-CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId // 56')
+echo "$REGISTRY" | jq -e '.awpRegistry' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
+
+# Get chainId from RPC (not in /registry response)
+CHAIN_ID_HEX=$(curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' | jq -r '.result')
+CHAIN_ID=$(hex_to_dec "$CHAIN_ID_HEX")
 
 # Step 2: Get wallet address
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address') || {
@@ -63,8 +74,11 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address') || {
   echo '{"error": "Wallet address is empty — token may be expired"}' >&2; exit 1
 }
 
-# Step 3: Get initialAlphaPrice — selector = 0x8a5c7899
-PRICE_HEX=$(eth_call "$ROOT_NET" "0x8a5c7899")
+# Step 3: Get initialAlphaPrice — selector = 0x6d345eea
+PRICE_HEX=$(eth_call "$AWP_REGISTRY" "0x6d345eea")
+[[ -z "$PRICE_HEX" || "$PRICE_HEX" == "0x" || "$PRICE_HEX" == "null" ]] && {
+  echo '{"error": "initialAlphaPrice() returned empty — is AWP_REGISTRY correct?"}' >&2; exit 1
+}
 INITIAL_ALPHA_PRICE=$(hex_to_dec "$PRICE_HEX")
 
 # LP_COST = 100M * 10^18 * initialAlphaPrice / 10^18
@@ -73,9 +87,9 @@ LP_COST=$(python3 -c "print(100_000_000 * 10**18 * $INITIAL_ALPHA_PRICE // 10**1
 # Step 4: Get nonces
 ADDR_PADDED=$(python3 -c "print('${WALLET_ADDR#0x}'.lower().zfill(64))")
 
-# RootNet nonce (for RegisterSubnet signature)
-ROOTNET_NONCE_HEX=$(eth_call "$ROOT_NET" "0x7ecebe00${ADDR_PADDED}")
-ROOTNET_NONCE=$(hex_to_dec "$ROOTNET_NONCE_HEX")
+# AWPRegistry nonce (for RegisterSubnet signature)
+REGISTRY_NONCE_HEX=$(eth_call "$AWP_REGISTRY" "0x7ecebe00${ADDR_PADDED}")
+REGISTRY_NONCE=$(hex_to_dec "$REGISTRY_NONCE_HEX")
 
 # AWPToken permit nonce (for ERC-2612 Permit signature)
 PERMIT_NONCE_HEX=$(eth_call "$AWP_TOKEN" "0x7ecebe00${ADDR_PADDED}")
@@ -111,7 +125,7 @@ PERMIT_DATA=$(cat <<EIPJSON
   },
   "message": {
     "owner": "$WALLET_ADDR",
-    "spender": "$ROOT_NET",
+    "spender": "$AWP_REGISTRY",
     "value": $LP_COST,
     "nonce": $PERMIT_NONCE,
     "deadline": $DEADLINE
@@ -125,7 +139,7 @@ PERMIT_SIG=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$PERMIT_DATA") 
 }
 PERMIT_SIGNATURE=$(echo "$PERMIT_SIG" | jq -r '.signature')
 
-# Step 7: Sign EIP-712 RegisterSubnet
+# Step 7: Sign EIP-712 RegisterSubnet (V2 includes skillsURI field)
 REGISTER_DATA=$(cat <<EIPJSON
 {
   "types": {
@@ -142,16 +156,17 @@ REGISTER_DATA=$(cat <<EIPJSON
       {"name": "subnetManager", "type": "address"},
       {"name": "salt", "type": "bytes32"},
       {"name": "minStake", "type": "uint128"},
+      {"name": "skillsURI", "type": "string"},
       {"name": "nonce", "type": "uint256"},
       {"name": "deadline", "type": "uint256"}
     ]
   },
   "primaryType": "RegisterSubnet",
   "domain": {
-    "name": "AWPRootNet",
+    "name": "AWPRegistry",
     "version": "1",
     "chainId": $CHAIN_ID,
-    "verifyingContract": "$ROOT_NET"
+    "verifyingContract": "$AWP_REGISTRY"
   },
   "message": {
     "user": "$WALLET_ADDR",
@@ -160,7 +175,8 @@ REGISTER_DATA=$(cat <<EIPJSON
     "subnetManager": "$SUBNET_MANAGER",
     "salt": "$SALT",
     "minStake": $MIN_STAKE,
-    "nonce": $ROOTNET_NONCE,
+    "skillsURI": "$SKILLS_URI",
+    "nonce": $REGISTRY_NONCE,
     "deadline": $DEADLINE
   }
 }
@@ -172,20 +188,23 @@ REGISTER_SIG=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$REGISTER_DAT
 }
 REGISTER_SIGNATURE=$(echo "$REGISTER_SIG" | jq -r '.signature')
 
-# Step 8: Submit to relay
+# Step 8: Submit to relay (use jq to safely encode user strings)
+RELAY_BODY=$(jq -n \
+  --arg user "$WALLET_ADDR" \
+  --arg name "$NAME" \
+  --arg symbol "$SYMBOL" \
+  --arg subnetManager "$SUBNET_MANAGER" \
+  --arg salt "$SALT" \
+  --argjson minStake "$MIN_STAKE" \
+  --arg skillsUri "$SKILLS_URI" \
+  --argjson deadline "$DEADLINE" \
+  --arg permitSignature "$PERMIT_SIGNATURE" \
+  --arg registerSignature "$REGISTER_SIGNATURE" \
+  '{user:$user,name:$name,symbol:$symbol,subnetManager:$subnetManager,salt:$salt,minStake:$minStake,skillsUri:$skillsUri,deadline:$deadline,permitSignature:$permitSignature,registerSignature:$registerSignature}')
+
 RELAY_RESULT=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/relay/register-subnet" \
   -H "Content-Type: application/json" \
-  -d "{
-    \"user\": \"$WALLET_ADDR\",
-    \"name\": \"$NAME\",
-    \"symbol\": \"$SYMBOL\",
-    \"subnetManager\": \"$SUBNET_MANAGER\",
-    \"salt\": \"$SALT\",
-    \"minStake\": \"$MIN_STAKE\",
-    \"deadline\": $DEADLINE,
-    \"permitSignature\": \"$PERMIT_SIGNATURE\",
-    \"registerSignature\": \"$REGISTER_SIGNATURE\"
-  }")
+  -d "$RELAY_BODY")
 
 HTTP_CODE=$(echo "$RELAY_RESULT" | tail -1)
 BODY=$(echo "$RELAY_RESULT" | sed '$d')

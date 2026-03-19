@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# On-chain deposit AWP to StakeNFT
+# On-chain deposit AWP to StakeNFT (V2)
 # Usage: ./onchain-deposit.sh --token <T> --amount <AWP_human> --lock-days <days>
 # Requires BNB for gas. Handles approve + deposit in sequence.
 set -euo pipefail
@@ -13,6 +13,10 @@ while [[ $# -gt 0 ]]; do
 done
 [[ -z "$TOKEN" || -z "$AMOUNT" || -z "$LOCK_DAYS" ]] && { echo '{"error": "Missing --token, --amount, --lock-days"}' >&2; exit 1; }
 
+# Validate numeric inputs BEFORE any on-chain calls (shell regex, no python injection risk)
+[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
+[[ "$LOCK_DAYS" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --lock-days: must be a positive number"}' >&2; exit 1; }
+
 # Pre-flight
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 [[ -z "$WALLET_ADDR" || "$WALLET_ADDR" == "null" ]] && { echo '{"error": "Invalid token"}' >&2; exit 1; }
@@ -24,12 +28,11 @@ STAKE_NFT=$(echo "$REGISTRY" | jq -r '.stakeNFT')
 AMOUNT_WEI=$(python3 -c "print(int(float('$AMOUNT') * 10**18))")
 LOCK_SECONDS=$(python3 -c "print(int(float('$LOCK_DAYS') * 86400))")
 
-# Step 1: Approve AWP to StakeNFT (NOT RootNet!)
+# Step 1: Approve AWP to StakeNFT
 echo '{"step": "approve", "spender": "'"$STAKE_NFT"'", "amount": "'"$AMOUNT"' AWP"}' >&2
 awp-wallet approve --token "$TOKEN" --asset "$AWP_TOKEN" --spender "$STAKE_NFT" --amount "$AMOUNT" --chain bsc
 
 # Step 2: Deposit
-# deposit(uint256,uint64) selector = 0xb6b55f25... actually let's use python3 for encoding
 # deposit(uint256,uint64) selector = 0x7d552ea6
 DEPOSIT_DATA=$(python3 -c "print('0x7d552ea6' + hex($AMOUNT_WEI)[2:].zfill(64) + hex($LOCK_SECONDS)[2:].zfill(64))")
 

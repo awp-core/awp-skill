@@ -1,6 +1,6 @@
-# AWP RootNet — Protocol Reference
+# AWP Protocol Reference (V2)
 
-Shared definitions for the AWP RootNet skill.
+Shared definitions for the AWP skill.
 
 ---
 
@@ -17,7 +17,7 @@ Shared definitions for the AWP RootNet skill.
 
 ### SubnetInfo (on-chain struct)
 
-Returned by `RootNet.getSubnet(subnetId)`. Lifecycle state only — identity data lives in SubnetNFT.
+Returned by `AWPRegistry.getSubnet(subnetId)`. AWPRegistry lifecycle state only — identity data lives in SubnetNFT.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -30,7 +30,7 @@ Returned by `RootNet.getSubnet(subnetId)`. Lifecycle state only — identity dat
 
 ### SubnetFullInfo (on-chain struct)
 
-Returned by `RootNet.getSubnetFull(subnetId)`. Combined view: RootNet lifecycle state + SubnetNFT identity.
+Returned by `AWPRegistry.getSubnetFull(subnetId)`. Combined: AWPRegistry state + SubnetNFT identity.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -47,7 +47,7 @@ Returned by `RootNet.getSubnetFull(subnetId)`. Combined view: RootNet lifecycle 
 
 ### SubnetParams (registration input)
 
-Used in `RootNet.registerSubnet(params)`.
+Used in `AWPRegistry.registerSubnet(params)`.
 
 | Field | Type | Constraints |
 |-------|------|-------------|
@@ -56,19 +56,18 @@ Used in `RootNet.registerSubnet(params)`.
 | subnetManager | address | `address(0)` = auto-deploy SubnetManager proxy |
 | salt | bytes32 | CREATE2 salt; `bytes32(0)` = use subnetId as salt |
 | minStake | uint128 | Minimum stake for agents (0 = no minimum) |
-
-> **Note**: `skillsURI` is NOT part of SubnetParams. Set it separately after registration via `SubnetNFT.setSkillsURI(subnetId, skillsURI)`.
+| skillsURI | string | Skills file URI (IPFS/HTTPS) |
 
 ### AgentInfo (on-chain struct)
 
-Returned by `RootNet.getAgentInfo(agent, subnetId)`.
+Returned by `AWPRegistry.getAgentInfo(agent, subnetId)`.
 
 | Field | Type |
 |-------|------|
-| owner | address |
+| boundTo | address |
 | isValid | bool |
 | stake | uint256 |
-| rewardRecipient | address |
+| recipient | address |
 
 ### StakeNFT Position
 
@@ -84,22 +83,21 @@ Returned by `StakeNFT.positions(tokenId)`.
 
 ---
 
-## Event Field Table (27 types)
+## Event Field Table (26 types)
 
-All events arrive via WebSocket (`wss://tapi.awp.sh/ws/live`) with envelope:
+All events arrive via WebSocket (`wss://<API_HOST>/ws/live`) with envelope:
 ```json
 {"type": "EventName", "blockNumber": 12345, "txHash": "0x...", "data": {...}}
 ```
 
-### User & Agent Events
+### User & Delegation Events
 
 | Event | Source | Data Fields |
 |-------|--------|-------------|
-| UserRegistered | RootNet | `{user}` |
-| AgentBound | RootNet | `{principal, agent, oldPrincipal}` |
-| AgentUnbound | RootNet | `{principal, agent}` |
-| AgentRemoved | RootNet | `{user, agent, operator}` |
-| DelegationUpdated | RootNet | `{user, agent, isManager, operator}` |
+| Bound | AWPRegistry | `{user, target, oldTarget}` |
+| RecipientUpdated | AWPRegistry | `{user, recipient}` |
+| DelegateGranted | AWPRegistry | `{user, delegate}` |
+| DelegateRevoked | AWPRegistry | `{user, delegate}` |
 
 ### Staking Events
 
@@ -108,24 +106,24 @@ All events arrive via WebSocket (`wss://tapi.awp.sh/ws/live`) with envelope:
 | Deposited | StakeNFT | `{user, tokenId, amount, lockEndTime}` | `lockEndTime` is **absolute** unix timestamp, NOT relative lock duration |
 | PositionIncreased | StakeNFT | `{tokenId, addedAmount, newLockEndTime}` | — |
 | Withdrawn | StakeNFT | `{user, tokenId, amount}` | — |
-| Allocated | RootNet | `{user, agent, subnetId, amount, operator}` | Includes `operator` field |
-| Deallocated | RootNet | `{user, agent, subnetId, amount, operator}` | Includes `operator` field |
-| Reallocated | RootNet | `{user, fromAgent, fromSubnet, toAgent, toSubnet, amount, operator}` | Includes `operator` field; `user` = stake owner, `operator` = caller |
+| Allocated | AWPRegistry | `{user, agent, subnetId, amount, operator}` | Includes `operator` field |
+| Deallocated | AWPRegistry | `{user, agent, subnetId, amount, operator}` | Includes `operator` field |
+| Reallocated | AWPRegistry | `{user, fromAgent, fromSubnet, toAgent, toSubnet, amount, operator}` | Includes `operator` field; `user` = stake owner, `operator` = caller |
 
 ### Subnet Events
 
 | Event | Source | Data Fields | Pitfall |
 |-------|--------|-------------|---------|
-| SubnetRegistered | RootNet | `{subnetId, owner, name, symbol, subnetManager, alphaToken}` | `subnetManager` (not subnetContract); does NOT include skillsURI |
-| LPCreated | RootNet | `{subnetId, poolId, awpAmount, alphaAmount}` | — |
-| SkillsURIUpdated | SubnetNFT | `{subnetId, skillsURI}` | Emitted by SubnetNFT, not RootNet |
-| MinStakeUpdated | SubnetNFT | `{subnetId, minStake}` | Emitted by SubnetNFT, not RootNet |
-| SubnetActivated | RootNet | `{subnetId}` | — |
-| SubnetPaused | RootNet | `{subnetId}` | — |
-| SubnetResumed | RootNet | `{subnetId}` | — |
-| SubnetBanned | RootNet | `{subnetId}` | — |
-| SubnetUnbanned | RootNet | `{subnetId}` | — |
-| SubnetDeregistered | RootNet | `{subnetId}` | — |
+| SubnetRegistered | AWPRegistry | `{subnetId, owner, name, symbol, subnetManager, alphaToken}` | `subnetManager` (not subnetContract); does NOT include skillsURI |
+| LPCreated | AWPRegistry | `{subnetId, poolId, awpAmount, alphaAmount}` | — |
+| SkillsURIUpdated | SubnetNFT | `{subnetId, skillsURI}` | Emitted by SubnetNFT, not AWPRegistry |
+| MinStakeUpdated | SubnetNFT | `{subnetId, minStake}` | Emitted by SubnetNFT, not AWPRegistry |
+| SubnetActivated | AWPRegistry | `{subnetId}` | — |
+| SubnetPaused | AWPRegistry | `{subnetId}` | — |
+| SubnetResumed | AWPRegistry | `{subnetId}` | — |
+| SubnetBanned | AWPRegistry | `{subnetId}` | — |
+| SubnetUnbanned | AWPRegistry | `{subnetId}` | — |
+| SubnetDeregistered | AWPRegistry | `{subnetId}` | — |
 
 ### Emission Events [DRAFT]
 
@@ -144,18 +142,16 @@ All events arrive via WebSocket (`wss://tapi.awp.sh/ws/live`) with envelope:
 
 ### `GET /registry`
 
-Returns chainId and all 11 protocol contract addresses. Always fetch dynamically — never hardcode.
+Returns all 10 protocol contract addresses. Always fetch dynamically — never hardcode.
 
 ```json
 {
-  "chainId": 56,
-  "rootNet": "0x...",
+  "awpRegistry": "0x...",
   "awpToken": "0x...",
   "awpEmission": "0x...",
   "stakingVault": "0x...",
   "stakeNFT": "0x...",
   "subnetNFT": "0x...",
-  "accessManager": "0x...",
   "lpManager": "0x...",
   "alphaTokenFactory": "0x...",
   "dao": "0x...",
@@ -163,7 +159,7 @@ Returns chainId and all 11 protocol contract addresses. Always fetch dynamically
 }
 ```
 
-> Note: Per-subnet addresses (`subnet_contract`, `alpha_token`, `lp_pool`) are returned by `GET /subnets/{subnetId}`, not by `/registry`. The on-chain `RootNet.getRegistry()` additionally returns `guardian` which is not in the REST response.
+> Note: Per-subnet addresses (`subnet_contract`, `alpha_token`, `lp_pool`) are returned by `GET /subnets/{subnetId}`, not by `/registry`. The on-chain `AWPRegistry.getRegistry()` additionally returns `guardian` which is not in the REST response.
 
 ### `GET /address/{address}/check`
 
@@ -171,12 +167,13 @@ Check registration status for any address.
 
 ```json
 {
-  "isRegisteredUser": true,
-  "isRegisteredAgent": false,
-  "ownerAddress": "",
-  "isManager": false
+  "isRegistered": true,
+  "boundTo": "0x...",
+  "recipient": "0x..."
 }
 ```
+
+> `isRegistered` = `boundTo != 0x0 || recipient != 0x0`.
 
 ### `GET /health`
 
@@ -190,8 +187,7 @@ Check registration status for any address.
 
 | Constant | Value |
 |----------|-------|
-| Chain | BSC Mainnet (Chain ID 56) |
-| Explorer | `https://bscscan.com` |
+| Chain | EVM chain (configured at deployment) |
 | Epoch Duration | 1 day (86,400 seconds) |
 | Initial Daily Emission | 15,800,000 AWP |
 | Decay Factor | 0.996844 per epoch (~0.3156% daily decay) |
@@ -206,10 +202,12 @@ Check registration status for any address.
 | Immunity Period | 30 days |
 | Timelock Delay | 2 days |
 
+> Emission constants are **[DRAFT]** — the emission mechanism has not been finalized.
+
 ### Voting Power Formula
 
 ```
-votingPower = amount × sqrt(min(remainingTime, 54 weeks) / 7 days)
+votingPower = amount * sqrt(min(remainingTime, 54 weeks) / 7 days)
 ```
 
 - `remainingTime` = `lockEndTime - block.timestamp` (in seconds)

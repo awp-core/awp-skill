@@ -5,7 +5,7 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 - **commands-subnet.md** — M1 Register Subnet, M2 Lifecycle, M3-M4 Settings
 - **commands-governance.md** — G1 Proposals, G2 Voting, G3/G4 Queries, Supplementary
 
-**API Base URL**: `https://tapi.awp.sh/api` (or `AWP_API_URL` env var)
+**API Base URL**: `{API_BASE}/api` (deployment-specific — do not hardcode)
 
 ---
 
@@ -13,7 +13,7 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 
 | Action | Endpoint | Notes |
 |--------|----------|-------|
-| Q1 Subnet | `GET /subnets/{subnetId}` | Full subnet object; fallback: `getSubnetFull(id)` |
+| Q1 Subnet | `GET /subnets/{subnetId}` | Full subnet object (includes `min_stake`, `immunity_ends_at`, `burned`); fallback: `getSubnetFull(id)` on AWPRegistry |
 | Q2 Balance | `GET /staking/user/{addr}/balance` | Also: `/positions`, `/allocations` |
 | Q3 Emission | `GET /emission/current` [DRAFT] | Also: `/schedule`, `/epochs` [DRAFT] |
 | Q4 Agent | `GET /subnets/{subnetId}/agents/{agent}` | Batch: `POST /agents/batch-info`; By owner: `/agents/by-owner/{owner}` |
@@ -25,8 +25,147 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /registry` | All 11 contract addresses — never hardcode |
-| `GET /address/{addr}/check` | Registration status check |
+| `GET /registry` | Returns `awpRegistry` + 9 other contract addresses (no `accessManager` field) — never hardcode |
+| `GET /address/{addr}/check` | `{isRegistered, boundTo, recipient}` |
 | `GET /health` | Service health |
+
+### `GET /registry` Response
+
+```json
+{
+  "awpRegistry": "0x...",
+  "awpToken": "0x...",
+  "awpEmission": "0x...",
+  "stakingVault": "0x...",
+  "stakeNFT": "0x...",
+  "subnetNFT": "0x...",
+  "lpManager": "0x...",
+  "alphaTokenFactory": "0x...",
+  "dao": "0x...",
+  "treasury": "0x..."
+}
+```
+
+> **Note:** No `accessManager` field. Per-subnet addresses (`subnet_contract`, `alpha_token`, `lp_pool`) are returned by `GET /subnets/{subnetId}`, not by `/registry`.
+
+### `GET /address/{addr}/check` Response
+
+```json
+{
+  "isRegistered": true,
+  "boundTo": "0x...",
+  "recipient": "0x..."
+}
+```
+> `isRegistered` = `boundTo != 0x0 || recipient != 0x0`.
+
+### Subnet REST Response
+
+```json
+{
+  "subnet_id": 1,
+  "owner": "0x...",
+  "name": "My Subnet",
+  "symbol": "MSUB",
+  "subnet_contract": "0x...",
+  "skills_uri": "ipfs://QmSkills...",
+  "alpha_token": "0x...",
+  "lp_pool": "0x...",
+  "status": "Active",
+  "created_at": 1710000000,
+  "activated_at": 1710000100,
+  "min_stake": 0,
+  "immunity_ends_at": null,
+  "burned": false
+}
+```
+
+## Contract Quick Reference
+
+### AWPRegistry — getRegistry()
+
+```solidity
+getRegistry() → (awpToken, subnetNFT, alphaTokenFactory, awpEmission, lpManager, stakingVault, stakeNFT, treasury, guardian)
+```
+> Returns `awpRegistry`-scoped addresses. No `accessManager` in the tuple.
+
+### AWPRegistry — Account System V2
+
+```solidity
+register()                          // Optional; equivalent to setRecipient(msg.sender)
+bind(address target)                // Tree-based binding with anti-cycle check
+setRecipient(address recipient)     // Set reward recipient
+grantDelegate(address delegate)     // Grant delegation
+revokeDelegate(address delegate)    // Revoke delegation
+resolveRecipient(address addr) view // Walks boundTo chain to root
+isRegistered(address addr) view     // boundTo[addr] != 0 || recipient[addr] != 0
+```
+> EIP-712 domain name: `"AWPRegistry"` (not "AWPRootNet").
+> `unbind()` and `removeAgent()` are removed in V2.
+> `setDelegation` replaced by `grantDelegate` / `revokeDelegate`.
+> `setRewardRecipient` replaced by `setRecipient` + gasless `setRecipientFor`.
+
+### AWPRegistry — Staking (allocation only)
+
+```solidity
+allocate(address staker, address agent, uint256 subnetId, uint256 amount)
+deallocate(address staker, address agent, uint256 subnetId, uint256 amount)
+reallocate(address staker, address fromAgent, uint256 fromSubnetId, address toAgent, uint256 toSubnetId, uint256 amount)
+```
+> `staker` is an explicit parameter (caller must be staker or delegate).
+
+### AWPEmission
+
+```solidity
+awpRegistry() → address   // (not rootNet())
+```
+
+### StakeNFT
+
+```solidity
+depositFor(address user, uint256 amount, uint64 lockDuration) → uint256 tokenId  // onlyAWPRegistry
+```
+
+### StakingVault
+
+```solidity
+allocate(address staker, address agent, uint256 subnetId, uint256 amount)    // onlyAWPRegistry
+deallocate(address staker, address agent, uint256 subnetId, uint256 amount)  // onlyAWPRegistry
+reallocate(...)                                                               // onlyAWPRegistry
+```
+> All functions use `staker` param name and `onlyAWPRegistry` modifier.
+
+## WebSocket Events
+
+> Source contract: **AWPRegistry** (not RootNet). 26 event types total.
+
+| Event | Data Fields | Source |
+|-------|-------------|--------|
+| `Bound` | `{user, target, oldTarget}` | AWPRegistry |
+| `RecipientUpdated` | `{user, recipient}` | AWPRegistry |
+| `DelegateGranted` | `{user, delegate}` | AWPRegistry |
+| `DelegateRevoked` | `{user, delegate}` | AWPRegistry |
+| `Deposited` | `{user, tokenId, amount, lockEndTime}` | StakeNFT |
+| `PositionIncreased` | `{tokenId, addedAmount, newLockEndTime}` | StakeNFT |
+| `Withdrawn` | `{user, tokenId, amount}` | StakeNFT |
+| `Allocated` | `{user, agent, subnetId, amount, operator}` | AWPRegistry |
+| `Deallocated` | `{user, agent, subnetId, amount, operator}` | AWPRegistry |
+| `Reallocated` | `{user, fromAgent, fromSubnet, toAgent, toSubnet, amount, operator}` | AWPRegistry |
+| `SubnetRegistered` | `{subnetId, owner, name, symbol, subnetManager, alphaToken}` | AWPRegistry |
+| `LPCreated` | `{subnetId, poolId, awpAmount, alphaAmount}` | AWPRegistry |
+| `SkillsURIUpdated` | `{subnetId, skillsURI}` | SubnetNFT |
+| `MinStakeUpdated` | `{subnetId, minStake}` | SubnetNFT |
+| `SubnetActivated` | `{subnetId}` | AWPRegistry |
+| `SubnetPaused` | `{subnetId}` | AWPRegistry |
+| `SubnetResumed` | `{subnetId}` | AWPRegistry |
+| `SubnetBanned` | `{subnetId}` | AWPRegistry |
+| `SubnetUnbanned` | `{subnetId}` | AWPRegistry |
+| `SubnetDeregistered` | `{subnetId}` | AWPRegistry |
+| `GovernanceWeightUpdated` | `{addr, weight}` | AWPEmission |
+| `RecipientAWPDistributed` | `{epoch, recipient, awpAmount}` | AWPEmission |
+| `DAOMatchDistributed` | `{epoch, amount}` | AWPEmission |
+| `EpochSettled` | `{epoch, totalEmission, recipientCount}` | AWPEmission |
+| `AllocationsSubmitted` | `{nonce, recipients, weights}` | AWPEmission |
+| `OracleConfigUpdated` | `{oracles, threshold}` | AWPEmission |
 
 For data structures, events, and constants, see **protocol.md**.

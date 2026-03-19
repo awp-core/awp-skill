@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# AWP RootNet: One-command gasless onboarding
+# AWP Registry V2: One-command gasless onboarding
 #
 # Usage:
-#   Principal mode (register as self-managed account):
+#   Principal mode (set recipient to self — explicit registration):
 #     ./relay-start.sh --token <session_token> --mode principal
 #
-#   Agent mode (bind to a principal):
-#     ./relay-start.sh --token <session_token> --mode agent --principal <address>
+#   Agent mode (bind to a target address):
+#     ./relay-start.sh --token <session_token> --mode agent --target <address>
 #
-# Principal calls register() via /relay/register
-# Agent calls bind() via /relay/bind
+# In V2, every address is implicitly registered. There is no /relay/register endpoint.
+# - Principal mode calls setRecipient(self) via /relay/set-recipient
+# - Agent mode calls bind(target) via /relay/bind
 # Choose ONE — do not call both for the same address.
 #
 # Prerequisites: awp-wallet (unlocked), curl, jq, python3
@@ -21,13 +22,14 @@ RPC_URL="${BSC_RPC_URL:-https://bsc-dataseed.binance.org}"
 CHAIN_ID=""
 TOKEN=""
 MODE=""
-PRINCIPAL=""
+TARGET=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --token) TOKEN="$2"; shift 2 ;;
     --mode) MODE="$2"; shift 2 ;;
-    --principal) PRINCIPAL="$2"; shift 2 ;;
+    --target) TARGET="$2"; shift 2 ;;
+    --principal) MODE="principal"; shift 1 ;;  # backward compat: --principal = --mode principal
     --api) API_BASE="$2"; shift 2 ;;
     --rpc) RPC_URL="$2"; shift 2 ;;
     *) echo '{"error": "Unknown arg: '"$1"'"}' >&2; exit 1 ;;
@@ -37,7 +39,8 @@ done
 [[ -z "$TOKEN" ]] && { echo '{"error": "Missing --token (get from awp-wallet unlock)"}' >&2; exit 1; }
 [[ -z "$MODE" ]] && { echo '{"error": "Missing --mode (principal or agent)"}' >&2; exit 1; }
 [[ "$MODE" != "principal" && "$MODE" != "agent" ]] && { echo '{"error": "--mode must be principal or agent"}' >&2; exit 1; }
-[[ "$MODE" == "agent" && -z "$PRINCIPAL" ]] && { echo '{"error": "Agent mode requires --principal <address>"}' >&2; exit 1; }
+[[ "$MODE" == "agent" && -z "$TARGET" ]] && { echo '{"error": "Agent mode requires --target <address>"}' >&2; exit 1; }
+[[ -n "$TARGET" && ! "$TARGET" =~ ^0x[0-9a-fA-F]{40}$ ]] && { echo '{"error": "Invalid --target address: must be 0x + 40 hex chars"}' >&2; exit 1; }
 
 eth_call() {
   local to="$1" data="$2"
@@ -45,13 +48,21 @@ eth_call() {
     -d '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"'"$to"'","data":"'"$data"'"},"latest"],"id":1}' | jq -r '.result'
 }
 
-hex_to_dec() { python3 -c "print(int('$1', 16))"; }
+hex_to_dec() {
+  local val="$1"
+  [[ -z "$val" || "$val" == "null" || "$val" == "0x" ]] && { echo '{"error": "RPC returned empty/null value"}' >&2; exit 1; }
+  python3 -c "print(int('$val', 16))"
+}
 
 # Step 1: Fetch registry (fresh, never cached)
 REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
-echo "$REGISTRY" | jq -e '.rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
-ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
-CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId // 56')
+echo "$REGISTRY" | jq -e '.awpRegistry' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
+
+# Get chainId from RPC (not in /registry response)
+CHAIN_ID_HEX=$(curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' | jq -r '.result')
+CHAIN_ID=$(hex_to_dec "$CHAIN_ID_HEX")
 
 # Step 2: Get wallet address
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address') || {
@@ -63,23 +74,23 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address') || {
 
 # Step 3: Check current status
 CHECK=$(curl -s "$API_BASE/address/$WALLET_ADDR/check") || true
-IS_USER=$(echo "$CHECK" | jq -r '.isRegisteredUser' 2>/dev/null || echo "false")
-IS_AGENT=$(echo "$CHECK" | jq -r '.isRegisteredAgent' 2>/dev/null || echo "false")
+IS_REGISTERED=$(echo "$CHECK" | jq -r '.isRegistered' 2>/dev/null || echo "false")
+BOUND_TO=$(echo "$CHECK" | jq -r '.boundTo' 2>/dev/null || echo "")
+RECIPIENT=$(echo "$CHECK" | jq -r '.recipient' 2>/dev/null || echo "")
 
-if [[ "$MODE" == "principal" && "$IS_USER" == "true" ]]; then
-  echo '{"status": "already_registered", "address": "'"$WALLET_ADDR"'"}'
+if [[ "$MODE" == "principal" && "$RECIPIENT" != "" && "$RECIPIENT" != "null" && "$RECIPIENT" != "0x0000000000000000000000000000000000000000" ]]; then
+  echo '{"status": "already_registered", "address": "'"$WALLET_ADDR"'", "recipient": "'"$RECIPIENT"'"}'
   exit 0
 fi
 
-if [[ "$MODE" == "agent" && "$IS_AGENT" == "true" ]]; then
-  CURRENT_OWNER=$(echo "$CHECK" | jq -r '.ownerAddress' 2>/dev/null || echo "")
-  echo '{"status": "already_bound", "address": "'"$WALLET_ADDR"'", "principal": "'"$CURRENT_OWNER"'"}'
+if [[ "$MODE" == "agent" && "$BOUND_TO" != "" && "$BOUND_TO" != "null" && "$BOUND_TO" != "0x0000000000000000000000000000000000000000" ]]; then
+  echo '{"status": "already_bound", "address": "'"$WALLET_ADDR"'", "boundTo": "'"$BOUND_TO"'"}'
   exit 0
 fi
 
 # Step 4: Get nonce
 ADDR_PADDED=$(python3 -c "print('${WALLET_ADDR#0x}'.lower().zfill(64))")
-NONCE_HEX=$(eth_call "$ROOT_NET" "0x7ecebe00${ADDR_PADDED}")
+NONCE_HEX=$(eth_call "$AWP_REGISTRY" "0x7ecebe00${ADDR_PADDED}")
 NONCE=$(hex_to_dec "$NONCE_HEX")
 
 # Step 5: Deadline
@@ -87,7 +98,7 @@ DEADLINE=$(( $(date +%s) + 3600 ))
 
 # Step 6: Sign and submit based on mode
 if [[ "$MODE" == "principal" ]]; then
-  # ---- PRINCIPAL: register() via /relay/register ----
+  # ---- PRINCIPAL: setRecipient(self) via /relay/set-recipient ----
   EIP712_DATA=$(cat <<EIPJSON
 {
   "types": {
@@ -97,21 +108,23 @@ if [[ "$MODE" == "principal" ]]; then
       {"name": "chainId", "type": "uint256"},
       {"name": "verifyingContract", "type": "address"}
     ],
-    "Register": [
+    "SetRecipient": [
       {"name": "user", "type": "address"},
+      {"name": "recipient", "type": "address"},
       {"name": "nonce", "type": "uint256"},
       {"name": "deadline", "type": "uint256"}
     ]
   },
-  "primaryType": "Register",
+  "primaryType": "SetRecipient",
   "domain": {
-    "name": "AWPRootNet",
+    "name": "AWPRegistry",
     "version": "1",
     "chainId": $CHAIN_ID,
-    "verifyingContract": "$ROOT_NET"
+    "verifyingContract": "$AWP_REGISTRY"
   },
   "message": {
     "user": "$WALLET_ADDR",
+    "recipient": "$WALLET_ADDR",
     "nonce": $NONCE,
     "deadline": $DEADLINE
   }
@@ -124,12 +137,12 @@ EIPJSON
   }
   SIGNATURE=$(echo "$SIG_RESULT" | jq -r '.signature')
 
-  RELAY_RESULT=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/relay/register" \
+  RELAY_RESULT=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/relay/set-recipient" \
     -H "Content-Type: application/json" \
-    -d "{\"user\": \"$WALLET_ADDR\", \"deadline\": $DEADLINE, \"signature\": \"$SIGNATURE\"}")
+    -d "{\"user\": \"$WALLET_ADDR\", \"recipient\": \"$WALLET_ADDR\", \"deadline\": $DEADLINE, \"signature\": \"$SIGNATURE\"}")
 
 else
-  # ---- AGENT: bind(principal) via /relay/bind ----
+  # ---- AGENT: bind(target) via /relay/bind ----
   EIP712_DATA=$(cat <<EIPJSON
 {
   "types": {
@@ -140,22 +153,22 @@ else
       {"name": "verifyingContract", "type": "address"}
     ],
     "Bind": [
-      {"name": "agent", "type": "address"},
-      {"name": "principal", "type": "address"},
+      {"name": "user", "type": "address"},
+      {"name": "target", "type": "address"},
       {"name": "nonce", "type": "uint256"},
       {"name": "deadline", "type": "uint256"}
     ]
   },
   "primaryType": "Bind",
   "domain": {
-    "name": "AWPRootNet",
+    "name": "AWPRegistry",
     "version": "1",
     "chainId": $CHAIN_ID,
-    "verifyingContract": "$ROOT_NET"
+    "verifyingContract": "$AWP_REGISTRY"
   },
   "message": {
-    "agent": "$WALLET_ADDR",
-    "principal": "$PRINCIPAL",
+    "user": "$WALLET_ADDR",
+    "target": "$TARGET",
     "nonce": $NONCE,
     "deadline": $DEADLINE
   }
@@ -170,7 +183,7 @@ EIPJSON
 
   RELAY_RESULT=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/relay/bind" \
     -H "Content-Type: application/json" \
-    -d "{\"agent\": \"$WALLET_ADDR\", \"principal\": \"$PRINCIPAL\", \"deadline\": $DEADLINE, \"signature\": \"$SIGNATURE\"}")
+    -d "{\"user\": \"$WALLET_ADDR\", \"target\": \"$TARGET\", \"deadline\": $DEADLINE, \"signature\": \"$SIGNATURE\"}")
 fi
 
 # Step 7: Parse response

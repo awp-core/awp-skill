@@ -1,6 +1,6 @@
 # AWP Governance Commands
 
-**API Base URL**: `https://tapi.awp.sh/api`
+**API Base URL**: `{API_BASE}/api` (deployment-specific — do not hardcode)
 
 > **Note**: On-chain command templates below use `cast` (Foundry) for calldata encoding.
 > If `cast` is not available, pre-compute the 4-byte function selectors and use python3 for ABI encoding.
@@ -8,8 +8,8 @@
 ## Setup (run once per session)
 
 ```bash
-REGISTRY=$(curl -s {API_BASE}/registry)
-ROOT_NET=$(echo $REGISTRY | jq -r '.rootNet')
+REGISTRY=$(curl -s {API_BASE}/api/registry)
+AWP_REGISTRY=$(echo $REGISTRY | jq -r '.awpRegistry')
 AWP_TOKEN=$(echo $REGISTRY | jq -r '.awpToken')
 STAKE_NFT=$(echo $REGISTRY | jq -r '.stakeNFT')
 SUBNET_NFT=$(echo $REGISTRY | jq -r '.subnetNFT')
@@ -73,14 +73,14 @@ function proposalCreatedAt(uint256 proposalId) view returns (uint64)   // Timest
 
 ```bash
 # Step 1: Get eligible tokenIds
-POSITIONS=$(curl -s {API_BASE}/staking/user/$WALLET_ADDR/positions)
+POSITIONS=$(curl -s {API_BASE}/api/staking/user/$WALLET_ADDR/positions)
 # Get proposalCreatedAt from chain
-PROPOSAL_CREATED=$(cast call $DAO_ADDR "proposalCreatedAt(uint256)" {proposalId} --rpc-url https://bsc-dataseed.binance.org | cast --to-dec)
+PROPOSAL_CREATED=$(cast call $DAO_ADDR "proposalCreatedAt(uint256)" {proposalId} --rpc-url $RPC_URL | cast --to-dec)
 # Filter: only positions with created_at < PROPOSAL_CREATED (positions with createdAt >= are blocked)
 # Build tokenIds array: e.g. [1, 7, 12]
 
-# Step 2: Encode params (tokenIds as ABI-encoded uint256[])
-PARAMS=$(cast abi-encode "f(uint256[])" "[{tokenId1},{tokenId2},...]")
+# Step 2: Encode params (tokenIds as raw ABI-encoded uint256[], NO function selector)
+PARAMS=$(cast abi-encode "(uint256[])" "([{tokenId1},{tokenId2},...])")
 
 # Step 3: Cast vote (support: 0=Against, 1=For, 2=Abstain)
 awp-wallet send --token {T} --to $DAO_ADDR --data $(cast calldata "castVoteWithReasonAndParams(uint256,uint8,string,bytes)" {proposalId} {support} "{reason}" $PARAMS) --chain bsc
@@ -164,10 +164,8 @@ GET /users/{address}
 ```
 ```json
 {
-  "user": {"address": "0x...", "registered_at": 1710000000},
-  "balance": {"user_address": "0x...", "total_staked": "5000000000000000000000", "total_allocated": "3000000000000000000000"},
-  "rewardRecipient": {"user_address": "0x...", "recipient_address": "0x..."},
-  "agents": [{"agent_address": "0x...", "owner_address": "0x...", "is_manager": false, "removed": false}]
+  "user": {"address": "0x...", "bound_to": "0x...", "recipient": "0x...", "registered_at": 1710000000},
+  "balance": {"user_address": "0x...", "total_staked": "5000000000000000000000", "total_allocated": "3000000000000000000000"}
 }
 ```
 
