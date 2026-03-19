@@ -1,10 +1,43 @@
 # AWP Skill
 
-[![Skill Compatible](https://img.shields.io/badge/Skill-Compatible-blue)](https://openclaw.ai)
-[![Base](https://img.shields.io/badge/Base-EVM-yellow)](https://basescan.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+<p align="center">
+  <a href="https://awp.pro/">
+    <img src="assets/banner.png" alt="AWP - Agent Work Protocol" width="800">
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Base-0052FF?style=flat&logo=coinbase&logoColor=white" alt="Base">
+  <img src="https://img.shields.io/badge/BNB_Chain-F0B90B?style=flat&logo=bnbchain&logoColor=white" alt="BNB Chain">
+  <img src="https://img.shields.io/badge/x402_Protocol-7C3AED?style=flat" alt="x402">
+  <img src="https://img.shields.io/badge/SKILL.md-000000?style=flat" alt="SKILL.md">
+  <img src="https://img.shields.io/badge/AI_Agent-10B981?style=flat&logo=openai&logoColor=white" alt="AI Agent">
+  <img src="https://img.shields.io/badge/License-MIT-97CA00?style=flat" alt="MIT">
+</p>
 
 **Skill for interacting with the AWP (Agent Working Protocol) on Base/EVM.** Query protocol state, bind and delegate, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
+
+### Works with
+
+<p align="center">
+  <a href="https://github.com/anthropics/claude-code"><img src="https://img.shields.io/badge/Claude_Code-191919?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude Code"></a>
+  &nbsp;
+  <a href="https://github.com/openclaw/openclaw"><img src="https://img.shields.io/badge/OpenClaw-FF4500?style=for-the-badge" alt="OpenClaw"></a>
+  &nbsp;
+  <a href="https://cursor.sh"><img src="https://img.shields.io/badge/Cursor-000000?style=for-the-badge" alt="Cursor"></a>
+  &nbsp;
+  <a href="https://openai.com/codex"><img src="https://img.shields.io/badge/Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="Codex"></a>
+  &nbsp;
+  <a href="https://ai.google.dev/gemini-api/docs/cli"><img src="https://img.shields.io/badge/Gemini_CLI-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Gemini CLI"></a>
+  &nbsp;
+  <a href="https://windsurf.ai"><img src="https://img.shields.io/badge/Windsurf-06B6D4?style=for-the-badge" alt="Windsurf"></a>
+</p>
+
+<p align="center">Any agent that supports the <a href="https://agentskills.io/specification">SKILL.md standard</a>.</p>
+
+---
+
+> **Testnet.** AWP is currently in testnet on BASE mainnet. AWP mainnet deployment (ETH, Base, BSC, ...) is planned. Protocol parameters may change before the official mainnet launch.
 
 ## Overview
 
@@ -105,6 +138,7 @@ awp-skill/
 **Progressive loading**: The agent loads only what it needs per action. Query and Monitor actions use SKILL.md alone. Write actions load the specific command reference file, and all on-chain operations use bundled scripts — preventing manual calldata construction errors.
 
 **14 bundled scripts** cover every write operation. Each script handles:
+
 - Input validation (address regex, numeric checks)
 - Correct contract targeting (AWPRegistry vs StakeNFT vs SubnetNFT vs DAO)
 - Correct function selector (all verified via keccak256)
