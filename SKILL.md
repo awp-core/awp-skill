@@ -34,6 +34,11 @@ curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | hea
 ```
 If remote version > 1.6.1-test, show: "Update available! Run: `openclaw skill install https://github.com/awp-core/awp-skill`"
 
+**After any skill update**, contract addresses and wallet state from previous sessions are invalid:
+- Fetch `GET /registry` fresh — addresses may have changed due to contract upgrades
+- Re-check `GET /address/{addr}/check` — registration status may differ on new contracts
+- Re-unlock wallet: `awp-wallet unlock --scope full --duration 3600`
+
 **Step 3 — Route to action** using the Intent Routing table below.
 
 ## Intent Routing
