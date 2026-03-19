@@ -14,7 +14,7 @@ set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
 RPC_URL="${BSC_RPC_URL:-https://bsc-dataseed.binance.org}"
-CHAIN_ID=56
+CHAIN_ID=""
 TOKEN=""
 NAME=""
 SYMBOL=""
@@ -52,6 +52,7 @@ hex_to_dec() { python3 -c "print(int('$1', 16))"; }
 REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
 echo "$REGISTRY" | jq -e '.rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
 ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
+CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId // 56')
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
 
 # Step 2: Get wallet address

@@ -6,6 +6,7 @@
 
 ```bash
 REGISTRY=$(curl -s {API_BASE}/registry)
+CHAIN_ID=$(echo $REGISTRY | jq -r '.chainId')
 ROOT_NET=$(echo $REGISTRY | jq -r '.rootNet')
 AWP_TOKEN=$(echo $REGISTRY | jq -r '.awpToken')
 STAKE_NFT=$(echo $REGISTRY | jq -r '.stakeNFT')
@@ -198,7 +199,7 @@ awp-wallet sign-typed-data --token {T} --data '{
   "domain": {
     "name": "AWPRootNet",
     "version": "1",
-    "chainId": 56,
+    "chainId": '$CHAIN_ID',
     "verifyingContract": "'$ROOT_NET'"
   },
   "message": {
@@ -239,7 +240,7 @@ awp-wallet sign-typed-data --token {T} --data '{
   "domain": {
     "name": "AWPRootNet",
     "version": "1",
-    "chainId": 56,
+    "chainId": '$CHAIN_ID',
     "verifyingContract": "'$ROOT_NET'"
   },
   "message": {

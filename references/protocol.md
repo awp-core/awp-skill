@@ -144,10 +144,11 @@ All events arrive via WebSocket (`wss://tapi.awp.sh/ws/live`) with envelope:
 
 ### `GET /registry`
 
-Returns all 11 protocol contract addresses. Always fetch dynamically — never hardcode.
+Returns chainId and all 11 protocol contract addresses. Always fetch dynamically — never hardcode.
 
 ```json
 {
+  "chainId": 56,
   "rootNet": "0x...",
   "awpToken": "0x...",
   "awpEmission": "0x...",

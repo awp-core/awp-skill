@@ -108,7 +108,7 @@ Write actions (S/M/G sections) require the **AWP Wallet** skill.
    TOKEN=$(awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
    ```
 4. Pass `--token $TOKEN` to all awp-wallet commands and relay scripts
-5. All commands use `--chain bsc` (BSC, Chain ID 56)
+5. All commands use `--chain bsc`. Chain ID is returned by `GET /registry` → `chainId` field (currently 56).
 6. Read-only Q/W actions do not need the wallet.
 
 ## Gas Routing (for S1 and M1)
@@ -133,9 +133,11 @@ awp-wallet balance --token $TOKEN --chain bsc
 curl -s https://tapi.awp.sh/api/address/{addr}/check
 ```
 
-**Get RootNet address** (run before every write action — do not cache):
+**Get registry** (run before every write action — do not cache):
 ```bash
-ROOT_NET=$(curl -s https://tapi.awp.sh/api/registry | jq -r '.rootNet')
+REGISTRY=$(curl -s https://tapi.awp.sh/api/registry)
+ROOT_NET=$(echo "$REGISTRY" | jq -r '.rootNet')
+CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId')
 ```
 
 **Bind (on-chain, has BNB):**
