@@ -2,31 +2,28 @@
 # AWP RootNet: One-command gasless onboarding
 #
 # Usage:
-#   Principal mode (register + self-bind in ONE call):
-#     ./relay-start.sh --mode principal
+#   Principal mode: ./relay-start.sh --token <session_token> --mode principal
+#   Agent mode:     ./relay-start.sh --token <session_token> --mode agent --principal <address>
 #
-#   Agent mode (bind to a principal in ONE call):
-#     ./relay-start.sh --mode agent --principal <address>
-#
-# Environment:
-#   WALLET_PASSWORD  — required (awp-wallet password, auto-unlocks)
-#   AWP_API_URL      — optional (default: https://tapi.awp.sh/api)
-#   BSC_RPC_URL      — optional (default: https://bsc-dataseed.binance.org)
+# --token is the awp-wallet session token from `awp-wallet unlock`.
+# The agent (OpenClaw) manages the wallet password and provides the token.
 #
 # bind() auto-registers the principal — no separate register() call needed.
 #
-# Prerequisites: awp-wallet, curl, jq, python3
+# Prerequisites: awp-wallet (unlocked), curl, jq, python3
 
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
 RPC_URL="${BSC_RPC_URL:-https://bsc-dataseed.binance.org}"
 CHAIN_ID=56
+TOKEN=""
 MODE=""
 PRINCIPAL=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
+    --token) TOKEN="$2"; shift 2 ;;
     --mode) MODE="$2"; shift 2 ;;
     --principal) PRINCIPAL="$2"; shift 2 ;;
     --api) API_BASE="$2"; shift 2 ;;
@@ -35,25 +32,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+[[ -z "$TOKEN" ]] && { echo '{"error": "Missing --token (get from awp-wallet unlock)"}' >&2; exit 1; }
 [[ -z "$MODE" ]] && { echo '{"error": "Missing --mode (principal or agent)"}' >&2; exit 1; }
-[[ "$MODE" != "principal" && "$MODE" != "agent" ]] && { echo '{"error": "Invalid --mode: must be principal or agent"}' >&2; exit 1; }
+[[ "$MODE" != "principal" && "$MODE" != "agent" ]] && { echo '{"error": "--mode must be principal or agent"}' >&2; exit 1; }
 [[ "$MODE" == "agent" && -z "$PRINCIPAL" ]] && { echo '{"error": "Agent mode requires --principal <address>"}' >&2; exit 1; }
-
-# Auto-manage wallet: init if needed, unlock, get token
-if [[ -z "${WALLET_PASSWORD:-}" ]]; then
-  echo '{"error": "WALLET_PASSWORD env var required"}' >&2; exit 1
-fi
-
-# Init wallet if it doesn't exist
-awp-wallet status > /dev/null 2>&1 || {
-  WALLET_PASSWORD="$WALLET_PASSWORD" awp-wallet init > /dev/null 2>&1 || true
-}
-
-# Unlock and get session token
-UNLOCK_RESULT=$(WALLET_PASSWORD="$WALLET_PASSWORD" awp-wallet unlock --scope full --duration 3600 2>&1) || {
-  echo '{"error": "Wallet unlock failed: '"$(echo "$UNLOCK_RESULT" | jq -r '.error // "unknown"' 2>/dev/null)"'"}' >&2; exit 1
-}
-TOKEN=$(echo "$UNLOCK_RESULT" | jq -r '.sessionToken')
 
 eth_call() {
   local to="$1" data="$2"
@@ -129,7 +111,7 @@ EIP712_DATA=$(cat <<EIPJSON
 EIPJSON
 )
 
-SIG_RESULT=$(WALLET_PASSWORD="$WALLET_PASSWORD" awp-wallet sign-typed-data --token "$TOKEN" --data "$EIP712_DATA") || {
+SIG_RESULT=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$EIP712_DATA") || {
   echo '{"error": "EIP-712 signing failed"}' >&2; exit 1
 }
 SIGNATURE=$(echo "$SIG_RESULT" | jq -r '.signature')
