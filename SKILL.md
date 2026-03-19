@@ -15,7 +15,7 @@ metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]
 
 # AWP RootNet
 
-**Skill version: 1.6.1-test**
+**Skill version: 1.7.0**
 
 ## On Skill Load (do this FIRST)
 
@@ -32,7 +32,7 @@ metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 1.6.1-test, show: "Update available! Run: `skill install https://github.com/awp-core/awp-skill`"
+If remote version > 1.7.0, show: "Update available! Run: `skill install https://github.com/awp-core/awp-skill`"
 
 **After any skill update**, contract addresses and wallet state from previous sessions are invalid:
 - Fetch `GET /registry` fresh — addresses may have changed due to contract upgrades

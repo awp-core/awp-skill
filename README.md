@@ -184,6 +184,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 1.7.0 | Anti-hallucination: on-chain scripts (register/bind/deposit/allocate), pre-flight checklist, DO NOT list, fixed bind selector 0x81bac14f, dynamic chainId |
 | 1.6.1 | Remove cast/foundry dependency from scripts, remove evals/dev files from install, dev branch separation |
 | 1.6.0 | Bundled gasless relay scripts, file structure map, enforce script usage over manual EIP-712, no-cache contract addresses |
 | 1.5.0 | Remove updateMetadata (SubnetParams now 5 fields), 27 events, relay 100/IP/1h, emission [DRAFT], Agent Working |
