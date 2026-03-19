@@ -1,18 +1,15 @@
 ---
 name: awp
 description: >
-  Interact with the AWP (Agent Working Protocol) on Base/EVM. This skill handles
-  ALL AWP operations: check staking balances and positions, stake/deposit AWP tokens,
-  allocate stake to agents on subnets, register and manage subnets (gasless or on-chain),
-  create DAO governance proposals, vote on proposals with position NFTs, query emission
-  rates and epoch history, look up agent info, list subnets, install subnet skills,
-  and monitor real-time blockchain events via WebSocket. Use this skill whenever the user
-  mentions AWP, AWP staking, AWP balance, AWP deposit, AWP subnet, AWP emission,
-  AWP governance, AWP proposal, AWP voting, AWP allocation, AWP mining (solo or delegated),
-  AWP binding, AWP wallet, AWPRegistry, StakeNFT, SubnetNFT, alpha token, or any on-chain
-  interaction with the AWP protocol — even if the user doesn't say "AWP skill" explicitly.
-  Also trigger when users ask to watch, monitor, or subscribe to AWP events, check their
-  staked positions, register as a miner, or set up delegated mining with cold/hot wallets.
+  AWP (Agent Working Protocol) on Base/EVM. Handles ALL AWP operations: check staking
+  balances/positions, stake/deposit AWP, allocate to agents on subnets, register and
+  manage subnets (gasless or on-chain), create DAO proposals, vote with position NFTs,
+  query emission/epoch history, list subnets, install subnet skills, and monitor events
+  via WebSocket. Use whenever the user mentions AWP, AWP staking, AWP balance, AWP deposit,
+  AWP subnet, AWP emission, AWP governance, AWP voting, AWP allocation, AWP mining
+  (solo or delegated), AWP binding, AWPRegistry, StakeNFT, SubnetNFT, alpha token, or
+  any AWP on-chain interaction. Also trigger for watching/monitoring AWP events, checking
+  staked positions, registering as a miner, or setting up delegated mining.
 metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]}}}
 ---
 
