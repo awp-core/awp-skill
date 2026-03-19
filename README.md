@@ -1,21 +1,21 @@
 # AWP RootNet Skill
 
-[![OpenClaw Compatible](https://img.shields.io/badge/OpenClaw-Compatible-blue)](https://openclaw.ai)
+[![Claude Code Compatible](https://img.shields.io/badge/Claude_Code-Compatible-blue)](https://claude.ai/claude-code)
 [![BSC Mainnet](https://img.shields.io/badge/BSC-Mainnet-yellow)](https://bscscan.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-**OpenClaw skill for interacting with the AWP RootNet protocol on BSC.** Query protocol state, register and bind agents, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
+**Claude Code skill for interacting with the AWP RootNet protocol on BSC.** Query protocol state, register and bind agents, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
 
 ## Overview
 
 AWP RootNet is a decentralized **Agent Working** protocol on BNB Smart Chain (BSC). Agents register on subnets, execute tasks for subnet coordinators, and earn AWP token emissions as rewards. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
-This repository is a single OpenClaw skill with **22 actions** covering Query, Staking, Subnet Management, Governance, and real-time WebSocket Monitoring (27 event types).
+This repository is a single Claude Code skill with **22 actions** covering Query, Staking, Subnet Management, Governance, and real-time WebSocket Monitoring (27 event types).
 
 ## Quick Install
 
 ```bash
-openclaw skill install https://github.com/awp-core/awp-skill
+claude skill install https://github.com/awp-core/awp-skill
 ```
 
 The skill automatically installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) dependency when needed for write operations.
