@@ -85,7 +85,11 @@ awp-skill/
 │   └── protocol.md                         # Shared structs, 27 events, constants
 ├── scripts/
 │   ├── relay-start.sh                      # Gasless onboarding (register or bind)
-│   └── relay-register-subnet.sh            # Gasless subnet registration
+│   ├── relay-register-subnet.sh            # Gasless subnet registration
+│   ├── onchain-register.sh                 # On-chain register (has BNB)
+│   ├── onchain-bind.sh                     # On-chain bind (has BNB)
+│   ├── onchain-deposit.sh                  # On-chain deposit AWP (has BNB)
+│   └── onchain-allocate.sh                 # On-chain allocate stake (has BNB)
 ├── README.md
 └── LICENSE
 ```
@@ -126,7 +130,7 @@ Bind to someone else's account. They stake, you work.
 
 ```
 1. Install wallet skill
-2. bind(principalAddress) — auto-registers Principal
+2. bind(ownerAddress) — auto-registers the owner if not yet registered
 3. Principal stakes + allocates
 4. Install subnet skill → execute tasks
 5. unbind() anytime to leave
@@ -153,7 +157,7 @@ Bind to someone else's account. They stake, you work.
 | REST API | `https://tapi.awp.sh/api` |
 | WebSocket | `wss://tapi.awp.sh/ws/live` |
 | Health Check | `GET /health` |
-| Contract Registry | `GET /registry` (11 addresses) |
+| Contract Registry | `GET /registry` (chainId + 11 addresses) |
 
 ## Smart Contracts
 
@@ -196,9 +200,10 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 ## Contributing
 
+1. Switch to the `dev` branch and update source documents in `skills-dev/`
 2. Regenerate skill files to match the updated specifications
 3. Run eval tests to verify correctness
-4. Submit a pull request
+4. Submit a pull request to `main`
 
 ## License
 
