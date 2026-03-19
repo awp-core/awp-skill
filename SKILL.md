@@ -10,7 +10,7 @@ description: >
   AWP emission, AWP governance, alpha token, StakeNFT, SubnetNFT, or
   any AWP RootNet on-chain interaction — including monitoring, watching,
   tracking, or subscribing to AWP events.
-metadata: {"claude":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]}}}
+metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]}}}
 ---
 
 # AWP RootNet
@@ -32,7 +32,7 @@ metadata: {"claude":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]}}
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 1.6.1-test, show: "Update available! Run: `claude skill install https://github.com/awp-core/awp-skill`"
+If remote version > 1.6.1-test, show: "Update available! Run: `skill install https://github.com/awp-core/awp-skill`"
 
 **After any skill update**, contract addresses and wallet state from previous sessions are invalid:
 - Fetch `GET /registry` fresh — addresses may have changed due to contract upgrades
@@ -101,7 +101,7 @@ awp-skill/
 
 Write actions (S/M/G sections) require the **AWP Wallet** skill.
 
-1. Check if installed. If not: `claude skill install https://github.com/awp-core/awp-wallet`
+1. Check if installed. If not: `skill install https://github.com/awp-core/awp-wallet`
 2. Init: `awp-wallet init` (The agent manages the password automatically)
 3. Unlock and capture the session token:
    ```bash
@@ -362,7 +362,7 @@ $ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2025-12-01 | bs
 | Approve not confirmed | Wait for receipt — `awp-wallet tx-status --hash {hash} --chain bsc` |
 | Session expired | `awp-wallet unlock --scope full --duration 3600` |
 | Wallet not found | `awp-wallet init` then `awp-wallet unlock` |
-| AWP Wallet missing | `claude skill install https://github.com/awp-core/awp-wallet` |
+| AWP Wallet missing | `skill install https://github.com/awp-core/awp-wallet` |
 | WS connection refused | Wait 5s, check `GET /health`, retry. After 3 failures: switch to polling. |
 | WS unexpected close | Reconnect with backoff (1s-30s), re-send subscribe message. |
 | No WS events | Verify event names against preset lists above |

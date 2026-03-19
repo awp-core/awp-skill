@@ -6,7 +6,7 @@
 # Optional: --salt <hex>, --min-stake <wei>, --subnet-manager <address>
 #
 # --token is the awp-wallet session token from `awp-wallet unlock`.
-# The agent (Claude Code) manages the wallet password and provides the token.
+# The agent manages the wallet password and provides the token.
 #
 # Prerequisites: awp-wallet (unlocked), curl, jq, python3
 
