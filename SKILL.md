@@ -80,8 +80,12 @@ awp-skill/
 │   ├── commands-governance.md          G1-G4 commands + supplementary endpoints
 │   └── protocol.md                     Data structures, 27 events, constants
 └── scripts/                          ← executable bash scripts (run directly)
-    ├── relay-start.sh                    Gasless onboarding (register + bind in ONE call)
-    └── relay-register-subnet.sh          Gasless subnet registration (dual signature)
+    ├── relay-start.sh                    Gasless onboarding (register or bind)
+    ├── relay-register-subnet.sh          Gasless subnet registration (dual signature)
+    ├── onchain-register.sh               On-chain register (has BNB)
+    ├── onchain-bind.sh                   On-chain bind (has BNB)
+    ├── onchain-deposit.sh                On-chain deposit AWP (has BNB)
+    └── onchain-allocate.sh               On-chain allocate stake (has BNB)
 ```
 
 **Remote fallback** (if local files are missing, fetch from GitHub):
@@ -142,8 +146,8 @@ CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId')
 
 **Bind (on-chain, has BNB):**
 ```bash
-# bind(address) selector = 0x6c97b40f + ABI-encoded address
-BIND_DATA="0x6c97b40f$(python3 -c "print('{addr}'[2:].lower().zfill(64))")"
+# bind(address) selector = 0x81bac14f + ABI-encoded address
+BIND_DATA="0x81bac14f$(python3 -c "print('{addr}'[2:].lower().zfill(64))")"
 awp-wallet send --token $TOKEN --to $ROOT_NET --data "$BIND_DATA" --chain bsc
 ```
 
@@ -175,12 +179,36 @@ Ask user: **Principal (self-managed) or Agent (work for someone)?**
 - **Pagination**: limit=20 default, max=100
 - **Validation**: address = 0x+40hex, subnetId = positive int, amount = positive BigInt
 
+## Common Mistakes (DO NOT do these)
+
+- DO NOT call register() then bind() — pick ONE based on the user's role
+- DO NOT cache /registry addresses — fetch fresh before every write action
+- DO NOT construct EIP-712 JSON manually — use bundled scripts
+- DO NOT use ethers.js or write custom signing code — use awp-wallet CLI + scripts
+- DO NOT hardcode contract addresses or chainId — always from /registry
+- DO NOT assume the user is registered — always check /address/{addr}/check first
+- DO NOT use cast/foundry for gasless operations — use the relay scripts
+- DO NOT invent steps not described in this skill — follow the exact flows below
+
+## Pre-Flight Checklist (run before ANY write action)
+
+Before executing S1/S2/S3/M1-M4/G1/G2, verify ALL of these. If any check fails, STOP and tell the user what is missing.
+
+```
+1. Wallet installed?    → awp-wallet --version (if missing: skill install awp-wallet)
+2. Wallet unlocked?     → TOKEN=$(awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
+3. Wallet address?      → WALLET_ADDR=$(awp-wallet status --token $TOKEN | jq -r '.address')
+4. Registry fresh?      → REGISTRY=$(curl -s https://tapi.awp.sh/api/registry)
+5. Registration status? → curl -s https://tapi.awp.sh/api/address/$WALLET_ADDR/check
+6. Has BNB for gas?     → awp-wallet balance --token $TOKEN --chain bsc
+```
+
 ## Session State
 
 Track these across the conversation to avoid redundant checks:
 - `registered`: set to true after successful S1 bind/register — skip /address/check on subsequent actions
 - `wallet_addr`: cache after first awp-wallet status call
-- `registry`: DO NOT cache. Always call `GET /registry` before each write action to get the latest contract addresses.
+- `registry`: DO NOT cache. Always call `GET /registry` before each write action.
 - `has_gas`: cache BNB balance check result — re-check only if a tx fails with insufficient gas
 - `ws_connected`: true after WebSocket connect — don't reconnect unless disconnected
 - `subscribed_events`: current WebSocket subscription — re-use for reconnection
@@ -243,25 +271,30 @@ To participate in subnet work, a wallet address needs ONE of these (not both):
 
 Pick one based on the user's role. Do NOT call both register() and bind() for the same address.
 
-**Principal** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data 0x1aa3a008 --chain bsc` (register() selector)
+**Principal** (has BNB): `bash scripts/onchain-register.sh --token $TOKEN`
 **Principal** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode principal`
-**Agent** (has BNB): encode bind(address) calldata, then `awp-wallet send --token $TOKEN --to $ROOT_NET --data $BIND_DATA --chain bsc`
-**Agent** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode agent --principal {addr}`
+**Agent** (has BNB): `bash scripts/onchain-bind.sh --token $TOKEN --principal {ownerAddress}`
+**Agent** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode agent --principal {ownerAddress}`
 
 - setRewardRecipient(addr), setDelegation(agent, true) — optional, after binding
 - registerAndStake(depositAmount, lockDuration, agent, subnetId, allocateAmount) — one-click alternative, needs gas
 - unbind() anytime, rebind(newPrincipal) directly
 
 ### S2 · Deposit AWP
-1. approve AWP -> StakeNFT (not RootNet!)
-2. deposit(amount, lockDuration_seconds) -> tokenId
-3. lockEndTime is absolute timestamp in Deposited event
-4. withdraw(tokenId) after lock expires
-5. addToPosition(tokenId, amount, newLockEndTime) — **reverts PositionExpired if expired**
+
+Use the script: `bash scripts/onchain-deposit.sh --token $TOKEN --amount {AWP} --lock-days {days}`
+
+The script handles approve + deposit in sequence. Requires BNB for gas.
+- lockEndTime is absolute timestamp in Deposited event
+- withdraw(tokenId) after lock expires
+- addToPosition(tokenId, amount, newLockEndTime) — **reverts PositionExpired if expired**
 
 ### S3 · Allocate / Deallocate / Reallocate
-1. Check unallocated via `GET /staking/user/{addr}/balance`
-2. allocate(agent, subnetId, amount) / deallocate / reallocate (immediate, no cooldown)
+
+Use the script for allocate: `bash scripts/onchain-allocate.sh --token $TOKEN --agent {addr} --subnet {id} --amount {AWP}`
+
+The script checks unallocated balance before proceeding. Requires BNB for gas.
+- deallocate / reallocate: see commands-staking.md for templates (immediate, no cooldown)
 
 ---
 
