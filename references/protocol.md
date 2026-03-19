@@ -1,6 +1,6 @@
 # AWP RootNet — Protocol Reference
 
-Shared definitions for both `awp` and `awp-monitor` skills.
+Shared definitions for the AWP RootNet skill.
 
 ---
 

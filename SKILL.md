@@ -140,7 +140,9 @@ ROOT_NET=$(curl -s https://tapi.awp.sh/api/registry | jq -r '.rootNet')
 
 **Bind (on-chain, has BNB):**
 ```bash
-awp-wallet send --token $TOKEN --to $ROOT_NET --data $(cast calldata "bind(address)" {addr}) --chain bsc
+# bind(address) selector = 0x6c97b40f + ABI-encoded address
+BIND_DATA="0x6c97b40f$(python3 -c "print('{addr}'[2:].lower().zfill(64))")"
+awp-wallet send --token $TOKEN --to $ROOT_NET --data "$BIND_DATA" --chain bsc
 ```
 
 **Gasless onboarding (no BNB — register + bind in ONE call):**
@@ -239,9 +241,9 @@ To participate in subnet work, a wallet address needs ONE of these (not both):
 
 Pick one based on the user's role. Do NOT call both register() and bind() for the same address.
 
-**Principal** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data $(cast calldata "register()") --chain bsc`
+**Principal** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data 0x1aa3a008 --chain bsc` (register() selector)
 **Principal** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode principal`
-**Agent** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data $(cast calldata "bind(address)" {ownerAddress}) --chain bsc`
+**Agent** (has BNB): encode bind(address) calldata, then `awp-wallet send --token $TOKEN --to $ROOT_NET --data $BIND_DATA --chain bsc`
 **Agent** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode agent --principal {addr}`
 
 - setRewardRecipient(addr), setDelegation(agent, true) — optional, after binding

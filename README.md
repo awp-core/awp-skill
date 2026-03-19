@@ -10,7 +10,7 @@
 
 AWP RootNet is a decentralized **Agent Working** protocol on BNB Smart Chain (BSC). Agents register on subnets, execute tasks for subnet coordinators, and earn AWP token emissions as rewards. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
-This repository is a single skill with **22 actions** covering Query, Staking, Subnet Management, Governance, and real-time WebSocket Monitoring (27 event types).
+This repository is a single skill with **20 actions** covering Query, Staking, Subnet Management, Governance, and real-time WebSocket Monitoring (27 event types).
 
 ## Quick Install
 
@@ -20,7 +20,7 @@ skill install https://github.com/awp-core/awp-skill
 
 The skill automatically installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) dependency when needed for write operations.
 
-## Features — 22 Actions
+## Features — 20 Actions
 
 #### Query (read-only, no wallet needed)
 | ID | Action | Description |
@@ -76,16 +76,14 @@ The skill automatically installs the [AWP Wallet](https://github.com/awp-core/aw
 
 ```
 awp-skill/
-├── SKILL.md                                # Single skill file (23 actions, 333 lines)
+├── SKILL.md                                # Single skill file (20 actions)
 ├── references/
 │   ├── api-reference.md                    # Q1-Q7 REST endpoint index
 │   ├── commands-staking.md                 # S1-S3 command templates + EIP-712
 │   ├── commands-subnet.md                  # M1-M4 command templates + gasless
 │   ├── commands-governance.md              # G1-G4 commands + supplementary endpoints
-│   ├── monitor-api-reference.md            # WebSocket protocol, presets, polling
 │   └── protocol.md                         # Shared structs, 27 events, constants
 ├── README.md
-└── skills-dev/                             # Source protocol specifications
 ```
 
 **Progressive loading**: The agent loads only what it needs per action. Query and Monitor actions (Q1-Q7, W1, W2) use SKILL.md alone. Write actions load the specific command file (~200-360 lines each) instead of all references at once, saving ~60% context.
@@ -100,7 +98,7 @@ Three operations support fully gasless execution via EIP-712 signatures and rela
 | Agent Binding | `POST /relay/bind` | 1 (EIP-712 Bind) |
 | Subnet Registration | `POST /relay/register-subnet` | 2 (ERC-2612 Permit + EIP-712 RegisterSubnet) |
 
-Rate limit: 5 requests per IP per 4 hours across all relay endpoints.
+Rate limit: 100 requests per IP per 1 hour across all relay endpoints.
 
 The skill automatically checks BNB balance and routes to gasless relay when the wallet has no native gas.
 
@@ -113,7 +111,7 @@ Own your funds, earn your own rewards.
 
 ```
 1. Install wallet skill
-2. bind(myAddress) — register + bind in one call
+2. register() — register as a self-managed Principal
 3. Discover active subnets → install subnet skill
 4. Deposit AWP → allocate to agent + subnet
 5. Execute tasks via subnet skill → earn emissions
@@ -172,7 +170,6 @@ Bind to someone else's account. They stake, you work.
 
 ### Source Documents
 
-The `skills-dev/` directory contains the authoritative protocol specifications used to generate these skills:
 
 | File | Content |
 |------|---------|
@@ -198,7 +195,6 @@ The `skills-dev/` directory contains the authoritative protocol specifications u
 
 ## Contributing
 
-1. Update source documents in `skills-dev/` when the protocol changes
 2. Regenerate skill files to match the updated specifications
 3. Run eval tests to verify correctness
 4. Submit a pull request
