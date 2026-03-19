@@ -15,7 +15,7 @@ metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]
 
 # AWP RootNet
 
-**Skill version: 1.6.1**
+**Skill version: 1.6.1-test**
 
 ## On Skill Load (do this FIRST)
 
@@ -32,7 +32,7 @@ metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 1.6.1, show: "Update available! Run: `openclaw skill install https://github.com/awp-core/awp-skill`"
+If remote version > 1.6.1-test, show: "Update available! Run: `openclaw skill install https://github.com/awp-core/awp-skill`"
 
 **Step 3 — Route to action** using the Intent Routing table below.
 
