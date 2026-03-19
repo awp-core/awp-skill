@@ -201,6 +201,8 @@ Check registration status for any address.
 | Proposal Threshold | 1,000,000 AWP voting power |
 | Immunity Period | 30 days |
 | Timelock Delay | 2 days |
+| Pool Fee | 1% (PancakeSwap V4 CL) |
+| Oracle Threshold | DAO-configured (initially 3/5 recommended) |
 
 > Emission constants are **[DRAFT]** — the emission mechanism has not been finalized.
 

@@ -16,7 +16,7 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 | Q1 Subnet | `GET /subnets/{subnetId}` | Full subnet object (includes `min_stake`, `immunity_ends_at`, `burned`); fallback: `getSubnetFull(id)` on AWPRegistry |
 | Q2 Balance | `GET /staking/user/{addr}/balance` | Also: `/positions`, `/allocations` |
 | Q3 Emission | `GET /emission/current` [DRAFT] | Also: `/schedule`, `/epochs` [DRAFT] |
-| Q4 Agent | `GET /subnets/{subnetId}/agents/{agent}` | Batch: `POST /agents/batch-info`; By owner: `/agents/by-owner/{owner}` |
+| Q4 Agent | `GET /subnets/{subnetId}/agents/{agent}` | Single agent stake on a subnet |
 | Q5 List | `GET /subnets?status={s}&page={p}&limit={n}` | Status: Pending, Active, Paused, Banned |
 | Q6 Skills | `GET /subnets/{subnetId}/skills` | Returns skillsURI |
 | Q7 Epochs | `GET /emission/epochs?page={p}&limit={n}` [DRAFT] | Epoch history with emissions |

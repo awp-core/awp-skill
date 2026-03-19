@@ -309,6 +309,7 @@ function withdraw(uint256 tokenId)   // on StakeNFT
 
 ```solidity
 function positions(uint256 tokenId) view returns (uint128 amount, uint64 lockEndTime, uint64 createdAt)
+function getUserTotalStaked(address user) view returns (uint256)     // O(1) total staked balance
 function remainingTime(uint256 tokenId) view returns (uint64)        // Remaining lock time in seconds
 function getVotingPower(uint256 tokenId) view returns (uint256)      // amount * sqrt(min(remainingTime, 54 weeks) / 7 days)
 function getUserVotingPower(address user, uint256[] tokenIds) view returns (uint256)
@@ -354,6 +355,7 @@ function reallocate(address staker, address fromAgent, uint256 fromSubnetId, add
 function userTotalAllocated(address staker) view returns (uint256)
 function getAgentStake(address staker, address agent, uint256 subnetId) view returns (uint256)
 function subnetTotalStake(uint256 subnetId) view returns (uint256)
+function getSubnetTotalStake(uint256 subnetId) view returns (uint256)
 function getAgentSubnets(address staker, address agent) view returns (uint256[])
 ```
 > StakingVault uses `onlyAWPRegistry` modifier and `staker` param name.
