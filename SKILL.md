@@ -80,9 +80,8 @@ awp-skill/
 │   ├── commands-governance.md          G1-G4 commands + supplementary endpoints
 │   └── protocol.md                     Data structures, 27 events, constants
 └── scripts/                          ← executable bash scripts (run directly)
-    ├── relay-register.sh               Gasless user registration
-    ├── relay-bind.sh                   Gasless agent binding
-    └── relay-register-subnet.sh        Gasless subnet registration (dual signature)
+    ├── relay-start.sh                    Gasless onboarding (register + bind in ONE call)
+    └── relay-register-subnet.sh          Gasless subnet registration (dual signature)
 ```
 
 **Remote fallback** (if local files are missing, fetch from GitHub):
@@ -94,7 +93,9 @@ awp-skill/
 - S1-S3 — ALWAYS load commands-staking.md first.
 - M1-M4 — ALWAYS load commands-subnet.md first.
 - G1-G2 — ALWAYS load commands-governance.md first.
-- Gasless operations — ALWAYS use the bundled scripts above. NEVER manually construct EIP-712 JSON — the field order and nonce handling are error-prone. The scripts handle everything correctly (fetch registry, get nonce, sign, submit).
+- Gasless onboarding — use `scripts/relay-start.sh`. This single script handles both registration AND binding in one call. bind() auto-registers the principal — there is NO need to call register() separately. Calling register() before bind() wastes a relay call and breaks the nonce.
+- Gasless subnet — use `scripts/relay-register-subnet.sh`.
+- NEVER manually construct EIP-712 JSON. NEVER call register() and bind() as two separate steps.
 
 ## Wallet Dependency
 
@@ -113,11 +114,12 @@ Before register/bind/registerSubnet, check BNB:
 awp-wallet balance --token {T} --chain bsc
 ```
 - **Has BNB** — direct on-chain tx via awp-wallet
-- **No BNB** — use the gasless relay scripts (handle EIP-712 signing automatically):
-  - Register: `bash scripts/relay-register.sh --token {T}`
-  - Bind: `bash scripts/relay-bind.sh --token {T} --principal {addr}`
-  - Subnet: `bash scripts/relay-register-subnet.sh --token {T} --name {name} --symbol {sym}`
+- **No BNB** — use the gasless relay scripts:
+  - Onboarding (Principal): `bash scripts/relay-start.sh --token {T} --mode principal`
+  - Onboarding (Agent): `bash scripts/relay-start.sh --token {T} --mode agent --principal {addr}`
+  - Subnet registration: `bash scripts/relay-register-subnet.sh --token {T} --name {name} --symbol {sym}`
   - Rate limit: 100/IP/1h
+  - bind() auto-registers — do NOT call register() separately
 - deposit/allocate always need BNB — no gasless option
 
 ### Inline High-Frequency Commands (S1)
@@ -137,9 +139,12 @@ ROOT_NET=$(curl -s https://tapi.awp.sh/api/registry | jq -r '.rootNet')
 awp-wallet send --token {T} --to $ROOT_NET --data $(cast calldata "bind(address)" {addr}) --chain bsc
 ```
 
-**Bind (gasless, no BNB):**
+**Gasless onboarding (no BNB — register + bind in ONE call):**
 ```bash
-bash scripts/relay-bind.sh --token {T} --principal {addr}
+# Principal mode (self-bind):
+bash scripts/relay-start.sh --token {T} --mode principal
+# Agent mode (bind to someone):
+bash scripts/relay-start.sh --token {T} --mode agent --principal {addr}
 ```
 
 ## Quick Start: Agent Working
@@ -223,18 +228,17 @@ Track these across the conversation to avoid redundant checks:
 ## Staking (wallet required — load commands-staking.md first)
 
 ### S1 · Register & Bind
-Check `GET /address/{addr}/check` first. Use Gas Routing.
 
-**Principal**: bind(myAddress) — auto-registers + binds
-- setRewardRecipient(addr), setDelegation(agent, true) — optional
-- registerAndStake(depositAmount, lockDuration, agent, subnetId, allocateAmount) — one-click, needs gas
+**IMPORTANT**: bind() auto-registers the principal. Do NOT call register() and bind() as two separate steps — this wastes a relay call and breaks the nonce. Use ONE call:
 
-**Agent**: bind(principalAddr) — auto-registers Principal
+**Principal** (has BNB): `awp-wallet send --to $ROOT_NET --data $(bind calldata) --chain bsc`
+**Principal** (no BNB): `bash scripts/relay-start.sh --token {T} --mode principal`
+**Agent** (has BNB): same bind call with principal's address
+**Agent** (no BNB): `bash scripts/relay-start.sh --token {T} --mode agent --principal {addr}`
+
+- setRewardRecipient(addr), setDelegation(agent, true) — optional, after binding
+- registerAndStake(depositAmount, lockDuration, agent, subnetId, allocateAmount) — one-click alternative, needs gas
 - unbind() anytime, rebind(newPrincipal) directly
-
-**Gasless**: Use the bundled scripts — do not construct EIP-712 JSON manually.
-- Register: `bash scripts/relay-register.sh --token {T}`
-- Bind: `bash scripts/relay-bind.sh --token {T} --principal {addr}`
 
 ### S2 · Deposit AWP
 1. approve AWP -> StakeNFT (not RootNet!)
