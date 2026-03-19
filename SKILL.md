@@ -37,6 +37,8 @@ Throughout this document, all `curl` commands use the full URL directly. Do not 
 
 **IMPORTANT: Always show the user what you're doing.** Every query result, every transaction, every event — print it clearly. Never run API calls silently.
 
+**CRITICAL: Registration is FREE and most subnets require ZERO staking.** Do NOT tell users they need AWP tokens or staking to get started. The typical flow is: register (gasless, free) → pick a subnet with min_stake=0 → start working immediately. Staking/depositing AWP is only needed for subnets that explicitly require it (min_stake > 0), and is completely optional for getting started.
+
 ## On Skill Load (do this FIRST)
 
 **Step 1 — Welcome screen** (first session only, skip if already shown):
@@ -56,12 +58,15 @@ welcome to awp.
 one protocol. infinite jobs. nonstop earnings.
 
 ── quick start ──────────────────
-"start working"    → register + join a subnet
+"start working"    → register + join (free, no AWP needed)
 "check my balance" → staking overview
 "list subnets"     → browse active subnets
 "watch events"     → real-time monitor
 "awp help"         → all commands
 ──────────────────────────────────
+
+no AWP tokens needed to start.
+register for free → pick a subnet → start earning.
 ```
 
 **Step 2 — Session recovery**: Check if wallet is already unlocked:
@@ -117,39 +122,40 @@ awp subnets      → browse active subnets
 awp help         → this list
 
 ── actions ───────────────────────
-"start working"    → register + join
+"start working"    → register + join (free)
 "check my balance" → staking overview
-"deposit X AWP"    → stake tokens
-"allocate"         → direct stake to subnet
+"deposit X AWP"    → stake tokens (optional)
+"allocate"         → direct stake (optional)
 "watch events"     → real-time monitor
 ──────────────────────────────────
 ```
 
 ## Onboarding Flow
 
-When the user says "start working", "get started", or similar, run this guided flow.
+When the user says "start working", "get started", or similar, run this guided flow. The entire flow is FREE — no AWP tokens or ETH needed.
 
 **Step 1: Check wallet**
 - No wallet → `awp-wallet init` + unlock
 - Wallet locked → unlock
 - Print: `[1/4] wallet       <short_address> ✓`
 
-**Step 2: Check registration**
+**Step 2: Register (FREE, gasless)**
 ```bash
 curl -s https://tapi.awp.sh/api/address/{addr}/check
 ```
 - Already registered → proceed to Step 3
-- Not registered → present options:
+- Not registered → ask user:
 
 ```
 ── how do you want to start? ─────
 
   Option A: Quick Start (recommended)
-  Register automatically. Gasless.
+  Register automatically. Free, gasless.
+  No AWP tokens needed.
 
   Option B: Link Your Wallet
   Link to your existing crypto wallet.
-  Gasless.
+  Free, gasless. No AWP tokens needed.
 ───────────────────────────────────
 ```
 
@@ -163,30 +169,45 @@ bash scripts/relay-start.sh --token $TOKEN --mode principal
 bash scripts/relay-start.sh --token $TOKEN --mode agent --target <user_wallet_address>
 ```
 
-Print: `[2/4] registered   ✓`
+Print: `[2/4] registered   ✓  (free, no AWP required)`
 
-**Step 3: Discover subnets**
+**Step 3: Auto-select a free subnet**
 ```bash
 curl -s "https://tapi.awp.sh/api/subnets?status=Active&limit=10"
 ```
-Sort: subnets with skills first, then minStake ascending.
+Filter for subnets with `min_stake = 0` AND `skills_uri` not empty. These subnets are FREE to join — no staking needed.
+
+If there is exactly one free subnet with a skill: auto-select it without asking.
+If there are multiple: show only the free ones first, let user pick.
 
 ```
 [3/4] discovering subnets...
 
-── available subnets ─────────────
-#1  Benchmark    min: 0 AWP    ✓ skill ready
-#3  DataMiner    min: 500 AWP  ✓ skill ready
+── free subnets (no staking needed) ──
+#1  Benchmark    ✓ skill ready    ← recommended
 ──────────────────────────────────
 
-Which subnet? (enter # or name)
+Auto-selecting #1 Benchmark (free, skill ready)
 ```
 
-**Step 4: Install subnet skill**
-If min_stake = 0: install skill immediately.
-If min_stake > 0: tell user to deposit and allocate first.
+Only show subnets with min_stake > 0 if the user explicitly asks, or if no free subnets exist.
 
-Print: `[4/4] ready ✓`
+**Step 4: Install subnet skill and start working**
+```
+[4/4] installing Benchmark skill...
+[4/4] ready ✓
+
+── onboarding complete ───────────
+wallet:     <short_address>
+subnet:     #1 "Benchmark"
+cost:       FREE (no staking required)
+──────────────────────────────────
+
+Your agent is now working on subnet #1.
+No AWP tokens were needed.
+```
+
+If the user later wants to work on a subnet that requires staking, guide them to S2 (deposit) and S3 (allocate) at that time — not during initial onboarding.
 
 ## Intent Routing
 
@@ -251,13 +272,14 @@ On "y": execute. On "n": `cancelled.`
 
 ## Rules
 
-1. **Use bundled scripts for ALL write operations.** Never manually construct calldata, ABI encoding, or EIP-712 JSON. Every write action has a script in `scripts/`.
-2. **Always fetch contract addresses from the API** before write actions: `curl -s https://tapi.awp.sh/api/registry`. Never hardcode contract addresses.
-3. **Always check registration** before write actions: `curl -s https://tapi.awp.sh/api/address/{addr}/check`.
-4. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei to the user.
-5. **Addresses**: show as `0x1234...abcd` (first 6 + last 4) for display, full for parameters.
-6. **Pagination**: limit=20 default, max=100.
-7. Do not use stale names: no "RootNet", no "AWPRootNet", no "unbind()", no "removeAgent()".
+1. **Registration is FREE.** Never tell users they need AWP tokens, ETH, or staking to register. Registration uses the gasless relay and costs nothing.
+2. **Most subnets are FREE to join.** Subnets with `min_stake = 0` require no staking at all. Always prefer these during onboarding. Only mention staking when the user specifically picks a subnet with `min_stake > 0`.
+3. **Do NOT block onboarding on staking.** The flow is: register → pick free subnet → start working. Staking is a separate, optional, later step.
+4. **Use bundled scripts for ALL write operations.** Never manually construct calldata, ABI encoding, or EIP-712 JSON.
+5. **Always fetch contract addresses from the API** before write actions: `curl -s https://tapi.awp.sh/api/registry`. Never hardcode contract addresses.
+6. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei.
+7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
+8. Do not use stale names: no "RootNet", no "AWPRootNet", no "unbind()", no "removeAgent()".
 
 ## Bundled Scripts
 
@@ -408,9 +430,11 @@ curl -s "https://tapi.awp.sh/api/emission/epochs?page=1&limit=20"
 
 ---
 
-## Staking (wallet required — load commands-staking.md first)
+## Registration & Staking (load commands-staking.md first)
 
-### S1 · Bind & Set Recipient
+### S1 · Register / Bind (FREE, gasless)
+
+Registration is free and gasless. No AWP or ETH needed.
 
 **Solo Mining (bind to self):**
 ```bash
@@ -427,7 +451,9 @@ If the wallet has ETH, use on-chain scripts instead:
 bash scripts/onchain-bind.sh --token $TOKEN --target <root_address>
 ```
 
-### S2 · Deposit AWP
+### S2 · Deposit AWP (optional — only for subnets that require staking)
+
+Most subnets have min_stake=0 and do not require any deposit. Only run these commands if the user wants to work on a subnet with min_stake > 0, or wants to earn voting power.
 
 **New deposit:**
 ```bash
@@ -444,7 +470,9 @@ bash scripts/onchain-add-position.sh --token $TOKEN --position 1 --amount 1000 -
 bash scripts/onchain-withdraw.sh --token $TOKEN --position 1
 ```
 
-### S3 · Allocate / Deallocate / Reallocate
+### S3 · Allocate / Deallocate / Reallocate (only after S2 deposit)
+
+Only needed if the user has deposited AWP and wants to direct it to a specific agent+subnet.
 
 **Allocate:**
 ```bash
