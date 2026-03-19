@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AWP Gasless onboarding — compatible with both V1 (RootNet) and V2 (AWPRegistry) APIs
+# AWP Gasless onboarding — register or bind via relay
 #
 # Usage:
 #   Principal mode (register / set recipient to self):
@@ -8,17 +8,15 @@
 #   Agent mode (bind to a target address):
 #     ./relay-start.sh --token <session_token> --mode agent --target <address>
 #
-# The script auto-detects V1 vs V2 API:
-#   V1: /registry returns .rootNet → uses /relay/register, EIP-712 domain "AWPRootNet"
-#   V2: /registry returns .awpRegistry → uses /relay/set-recipient, EIP-712 domain "AWPRegistry"
+# Nonce: fetched from GET /api/nonce/{address}
+# EIP-712 domain: fetched from GET /api/registry → eip712Domain
+# Signature: 65 bytes (r[32]+s[32]+v[1]), hex with 0x prefix = 132 chars
 #
-# Prerequisites: awp-wallet (unlocked), curl, jq, python3
+# Prerequisites: awp-wallet (unlocked), curl, jq
 
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
-RPC_URL="${BASE_RPC_URL:-https://mainnet.base.org}"
-CHAIN_ID=""
 TOKEN=""
 MODE=""
 TARGET=""
@@ -30,101 +28,76 @@ while [[ $# -gt 0 ]]; do
     --target) TARGET="$2"; shift 2 ;;
     --principal) MODE="principal"; shift 1 ;;
     --api) API_BASE="$2"; shift 2 ;;
-    --rpc) RPC_URL="$2"; shift 2 ;;
     *) echo '{"error": "Unknown arg: '"$1"'"}' >&2; exit 1 ;;
   esac
 done
 
-[[ -z "$TOKEN" ]] && { echo '{"error": "Missing --token (get from awp-wallet unlock)"}' >&2; exit 1; }
+[[ -z "$TOKEN" ]] && { echo '{"error": "Missing --token"}' >&2; exit 1; }
 [[ -z "$MODE" ]] && { echo '{"error": "Missing --mode (principal or agent)"}' >&2; exit 1; }
 [[ "$MODE" != "principal" && "$MODE" != "agent" ]] && { echo '{"error": "--mode must be principal or agent"}' >&2; exit 1; }
 [[ "$MODE" == "agent" && -z "$TARGET" ]] && { echo '{"error": "Agent mode requires --target <address>"}' >&2; exit 1; }
-[[ -n "$TARGET" && ! "$TARGET" =~ ^0x[0-9a-fA-F]{40}$ ]] && { echo '{"error": "Invalid --target address: must be 0x + 40 hex chars"}' >&2; exit 1; }
+[[ -n "$TARGET" && ! "$TARGET" =~ ^0x[0-9a-fA-F]{40}$ ]] && { echo '{"error": "Invalid --target: must be 0x + 40 hex chars"}' >&2; exit 1; }
 
-eth_call() {
-  local to="$1" data="$2"
-  curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" \
-    -d '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"'"$to"'","data":"'"$data"'"},"latest"],"id":1}' | jq -r '.result'
-}
-
-hex_to_dec() {
-  local val="$1"
-  [[ -z "$val" || "$val" == "null" || "$val" == "0x" ]] && { echo '{"error": "RPC returned empty/null value"}' >&2; exit 1; }
-  python3 -c "print(int('$val', 16))"
-}
-
-# Step 1: Fetch registry — auto-detect V1 (.rootNet) vs V2 (.awpRegistry)
+# Step 1: Fetch registry + eip712Domain
 REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
 
-# Detect API version
-API_VERSION="v1"
-CONTRACT_ADDR=$(echo "$REGISTRY" | jq -r '.awpRegistry // empty')
-if [[ -n "$CONTRACT_ADDR" && "$CONTRACT_ADDR" != "null" ]]; then
-  API_VERSION="v2"
-  EIP712_DOMAIN_NAME="AWPRegistry"
-else
-  CONTRACT_ADDR=$(echo "$REGISTRY" | jq -r '.rootNet // empty')
-  [[ -z "$CONTRACT_ADDR" || "$CONTRACT_ADDR" == "null" ]] && { echo '{"error": "Registry missing both .awpRegistry and .rootNet"}' >&2; exit 1; }
-  EIP712_DOMAIN_NAME="AWPRootNet"
-fi
-echo '{"info": "API version detected: '"$API_VERSION"', contract: '"$CONTRACT_ADDR"'"}' >&2
+# Read eip712Domain from registry (new V2 API)
+EIP712_NAME=$(echo "$REGISTRY" | jq -r '.eip712Domain.name // empty')
+EIP712_VERSION=$(echo "$REGISTRY" | jq -r '.eip712Domain.version // empty')
+EIP712_CHAIN_ID=$(echo "$REGISTRY" | jq -r '.eip712Domain.chainId // empty')
+EIP712_CONTRACT=$(echo "$REGISTRY" | jq -r '.eip712Domain.verifyingContract // empty')
 
-# Get chainId — try registry first, fallback to RPC
-CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId // empty')
-if [[ -z "$CHAIN_ID" || "$CHAIN_ID" == "null" ]]; then
-  CHAIN_ID_HEX=$(curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" \
-    -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' | jq -r '.result')
-  CHAIN_ID=$(hex_to_dec "$CHAIN_ID_HEX")
+# Fallback: if eip712Domain not present, construct from registry fields
+if [[ -z "$EIP712_NAME" || "$EIP712_NAME" == "null" ]]; then
+  EIP712_CONTRACT=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet // empty')
+  [[ -z "$EIP712_CONTRACT" || "$EIP712_CONTRACT" == "null" ]] && { echo '{"error": "Cannot determine contract address from /registry"}' >&2; exit 1; }
+  EIP712_CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId // empty')
+  [[ -z "$EIP712_CHAIN_ID" || "$EIP712_CHAIN_ID" == "null" ]] && { echo '{"error": "Cannot determine chainId from /registry"}' >&2; exit 1; }
+  EIP712_NAME="AWPRegistry"
+  EIP712_VERSION="1"
+  echo '{"info": "eip712Domain not in registry, using fallback"}' >&2
 fi
+
+echo '{"info": "domain: '"$EIP712_NAME"' v'"$EIP712_VERSION"' chain='"$EIP712_CHAIN_ID"' contract='"$EIP712_CONTRACT"'"}' >&2
 
 # Step 2: Get wallet address
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address') || {
-  echo '{"error": "Failed to get wallet address — is the token valid?"}' >&2; exit 1
+  echo '{"error": "Failed to get wallet address"}' >&2; exit 1
 }
 [[ -z "$WALLET_ADDR" || "$WALLET_ADDR" == "null" ]] && {
   echo '{"error": "Wallet address is empty — token may be expired"}' >&2; exit 1
 }
 
-# Step 3: Check current status — handle V1 and V2 response formats
+# Step 3: Check current status
 CHECK=$(curl -s "$API_BASE/address/$WALLET_ADDR/check") || true
+IS_REGISTERED=$(echo "$CHECK" | jq -r '.isRegistered // .isRegisteredUser // false' 2>/dev/null)
+BOUND_TO=$(echo "$CHECK" | jq -r '.boundTo // empty' 2>/dev/null)
 
-if [[ "$API_VERSION" == "v2" ]]; then
-  IS_REGISTERED=$(echo "$CHECK" | jq -r '.isRegistered // false' 2>/dev/null)
-  BOUND_TO=$(echo "$CHECK" | jq -r '.boundTo // empty' 2>/dev/null)
-  RECIPIENT=$(echo "$CHECK" | jq -r '.recipient // empty' 2>/dev/null)
-else
-  # V1 format: {isRegisteredUser, isRegisteredAgent, isManager, ownerAddress}
-  IS_REG_USER=$(echo "$CHECK" | jq -r '.isRegisteredUser // false' 2>/dev/null)
-  IS_REG_AGENT=$(echo "$CHECK" | jq -r '.isRegisteredAgent // false' 2>/dev/null)
-  OWNER_ADDR=$(echo "$CHECK" | jq -r '.ownerAddress // empty' 2>/dev/null)
-  IS_REGISTERED="false"
-  [[ "$IS_REG_USER" == "true" || "$IS_REG_AGENT" == "true" ]] && IS_REGISTERED="true"
-  BOUND_TO="$OWNER_ADDR"
-  RECIPIENT=""
-fi
-
-# Early exit if already registered/bound
 if [[ "$MODE" == "principal" && "$IS_REGISTERED" == "true" ]]; then
   echo '{"status": "already_registered", "address": "'"$WALLET_ADDR"'"}'
   exit 0
 fi
-if [[ "$MODE" == "agent" && -n "$BOUND_TO" && "$BOUND_TO" != "null" && "$BOUND_TO" != "0x0000000000000000000000000000000000000000" ]]; then
+if [[ "$MODE" == "agent" && -n "$BOUND_TO" && "$BOUND_TO" != "null" && "$BOUND_TO" != "" && "$BOUND_TO" != "0x0000000000000000000000000000000000000000" ]]; then
   echo '{"status": "already_bound", "address": "'"$WALLET_ADDR"'", "boundTo": "'"$BOUND_TO"'"}'
   exit 0
 fi
 
-# Step 4: Get nonce
-ADDR_PADDED=$(python3 -c "print('${WALLET_ADDR#0x}'.lower().zfill(64))")
-NONCE_HEX=$(eth_call "$CONTRACT_ADDR" "0x7ecebe00${ADDR_PADDED}")
-NONCE=$(hex_to_dec "$NONCE_HEX")
+# Step 4: Get nonce from /api/nonce/{address}
+NONCE_RESP=$(curl -s "$API_BASE/nonce/$WALLET_ADDR") || { echo '{"error": "Failed to fetch nonce"}' >&2; exit 1; }
+NONCE=$(echo "$NONCE_RESP" | jq -r '.nonce // empty')
+[[ -z "$NONCE" || "$NONCE" == "null" ]] && { echo '{"error": "Invalid nonce response: '"$NONCE_RESP"'"}' >&2; exit 1; }
 
-# Step 5: Deadline
+# Step 5: Deadline (1 hour from now)
 DEADLINE=$(( $(date +%s) + 3600 ))
 
-# Step 6: Sign and submit based on mode + API version
+# Step 6: Build EIP-712 typed data and submit
 if [[ "$MODE" == "principal" ]]; then
-  if [[ "$API_VERSION" == "v2" ]]; then
-    # V2: setRecipient(self) via /relay/set-recipient
+  # Try /relay/set-recipient first, fallback to /relay/register
+  # Check if set-recipient endpoint exists
+  SR_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_BASE/relay/set-recipient" -H "Content-Type: application/json" -d '{}' 2>/dev/null)
+
+  if [[ "$SR_CHECK" != "404" ]]; then
+    # /relay/set-recipient available
     EIP712_DATA=$(cat <<EIPJSON
 {
   "types": {
@@ -143,10 +116,10 @@ if [[ "$MODE" == "principal" ]]; then
   },
   "primaryType": "SetRecipient",
   "domain": {
-    "name": "$EIP712_DOMAIN_NAME",
-    "version": "1",
-    "chainId": $CHAIN_ID,
-    "verifyingContract": "$CONTRACT_ADDR"
+    "name": "$EIP712_NAME",
+    "version": "$EIP712_VERSION",
+    "chainId": $EIP712_CHAIN_ID,
+    "verifyingContract": "$EIP712_CONTRACT"
   },
   "message": {
     "user": "$WALLET_ADDR",
@@ -160,7 +133,7 @@ EIPJSON
     RELAY_ENDPOINT="$API_BASE/relay/set-recipient"
     RELAY_BODY="{\"user\": \"$WALLET_ADDR\", \"recipient\": \"$WALLET_ADDR\", \"deadline\": $DEADLINE, \"signature\": \"__SIG__\"}"
   else
-    # V1: register() via /relay/register
+    # Fallback: /relay/register
     EIP712_DATA=$(cat <<EIPJSON
 {
   "types": {
@@ -178,10 +151,10 @@ EIPJSON
   },
   "primaryType": "Register",
   "domain": {
-    "name": "$EIP712_DOMAIN_NAME",
-    "version": "1",
-    "chainId": $CHAIN_ID,
-    "verifyingContract": "$CONTRACT_ADDR"
+    "name": "$EIP712_NAME",
+    "version": "$EIP712_VERSION",
+    "chainId": $EIP712_CHAIN_ID,
+    "verifyingContract": "$EIP712_CONTRACT"
   },
   "message": {
     "user": "$WALLET_ADDR",
@@ -196,17 +169,8 @@ EIPJSON
   fi
 
 else
-  # AGENT mode: bind(target) via /relay/bind — same for V1 and V2
-  if [[ "$API_VERSION" == "v2" ]]; then
-    BIND_TYPE_NAME="Bind"
-    BIND_FIELD_1="user"
-    BIND_FIELD_2="target"
-  else
-    BIND_TYPE_NAME="Bind"
-    BIND_FIELD_1="agent"
-    BIND_FIELD_2="principal"
-  fi
-
+  # AGENT mode: bind(target) via /relay/bind
+  # EIP-712 Bind type: {agent, target, nonce, deadline}
   EIP712_DATA=$(cat <<EIPJSON
 {
   "types": {
@@ -216,51 +180,48 @@ else
       {"name": "chainId", "type": "uint256"},
       {"name": "verifyingContract", "type": "address"}
     ],
-    "$BIND_TYPE_NAME": [
-      {"name": "$BIND_FIELD_1", "type": "address"},
-      {"name": "$BIND_FIELD_2", "type": "address"},
+    "Bind": [
+      {"name": "agent", "type": "address"},
+      {"name": "target", "type": "address"},
       {"name": "nonce", "type": "uint256"},
       {"name": "deadline", "type": "uint256"}
     ]
   },
-  "primaryType": "$BIND_TYPE_NAME",
+  "primaryType": "Bind",
   "domain": {
-    "name": "$EIP712_DOMAIN_NAME",
-    "version": "1",
-    "chainId": $CHAIN_ID,
-    "verifyingContract": "$CONTRACT_ADDR"
+    "name": "$EIP712_NAME",
+    "version": "$EIP712_VERSION",
+    "chainId": $EIP712_CHAIN_ID,
+    "verifyingContract": "$EIP712_CONTRACT"
   },
   "message": {
-    "$BIND_FIELD_1": "$WALLET_ADDR",
-    "$BIND_FIELD_2": "$TARGET",
+    "agent": "$WALLET_ADDR",
+    "target": "$TARGET",
     "nonce": $NONCE,
     "deadline": $DEADLINE
   }
 }
 EIPJSON
 )
-
-  # API accepts {agent, target} for relay/bind (confirmed by testing)
   RELAY_ENDPOINT="$API_BASE/relay/bind"
   RELAY_BODY="{\"agent\": \"$WALLET_ADDR\", \"target\": \"$TARGET\", \"deadline\": $DEADLINE, \"signature\": \"__SIG__\"}"
 fi
 
-# Sign
+# Step 7: Sign
 SIG_RESULT=$(awp-wallet sign-typed-data --token "$TOKEN" --data "$EIP712_DATA") || {
   echo '{"error": "EIP-712 signing failed"}' >&2; exit 1
 }
 SIGNATURE=$(echo "$SIG_RESULT" | jq -r '.signature')
 
-# Replace signature placeholder in body
+# Replace signature placeholder
 FINAL_BODY=$(echo "$RELAY_BODY" | sed "s|__SIG__|$SIGNATURE|")
 
-# Submit
+# Step 8: Submit
 echo '{"info": "Submitting to '"$RELAY_ENDPOINT"'"}' >&2
 RELAY_RESULT=$(curl -s -w "\n%{http_code}" -X POST "$RELAY_ENDPOINT" \
   -H "Content-Type: application/json" \
   -d "$FINAL_BODY")
 
-# Step 7: Parse response
 HTTP_CODE=$(echo "$RELAY_RESULT" | tail -1)
 BODY=$(echo "$RELAY_RESULT" | sed '$d')
 

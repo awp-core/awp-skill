@@ -25,7 +25,8 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /registry` | Returns `awpRegistry` + 9 other contract addresses (no `accessManager` field) — never hardcode |
+| `GET /registry` | Contract addresses + `eip712Domain` + `chainId` — never hardcode |
+| `GET /nonce/{address}` | EIP-712 signature nonce for gasless relay |
 | `GET /address/{addr}/check` | `{isRegistered, boundTo, recipient}` |
 | `GET /health` | Service health |
 
@@ -33,6 +34,7 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 
 ```json
 {
+  "chainId": 8453,
   "awpRegistry": "0x...",
   "awpToken": "0x...",
   "awpEmission": "0x...",
@@ -42,11 +44,25 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
   "lpManager": "0x...",
   "alphaTokenFactory": "0x...",
   "dao": "0x...",
-  "treasury": "0x..."
+  "treasury": "0x...",
+  "eip712Domain": {
+    "name": "AWPRegistry",
+    "version": "1",
+    "chainId": 8453,
+    "verifyingContract": "0x..."
+  }
 }
 ```
 
-> **Note:** No `accessManager` field. Per-subnet addresses (`subnet_contract`, `alpha_token`, `lp_pool`) are returned by `GET /subnets/{subnetId}`, not by `/registry`.
+> **Note:** `eip712Domain` provides the complete EIP-712 domain separator for all gasless relay signatures. Per-subnet addresses are returned by `GET /subnets/{subnetId}`, not by `/registry`.
+
+### `GET /nonce/{address}` Response
+
+```json
+{"nonce": 0}
+```
+
+> The nonce auto-increments after each successful relay call. Use this before signing any EIP-712 relay message.
 
 ### `GET /address/{addr}/check` Response
 

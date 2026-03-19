@@ -164,31 +164,27 @@ POST /relay/set-recipient
 
 ### Complete Command Templates
 
-**Step 1: Get addresses and nonce**
+**Step 1: Get nonce and EIP-712 domain**
 ```bash
-# Get nonce for EIP-712 signatures
-NONCE=$(cast call $AWP_REGISTRY "nonces(address)" $WALLET_ADDR --rpc-url $RPC_URL | cast --to-dec)
+# Get nonce from REST API
+NONCE=$(curl -s https://tapi.awp.sh/api/nonce/$WALLET_ADDR | jq -r '.nonce')
+
+# Get EIP-712 domain from registry
+REGISTRY=$(curl -s https://tapi.awp.sh/api/registry)
+EIP712_DOMAIN=$(echo $REGISTRY | jq '.eip712Domain')
+# → {"name": "AWPRegistry", "version": "1", "chainId": 8453, "verifyingContract": "0x..."}
 ```
 
 **On-chain bind (has ETH gas):**
 ```bash
-# Bind to target (self-bind: TARGET=WALLET_ADDR)
-TARGET={targetAddress}
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "bind(address)" $TARGET) --chain base
+bash scripts/onchain-bind.sh --token {T} --target {targetAddress}
 ```
 
-**On-chain registerAndStake (has ETH gas):**
+**Gasless bind (no ETH) — EIP-712 signature flow:**
 ```bash
-# Step 1: Approve AWP to AWPRegistry
-awp-wallet approve --token {T} --asset $AWP_TOKEN --spender $AWP_REGISTRY --amount {depositAmountHuman} --chain base
-# Step 2: registerAndStake
-awp-wallet send --token {T} --to $AWP_REGISTRY --data $(cast calldata "registerAndStake(uint256,uint64,address,uint256,uint256)" {depositAmountWei} {lockDurationSeconds} {agentAddr} {subnetId} {allocateAmountWei}) --chain base
-```
-
-**Gasless bind (no ETH) — EIP-712 template:**
-```bash
-TARGET={targetAddress}
-DEADLINE=$(date -d '+1 hour' +%s)
+# 1. Get nonce:  GET /api/nonce/{agentAddress}
+# 2. Get domain: GET /api/registry → eip712Domain
+# 3. Sign EIP-712 typed data:
 
 awp-wallet sign-typed-data --token {T} --data '{
   "types": {
@@ -199,7 +195,7 @@ awp-wallet sign-typed-data --token {T} --data '{
       {"name": "verifyingContract", "type": "address"}
     ],
     "Bind": [
-      {"name": "user", "type": "address"},
+      {"name": "agent", "type": "address"},
       {"name": "target", "type": "address"},
       {"name": "nonce", "type": "uint256"},
       {"name": "deadline", "type": "uint256"}
@@ -209,21 +205,24 @@ awp-wallet sign-typed-data --token {T} --data '{
   "domain": {
     "name": "AWPRegistry",
     "version": "1",
-    "chainId": '$CHAIN_ID',
-    "verifyingContract": "'$AWP_REGISTRY'"
+    "chainId": 8453,
+    "verifyingContract": "0x00003a7fa04c3af3adba2dc3c6622277501400b1"
   },
   "message": {
-    "user": "'$WALLET_ADDR'",
+    "agent": "'$WALLET_ADDR'",
     "target": "'$TARGET'",
     "nonce": '$NONCE',
     "deadline": '$DEADLINE'
   }
 }'
 
-curl -X POST {API_BASE}/api/relay/bind \
+# 4. Submit to relay:
+curl -X POST https://tapi.awp.sh/api/relay/bind \
   -H "Content-Type: application/json" \
   -d '{"agent": "'$WALLET_ADDR'", "target": "'$TARGET'", "deadline": '$DEADLINE', "signature": "{signatureHex}"}'
 ```
+
+> **Bind type fields are `{agent, target, nonce, deadline}`** — NOT `{user, target}`. The `agent` is the wallet signing the message. The `target` is the address to bind to. Nonce from `GET /nonce/{agent}`. Domain from `GET /registry → eip712Domain`.
 
 **Gasless set-recipient (no ETH) — EIP-712 template:**
 ```bash

@@ -57,17 +57,21 @@ hex_to_dec() {
 
 # Step 1: Fetch registry (fresh, never cached)
 REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
-echo "$REGISTRY" | jq -e '.awpRegistry // .rootNet' > /dev/null 2>&1 || { echo "$REGISTRY" >&2; exit 1; }
-AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet // empty')
+[[ -z "$AWP_REGISTRY" || "$AWP_REGISTRY" == "null" ]] && { echo '{"error": "Cannot find contract address in /registry"}' >&2; exit 1; }
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
 
-# Get chainId — try registry first, fallback to RPC
-CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId // empty')
-if [[ -z "$CHAIN_ID" || "$CHAIN_ID" == "null" ]]; then
+# Read eip712Domain from registry (new API), with fallback
+EIP712_NAME=$(echo "$REGISTRY" | jq -r '.eip712Domain.name // "AWPRegistry"')
+EIP712_VERSION=$(echo "$REGISTRY" | jq -r '.eip712Domain.version // "1"')
+CHAIN_ID=$(echo "$REGISTRY" | jq -r '.eip712Domain.chainId // .chainId // empty')
+[[ -z "$CHAIN_ID" || "$CHAIN_ID" == "null" ]] && {
   CHAIN_ID_HEX=$(curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" \
     -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' | jq -r '.result')
   CHAIN_ID=$(hex_to_dec "$CHAIN_ID_HEX")
-fi
+}
+EIP712_CONTRACT=$(echo "$REGISTRY" | jq -r '.eip712Domain.verifyingContract // empty')
+[[ -z "$EIP712_CONTRACT" || "$EIP712_CONTRACT" == "null" ]] && EIP712_CONTRACT="$AWP_REGISTRY"
 
 # Step 2: Get wallet address
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address') || {
@@ -88,13 +92,18 @@ INITIAL_ALPHA_PRICE=$(hex_to_dec "$PRICE_HEX")
 LP_COST=$(python3 -c "print(100_000_000 * 10**18 * $INITIAL_ALPHA_PRICE // 10**18)")
 
 # Step 4: Get nonces
+# Registry nonce — try /api/nonce/{addr} first (new API), fallback to RPC
+NONCE_RESP=$(curl -s "$API_BASE/nonce/$WALLET_ADDR" 2>/dev/null)
+REGISTRY_NONCE=$(echo "$NONCE_RESP" | jq -r '.nonce // empty' 2>/dev/null)
+if [[ -z "$REGISTRY_NONCE" || "$REGISTRY_NONCE" == "null" ]]; then
+  # Fallback: read nonce from contract via RPC
+  ADDR_PADDED=$(python3 -c "print('${WALLET_ADDR#0x}'.lower().zfill(64))")
+  REGISTRY_NONCE_HEX=$(eth_call "$AWP_REGISTRY" "0x7ecebe00${ADDR_PADDED}")
+  REGISTRY_NONCE=$(hex_to_dec "$REGISTRY_NONCE_HEX")
+fi
+
+# AWPToken permit nonce (always from RPC — no REST endpoint for token nonces)
 ADDR_PADDED=$(python3 -c "print('${WALLET_ADDR#0x}'.lower().zfill(64))")
-
-# AWPRegistry nonce (for RegisterSubnet signature)
-REGISTRY_NONCE_HEX=$(eth_call "$AWP_REGISTRY" "0x7ecebe00${ADDR_PADDED}")
-REGISTRY_NONCE=$(hex_to_dec "$REGISTRY_NONCE_HEX")
-
-# AWPToken permit nonce (for ERC-2612 Permit signature)
 PERMIT_NONCE_HEX=$(eth_call "$AWP_TOKEN" "0x7ecebe00${ADDR_PADDED}")
 PERMIT_NONCE=$(hex_to_dec "$PERMIT_NONCE_HEX")
 
@@ -166,10 +175,10 @@ REGISTER_DATA=$(cat <<EIPJSON
   },
   "primaryType": "RegisterSubnet",
   "domain": {
-    "name": "AWPRegistry",
-    "version": "1",
+    "name": "$EIP712_NAME",
+    "version": "$EIP712_VERSION",
     "chainId": $CHAIN_ID,
-    "verifyingContract": "$AWP_REGISTRY"
+    "verifyingContract": "$EIP712_CONTRACT"
   },
   "message": {
     "user": "$WALLET_ADDR",
