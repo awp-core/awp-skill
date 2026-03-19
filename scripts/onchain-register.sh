@@ -4,7 +4,7 @@
 # Every address is implicitly a root; calling register() just explicitly
 # sets your recipient to yourself.
 # Usage: ./onchain-register.sh --token <session_token>
-# Requires BNB for gas.
+# Requires ETH for gas.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"

@@ -28,7 +28,7 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 REGISTRY=$(curl -s "$API_BASE/registry")
 STAKE_NFT=$(echo "$REGISTRY" | jq -r '.stakeNFT')
 
-# Check remainingTime(tokenId) — selector = 0xbac7e0cf (keccak256("remainingTime(uint256)")[:4])
+# Check remainingTime(tokenId) — selector = 0x0c64a7f2 (keccak256("remainingTime(uint256)")[:4])
 POSITION_PADDED=$(python3 -c "print(hex($POSITION)[2:].zfill(64))")
 
 # remainingTime(uint256) selector

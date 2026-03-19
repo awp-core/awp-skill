@@ -3,7 +3,7 @@
 # V2 signature: allocate(address staker, address agent, uint256 subnetId, uint256 amount)
 # The staker parameter is now explicit (first param). Caller must be staker or delegate.
 # Usage: ./onchain-allocate.sh --token <T> --agent <addr> --subnet <id> --amount <AWP_human>
-# Requires BNB for gas.
+# Requires ETH for gas.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
@@ -26,7 +26,7 @@ AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
 
 # Validate numeric inputs (shell regex, no python injection risk)
 [[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
-[[ "$SUBNET" =~ ^[0-9]+$ ]] || { echo '{"error": "Invalid --subnet: must be a positive integer"}' >&2; exit 1; }
+[[ "$SUBNET" =~ ^[0-9]+$ && "$SUBNET" -gt 0 ]] || { echo '{"error": "Invalid --subnet: must be a positive integer > 0"}' >&2; exit 1; }
 
 # Check unallocated balance
 BALANCE=$(curl -s "$API_BASE/staking/user/$WALLET_ADDR/balance")

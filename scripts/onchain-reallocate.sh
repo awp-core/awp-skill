@@ -3,7 +3,7 @@
 # V2 signature: reallocate(address staker, address fromAgent, uint256 fromSubnetId, address toAgent, uint256 toSubnetId, uint256 amount)
 # The staker parameter is now explicit (first param). Caller must be staker or delegate.
 # Usage: ./onchain-reallocate.sh --token <T> --from-agent <addr> --from-subnet <id> --to-agent <addr> --to-subnet <id> --amount <AWP_human>
-# Requires BNB for gas.
+# Requires ETH for gas.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
@@ -29,8 +29,8 @@ AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
 
 # Validate numeric inputs (shell regex, no python injection risk)
 [[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
-[[ "$FROM_SUBNET" =~ ^[0-9]+$ ]] || { echo '{"error": "Invalid --from-subnet: must be a positive integer"}' >&2; exit 1; }
-[[ "$TO_SUBNET" =~ ^[0-9]+$ ]] || { echo '{"error": "Invalid --to-subnet: must be a positive integer"}' >&2; exit 1; }
+[[ "$FROM_SUBNET" =~ ^[0-9]+$ && "$FROM_SUBNET" -gt 0 ]] || { echo '{"error": "Invalid --from-subnet: must be > 0"}' >&2; exit 1; }
+[[ "$TO_SUBNET" =~ ^[0-9]+$ && "$TO_SUBNET" -gt 0 ]] || { echo '{"error": "Invalid --to-subnet: must be > 0"}' >&2; exit 1; }
 
 # Convert amount to wei
 AMOUNT_WEI=$(python3 -c "print(int(float('$AMOUNT') * 10**18))")

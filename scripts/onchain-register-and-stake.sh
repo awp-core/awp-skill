@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-click registerAndStake: register + deposit + allocate in a single tx
 # Usage: ./onchain-register-and-stake.sh --token <T> --amount <AWP_human> --lock-days <days> --agent <address> --subnet <id> --allocate-amount <AWP_human>
-# Requires BNB for gas. Handles approve (to AWP_REGISTRY) + registerAndStake in sequence.
+# Requires ETH for gas. Handles approve (to AWP_REGISTRY) + registerAndStake in sequence.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # On-chain add AWP to an existing StakeNFT position
 # Usage: ./onchain-add-position.sh --token <T> --position <tokenId> --amount <AWP_human> [--extend-days <days>]
-# Requires BNB for gas. Handles remainingTime check + approve + addToPosition.
+# Requires ETH for gas. Handles remainingTime check + approve + addToPosition.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"

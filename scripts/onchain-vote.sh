@@ -3,11 +3,11 @@
 # Uses castVoteWithReasonAndParams(uint256,uint8,string,bytes)
 # params = abi.encode(uint256[] tokenIds) — eligible stakeNFT positions only
 # Usage: ./onchain-vote.sh --token <T> --proposal <id> --support <0|1|2> [--reason <text>]
-# Requires BNB for gas.
+# Requires ETH for gas.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
-RPC_URL="${RPC_URL:-https://mainnet.base.org}"
+RPC_URL="${BASE_RPC_URL:-https://mainnet.base.org}"
 TOKEN=""
 PROPOSAL=""
 SUPPORT=""

@@ -2,7 +2,7 @@
 # On-chain subnet lifecycle — activate/pause/resume (V2)
 # Usage:
 #   ./onchain-subnet-lifecycle.sh --token <T> --subnet <id> --action <activate|pause|resume>
-# Requires BNB for gas. SubnetNFT owner only.
+# Requires ETH for gas. SubnetNFT owner only.
 # Pre-checks current subnet status to prevent invalid state transitions.
 set -euo pipefail
 
@@ -19,7 +19,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -z "$TOKEN" || -z "$SUBNET" || -z "$ACTION" ]] && { echo '{"error": "Missing --token, --subnet, --action"}' >&2; exit 1; }
-[[ "$SUBNET" =~ ^[0-9]+$ ]] || { echo '{"error": "Invalid --subnet: must be a positive integer"}' >&2; exit 1; }
+[[ "$SUBNET" =~ ^[0-9]+$ && "$SUBNET" -gt 0 ]] || { echo '{"error": "Invalid --subnet: must be > 0"}' >&2; exit 1; }
 [[ "$ACTION" == "activate" || "$ACTION" == "pause" || "$ACTION" == "resume" ]] || {
   echo '{"error": "--action must be activate, pause, or resume"}' >&2; exit 1
 }

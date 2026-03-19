@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # On-chain bind(address target) — bind to a target in the account tree (V2)
 # Usage: ./onchain-bind.sh --token <session_token> --target <address>
-# Requires BNB for gas. Tree-based binding with anti-cycle check.
+# Requires ETH for gas. Tree-based binding with anti-cycle check.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"

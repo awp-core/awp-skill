@@ -4,7 +4,7 @@
 # Usage:
 #   ./onchain-subnet-update.sh --token <T> --subnet <id> --skills-uri <uri>
 #   ./onchain-subnet-update.sh --token <T> --subnet <id> --min-stake <wei>
-# Requires BNB for gas. NFT owner only.
+# Requires ETH for gas. NFT owner only.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
@@ -24,7 +24,7 @@ done
 [[ -z "$TOKEN" || -z "$SUBNET" ]] && { echo '{"error": "Missing --token, --subnet"}' >&2; exit 1; }
 [[ -z "$SKILLS_URI" && -z "$MIN_STAKE" ]] && { echo '{"error": "Provide --skills-uri or --min-stake"}' >&2; exit 1; }
 [[ -n "$SKILLS_URI" && -n "$MIN_STAKE" ]] && { echo '{"error": "Provide only one of --skills-uri or --min-stake per call"}' >&2; exit 1; }
-[[ "$SUBNET" =~ ^[0-9]+$ ]] || { echo '{"error": "Invalid --subnet: must be a positive integer"}' >&2; exit 1; }
+[[ "$SUBNET" =~ ^[0-9]+$ && "$SUBNET" -gt 0 ]] || { echo '{"error": "Invalid --subnet: must be > 0"}' >&2; exit 1; }
 [[ -n "$MIN_STAKE" ]] && { [[ "$MIN_STAKE" =~ ^[0-9]+$ ]] || { echo '{"error": "Invalid --min-stake: must be a non-negative integer (wei)"}' >&2; exit 1; }; }
 
 # Pre-flight

@@ -2,7 +2,7 @@
 # On-chain deallocate stake from agent+subnet (V2)
 # deallocate(address staker, address agent, uint256 subnetId, uint256 amount)
 # Usage: ./onchain-deallocate.sh --token <T> --agent <addr> --subnet <id> --amount <AWP_human>
-# Requires BNB for gas. Immediate — no cooldown.
+# Requires ETH for gas. Immediate — no cooldown.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
@@ -16,7 +16,7 @@ done
 [[ -z "$TOKEN" || -z "$AGENT" || -z "$SUBNET" || -z "$AMOUNT" ]] && { echo '{"error": "Missing --token, --agent, --subnet, --amount"}' >&2; exit 1; }
 [[ "$AGENT" =~ ^0x[0-9a-fA-F]{40}$ ]] || { echo '{"error": "Invalid --agent address: must be 0x + 40 hex chars"}' >&2; exit 1; }
 [[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
-[[ "$SUBNET" =~ ^[0-9]+$ ]] || { echo '{"error": "Invalid --subnet: must be a positive integer"}' >&2; exit 1; }
+[[ "$SUBNET" =~ ^[0-9]+$ && "$SUBNET" -gt 0 ]] || { echo '{"error": "Invalid --subnet: must be a positive integer > 0"}' >&2; exit 1; }
 
 # Pre-flight
 WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')

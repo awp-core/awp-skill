@@ -1,7 +1,7 @@
 # AWP Skill
 
 [![Skill Compatible](https://img.shields.io/badge/Skill-Compatible-blue)](https://openclaw.ai)
-[![BSC](https://img.shields.io/badge/Base-EVM-yellow)](https://basescan.org)
+[![Base](https://img.shields.io/badge/Base-EVM-yellow)](https://basescan.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 **Skill for interacting with the AWP (Agent Working Protocol) on Base/EVM.** Query protocol state, bind and delegate, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
@@ -170,7 +170,7 @@ Root (cold wallet):                    Agent (hot wallet):
 
 | Parameter | Value |
 |-----------|-------|
-| Chain | EVM (deployed on Base, Chain ID 56) |
+| Chain | EVM (deployed on Base, Chain ID 8453) |
 | Epoch Duration | 1 day (86,400 seconds) |
 | Initial Daily Emission | 15,800,000 AWP |
 | Decay Factor | ~0.3156% per epoch |

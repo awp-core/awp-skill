@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # On-chain deposit AWP to StakeNFT (V2)
 # Usage: ./onchain-deposit.sh --token <T> --amount <AWP_human> --lock-days <days>
-# Requires BNB for gas. Handles approve + deposit in sequence.
+# Requires ETH for gas. Handles approve + deposit in sequence.
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
