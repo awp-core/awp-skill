@@ -93,7 +93,7 @@ awp-skill/
 - S1-S3 — ALWAYS load commands-staking.md first.
 - M1-M4 — ALWAYS load commands-subnet.md first.
 - G1-G2 — ALWAYS load commands-governance.md first.
-- Gasless onboarding — use `scripts/relay-start.sh`. This single script handles both registration AND binding in one call. bind() auto-registers the principal — there is NO need to call register() separately. Calling register() before bind() wastes a relay call and breaks the nonce.
+- Gasless onboarding — use `scripts/relay-start.sh` with `--mode principal` (register) or `--mode agent` (bind). Choose one per address, not both.
 - Gasless subnet — use `scripts/relay-register-subnet.sh`.
 - NEVER manually construct EIP-712 JSON. NEVER call register() and bind() as two separate steps.
 
@@ -155,9 +155,9 @@ bash scripts/relay-start.sh --token $TOKEN --mode agent --principal {addr}
 
 Ask user: **Principal (self-managed) or Agent (work for someone)?**
 
-**Principal**: wallet setup -> S1 bind(myAddress) -> Q5 discover subnets -> Q6 install skill -> S2 deposit -> S3 allocate -> work -> earn
+**Principal**: wallet setup -> S1 register() -> Q5 discover subnets -> Q6 install skill -> S2 deposit -> S3 allocate -> work -> earn
 
-**Agent**: wallet setup -> S1 bind(principalAddr) -> Principal does S2+S3 -> install subnet skill -> work -> unbind() anytime
+**Agent**: wallet setup -> S1 bind(ownerAddress) -> Principal does S2+S3 -> install subnet skill -> work -> unbind() anytime
 
 ## Conventions
 
@@ -235,13 +235,13 @@ Track these across the conversation to avoid redundant checks:
 
 To participate in subnet work, a wallet address needs ONE of these (not both):
 - **register()** — become a Principal (self-managed account, can stake and earn directly)
-- **bind(principal)** — become an Agent bound to a Principal (work for them)
+- **bind(ownerAddress)** — become an Agent bound to a Principal (work for them). The owner does not need to be registered first — bind() will auto-register them if needed.
 
 Pick one based on the user's role. Do NOT call both register() and bind() for the same address.
 
 **Principal** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data $(cast calldata "register()") --chain bsc`
 **Principal** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode principal`
-**Agent** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data $(cast calldata "bind(address)" {principalAddr}) --chain bsc`
+**Agent** (has BNB): `awp-wallet send --token $TOKEN --to $ROOT_NET --data $(cast calldata "bind(address)" {ownerAddress}) --chain bsc`
 **Agent** (no BNB): `bash scripts/relay-start.sh --token $TOKEN --mode agent --principal {addr}`
 
 - setRewardRecipient(addr), setDelegation(agent, true) — optional, after binding
@@ -355,7 +355,7 @@ $ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2025-12-01 | bs
 | 400 Bad Request | Check address format (0x+40hex), amount > 0, subnetId > 0 |
 | 404 Not Found | `GET /subnets` or `GET /agents/by-owner` to find valid IDs |
 | 429 Rate Limit | Auto-retry: wait 60s then retry. If still 429, inform user of the 100/IP/1h limit. |
-| "not registered" | Run S1: bind(myAddress) or bind(principalAddr) |
+| "not registered" | Run S1: register() or bind(ownerAddress) |
 | "insufficient balance" | Q2 to check -> S2 to deposit more AWP |
 | "not subnet owner" | Check SubnetNFT ownership via `GET /subnets/{id}` owner field |
 | PositionExpired | Cannot addToPosition — withdraw first, then create new position via S2 |
