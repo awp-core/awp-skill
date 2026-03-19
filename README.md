@@ -83,7 +83,11 @@ awp-skill/
 │   ├── commands-subnet.md                  # M1-M4 command templates + gasless
 │   ├── commands-governance.md              # G1-G4 commands + supplementary endpoints
 │   └── protocol.md                         # Shared structs, 27 events, constants
+├── scripts/
+│   ├── relay-start.sh                      # Gasless onboarding (register or bind)
+│   └── relay-register-subnet.sh            # Gasless subnet registration
 ├── README.md
+└── LICENSE
 ```
 
 **Progressive loading**: The agent loads only what it needs per action. Query and Monitor actions (Q1-Q7, W1, W2) use SKILL.md alone. Write actions load the specific command file (~200-360 lines each) instead of all references at once, saving ~60% context.
@@ -170,15 +174,11 @@ Bind to someone else's account. They stake, you work.
 
 ### Source Documents
 
+Protocol specifications live on the `dev` branch (not included in the main install):
 
-| File | Content |
-|------|---------|
-| `contract-api.md` | All smart contract function signatures, parameters, access control |
-| `rest-api.md` | All HTTP endpoints with request/response schemas |
-| `config.md` | Chain configuration, contract addresses, constants |
-| `examples.md` | Working code examples for common operations |
-| `agent-skill-guide.md` | How agents discover subnets and install skills |
-| `abi/` | Contract ABI JSON files for viem/ethers.js integration |
+```bash
+git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config.md, ABIs, etc.
+```
 
 ### Version History
 

@@ -2,6 +2,10 @@
 
 **API Base URL**: `https://tapi.awp.sh/api`
 
+> **Note**: On-chain command templates below use `cast` (Foundry) for calldata encoding.
+> For gasless operations, use the bundled scripts instead — they require only curl+jq+python3.
+> If `cast` is not available, pre-compute the 4-byte function selectors and use python3 for ABI encoding.
+
 ## Setup (run once per session)
 
 ```bash

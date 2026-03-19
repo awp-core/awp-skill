@@ -56,7 +56,12 @@ CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId // 56')
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
 
 # Step 2: Get wallet address
-WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
+WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address') || {
+  echo '{"error": "Failed to get wallet address — is the token valid?"}' >&2; exit 1
+}
+[[ -z "$WALLET_ADDR" || "$WALLET_ADDR" == "null" ]] && {
+  echo '{"error": "Wallet address is empty — token may be expired"}' >&2; exit 1
+}
 
 # Step 3: Get initialAlphaPrice — selector = 0x8a5c7899
 PRICE_HEX=$(eth_call "$ROOT_NET" "0x8a5c7899")
