@@ -90,7 +90,11 @@ If remote version > 1.9.1, show: `[UPDATE] New version available. Run: skill ins
 
 The user may type these at any time:
 
-**awp status** — fetch from `https://tapi.awp.sh/api/address/{addr}/check` + `/staking/user/{addr}/balance` + `/positions` + `/allocations`
+**awp status** — fetch these 4 endpoints:
+- `https://tapi.awp.sh/api/address/{addr}/check`
+- `https://tapi.awp.sh/api/staking/user/{addr}/balance`
+- `https://tapi.awp.sh/api/staking/user/{addr}/positions`
+- `https://tapi.awp.sh/api/staking/user/{addr}/allocations`
 ```
 ── my agent ──────────────────────
 address:        <short_address>

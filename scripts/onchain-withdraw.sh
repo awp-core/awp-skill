@@ -31,12 +31,8 @@ STAKE_NFT=$(echo "$REGISTRY" | jq -r '.stakeNFT')
 # Check remainingTime(tokenId) — selector = 0x0c64a7f2 (keccak256("remainingTime(uint256)")[:4])
 POSITION_PADDED=$(python3 -c "print(hex($POSITION)[2:].zfill(64))")
 
-# remainingTime(uint256) selector
-REMAINING_SELECTOR=$(python3 -c "
-from web3 import Web3
-print('0x' + Web3.keccak(text='remainingTime(uint256)').hex()[:8])
-")
-REMAINING_HEX=$(eth_call "$STAKE_NFT" "${REMAINING_SELECTOR}${POSITION_PADDED}")
+# remainingTime(uint256) selector = 0x0c64a7f2 (hardcoded, no web3 dependency)
+REMAINING_HEX=$(eth_call "$STAKE_NFT" "0x0c64a7f2${POSITION_PADDED}")
 [[ -z "$REMAINING_HEX" || "$REMAINING_HEX" == "0x" || "$REMAINING_HEX" == "null" ]] && {
   echo '{"error": "Could not fetch remainingTime — is the position ID valid?"}' >&2; exit 1
 }

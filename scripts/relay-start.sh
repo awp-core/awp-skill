@@ -92,13 +92,8 @@ DEADLINE=$(( $(date +%s) + 3600 ))
 
 # Step 6: Build EIP-712 typed data and submit
 if [[ "$MODE" == "principal" ]]; then
-  # Try /relay/set-recipient first, fallback to /relay/register
-  # Check if set-recipient endpoint exists
-  SR_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_BASE/relay/set-recipient" -H "Content-Type: application/json" -d '{}' 2>/dev/null)
-
-  if [[ "$SR_CHECK" != "404" ]]; then
-    # /relay/set-recipient available
-    EIP712_DATA=$(cat <<EIPJSON
+  # Principal mode: setRecipient(self) via /relay/set-recipient
+  EIP712_DATA=$(cat <<EIPJSON
 {
   "types": {
     "EIP712Domain": [
@@ -130,43 +125,8 @@ if [[ "$MODE" == "principal" ]]; then
 }
 EIPJSON
 )
-    RELAY_ENDPOINT="$API_BASE/relay/set-recipient"
-    RELAY_BODY="{\"user\": \"$WALLET_ADDR\", \"recipient\": \"$WALLET_ADDR\", \"deadline\": $DEADLINE, \"signature\": \"__SIG__\"}"
-  else
-    # Fallback: /relay/register
-    EIP712_DATA=$(cat <<EIPJSON
-{
-  "types": {
-    "EIP712Domain": [
-      {"name": "name", "type": "string"},
-      {"name": "version", "type": "string"},
-      {"name": "chainId", "type": "uint256"},
-      {"name": "verifyingContract", "type": "address"}
-    ],
-    "Register": [
-      {"name": "user", "type": "address"},
-      {"name": "nonce", "type": "uint256"},
-      {"name": "deadline", "type": "uint256"}
-    ]
-  },
-  "primaryType": "Register",
-  "domain": {
-    "name": "$EIP712_NAME",
-    "version": "$EIP712_VERSION",
-    "chainId": $EIP712_CHAIN_ID,
-    "verifyingContract": "$EIP712_CONTRACT"
-  },
-  "message": {
-    "user": "$WALLET_ADDR",
-    "nonce": $NONCE,
-    "deadline": $DEADLINE
-  }
-}
-EIPJSON
-)
-    RELAY_ENDPOINT="$API_BASE/relay/register"
-    RELAY_BODY="{\"user\": \"$WALLET_ADDR\", \"deadline\": $DEADLINE, \"signature\": \"__SIG__\"}"
-  fi
+  RELAY_ENDPOINT="$API_BASE/relay/set-recipient"
+  RELAY_BODY="{\"user\": \"$WALLET_ADDR\", \"recipient\": \"$WALLET_ADDR\", \"deadline\": $DEADLINE, \"signature\": \"__SIG__\"}"
 
 else
   # AGENT mode: bind(target) via /relay/bind
