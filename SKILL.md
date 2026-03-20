@@ -11,7 +11,20 @@ description: >
   subnet discovery, staking/deposit/withdraw, allocate/deallocate/reallocate, governance
   proposals and voting, real-time event monitoring, solo and delegated mining setup.
   Do NOT trigger for generic Solidity, general blockchain questions, or non-AWP protocols.
-metadata: {"openclaw":{"requires":{"env":["AWP_API_URL"],"skills":["AWP Wallet"]}}}
+metadata:
+  openclaw:
+    requires:
+      env:
+        - AWP_API_URL          # REST API base URL (default: https://tapi.awp.sh/api)
+        - BASE_RPC_URL         # optional: Base chain RPC (default: https://mainnet.base.org)
+      skills:
+        - AWP Wallet           # awp-wallet CLI for signing and sending transactions
+      binaries:
+        - curl                 # HTTP requests to REST API
+        - jq                   # JSON parsing
+        - python3              # ABI encoding and unit conversion
+      config:
+        - ~/.awp-wallet-password  # auto-generated wallet password (chmod 600)
 ---
 
 # AWP Registry
@@ -264,9 +277,10 @@ Use tagged prefixes so the user can follow along:
 [TX] confirmed ✓
 ```
 
-## Write Safety
+## Write Safety — User Confirmation Required
 
-Every write operation must show a confirmation preview before executing:
+**Every on-chain transaction requires explicit user approval.** The agent must NEVER send a transaction without showing the preview and getting "y" from the user. This applies to all staking, subnet, and governance operations.
+
 ```
 [STAKE] About to deposit:
         amount:     1,000 AWP
@@ -286,7 +300,8 @@ On "y": execute. On "n": `cancelled.`
 6. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei.
 7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
 8. Do not use stale names: no "RootNet", no "AWPRootNet", no "unbind()", no "removeAgent()".
-9. **NEVER ask the user for a wallet password.** Auto-generate, auto-save to `~/.awp-wallet-password`, auto-read on unlock. The user should not even know a password exists.
+9. **NEVER ask the user for a wallet password.** Auto-generate, save to `~/.awp-wallet-password`, inform user about the file location. Auto-read on unlock.
+10. **Always confirm before signing transactions.** Show the user what will be signed and sent before executing. The Write Safety preview (below) is mandatory for every on-chain operation.
 
 ## Bundled Scripts
 
@@ -314,38 +329,47 @@ scripts/
 
 Write actions require the **AWP Wallet** skill.
 
-**The agent handles the entire wallet setup automatically. NEVER ask the user for a password.**
+**Wallet password is auto-generated and stored locally.** Before first-time wallet setup, inform the user:
+
+```
+[WALLET] Setting up your AWP wallet.
+        A random password will be generated and saved to ~/.awp-wallet-password
+        The password never leaves your machine. You can view it anytime:
+        cat ~/.awp-wallet-password
+```
+
+Then proceed automatically — do NOT ask the user to type a password:
 
 ```bash
 # Install if missing
 skill install https://github.com/awp-core/awp-wallet
 
-# Generate a random password and initialize (NEVER prompt user for password)
+# Generate a random password and initialize
 WALLET_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
 echo "$WALLET_PASSWORD" | awp-wallet init
 
-# Save the password so we can unlock later
+# Save the password locally (chmod 600 = only owner can read)
 echo "$WALLET_PASSWORD" > ~/.awp-wallet-password
 chmod 600 ~/.awp-wallet-password
 
-# Unlock and get token
+# Unlock and get session token
 TOKEN=$(echo "$WALLET_PASSWORD" | awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
 ```
 
 **If wallet already exists** (init fails or wallet found):
 ```bash
-# Read saved password and unlock
 WALLET_PASSWORD=$(cat ~/.awp-wallet-password 2>/dev/null)
 TOKEN=$(echo "$WALLET_PASSWORD" | awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
 ```
 
 All scripts accept `--token $TOKEN`. All on-chain scripts use `--chain base`.
 
-**Key rules for wallet password:**
-- Generate a random password automatically — do NOT ask the user to create or type one
-- Save it to `~/.awp-wallet-password` with `chmod 600` (read-only by owner)
-- On subsequent sessions, read from the saved file to unlock
-- If the password file is missing and wallet exists, the agent cannot unlock — tell user to reset with `awp-wallet reset`
+**Password management:**
+- Auto-generated random password (32 chars, URL-safe)
+- Saved to `~/.awp-wallet-password` with `chmod 600` (read-only by owner)
+- Never transmitted to any server — used only for local wallet unlock
+- User is informed about the file location before creation
+- If password file is missing and wallet exists, tell user: `cat ~/.awp-wallet-password` or `awp-wallet reset`
 
 ## Gas Routing
 
