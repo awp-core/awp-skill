@@ -28,7 +28,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.19.1**
+**Skill version: 0.19.2**
 
 ## API URL
 
@@ -93,7 +93,7 @@ awp-wallet receive 2>/dev/null
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.19.1, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.19.2, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
 
 **Step 4 — Route to action** using the Intent Routing table below.
 
