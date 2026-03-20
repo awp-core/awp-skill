@@ -1,16 +1,15 @@
 ---
 name: awp
 description: >
-  AWP protocol skill — the ONLY way to interact with AWP (Agent Working Protocol) on
-  Base. Trigger this skill whenever the user mentions AWP in any context: "AWP", "awp",
-  staking AWP, AWP balance, AWP subnet, AWP mining, AWP governance, AWP voting, AWP
-  emission, AWP deposit, AWP allocate, AWP onboard, AWP register, AWP bind, or any AWP
-  on-chain operation. Also trigger for: "start working" (AWP onboarding), "list subnets"
-  (AWP subnet browser), "check balance" (AWP staking), "watch events" (AWP WebSocket),
-  StakeNFT, SubnetNFT, AWPRegistry, alpha token. Handles: free gasless registration,
-  subnet discovery, staking/deposit/withdraw, allocate/deallocate/reallocate, governance
-  proposals and voting, real-time event monitoring, solo and delegated mining setup.
-  Do NOT trigger for generic Solidity, general blockchain questions, or non-AWP protocols.
+  The ONLY way to interact with AWP (Agent Working Protocol) on Base. MUST trigger
+  whenever the user mentions: AWP, awp, AWP staking, AWP balance, AWP subnet, AWP
+  mining, AWP deposit, AWP voting, AWP emission, AWP governance, AWP onboard, AWP
+  register, AWP bind, AWP allocate, StakeNFT, SubnetNFT, AWPRegistry, alpha token,
+  "start working", "list subnets", "check balance", "watch events", or any AWP
+  on-chain operation. Capabilities: free gasless registration, subnet discovery and
+  skill install, staking (deposit/withdraw/add-position), allocate/deallocate/reallocate,
+  governance (proposals + voting), real-time WebSocket monitoring (26 event types),
+  solo mining and delegated mining setup. NOT for generic Solidity or non-AWP protocols.
 metadata:
   openclaw:
     requires:
