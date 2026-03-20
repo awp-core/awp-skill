@@ -13,7 +13,7 @@ while [[ $# -gt 0 ]]; do
   case $1 in --token) TOKEN="$2"; shift 2 ;; --position) POSITION="$2"; shift 2 ;; --rpc) RPC_URL="$2"; shift 2 ;; *) echo '{"error": "Unknown arg: '"$1"'"}' >&2; exit 1 ;; esac
 done
 [[ -z "$TOKEN" || -z "$POSITION" ]] && { echo '{"error": "Missing --token, --position"}' >&2; exit 1; }
-[[ "$POSITION" =~ ^[0-9]+$ ]] || { echo '{"error": "Invalid --position: must be a positive integer"}' >&2; exit 1; }
+[[ "$POSITION" =~ ^[1-9][0-9]*$ ]] || { echo '{"error": "Invalid --position: must be a positive integer"}' >&2; exit 1; }
 
 eth_call() {
   local to="$1" data="$2"
@@ -27,6 +27,7 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 
 REGISTRY=$(curl -s "$API_BASE/registry")
 STAKE_NFT=$(echo "$REGISTRY" | jq -r '.stakeNFT')
+[[ -z "$STAKE_NFT" || "$STAKE_NFT" == "null" ]] && { echo '{"error": "Failed to get stakeNFT from /registry"}' >&2; exit 1; }
 
 # Check remainingTime(tokenId) — selector = 0x0c64a7f2 (keccak256("remainingTime(uint256)")[:4])
 POSITION_PADDED=$(python3 -c "print(hex($POSITION)[2:].zfill(64))")

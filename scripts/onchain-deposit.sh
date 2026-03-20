@@ -14,7 +14,7 @@ done
 [[ -z "$TOKEN" || -z "$AMOUNT" || -z "$LOCK_DAYS" ]] && { echo '{"error": "Missing --token, --amount, --lock-days"}' >&2; exit 1; }
 
 # Validate numeric inputs BEFORE any on-chain calls (shell regex, no python injection risk)
-[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
+[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ && "$AMOUNT" != "0" && "$AMOUNT" != "0.0" && "$AMOUNT" != "0.00" ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
 [[ "$LOCK_DAYS" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --lock-days: must be a positive number"}' >&2; exit 1; }
 
 # Pre-flight
@@ -24,6 +24,7 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 REGISTRY=$(curl -s "$API_BASE/registry")
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
 STAKE_NFT=$(echo "$REGISTRY" | jq -r '.stakeNFT')
+[[ -z "$STAKE_NFT" || "$STAKE_NFT" == "null" ]] && { echo '{"error": "Failed to get stakeNFT from /registry"}' >&2; exit 1; }
 
 AMOUNT_WEI=$(python3 -c "print(int(float('$AMOUNT') * 10**18))")
 LOCK_SECONDS=$(python3 -c "print(int(float('$LOCK_DAYS') * 86400))")

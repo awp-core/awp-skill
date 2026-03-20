@@ -15,7 +15,7 @@ while [[ $# -gt 0 ]]; do
 done
 [[ -z "$TOKEN" || -z "$AGENT" || -z "$SUBNET" || -z "$AMOUNT" ]] && { echo '{"error": "Missing --token, --agent, --subnet, --amount"}' >&2; exit 1; }
 [[ "$AGENT" =~ ^0x[0-9a-fA-F]{40}$ ]] || { echo '{"error": "Invalid --agent address: must be 0x + 40 hex chars"}' >&2; exit 1; }
-[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
+[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ && "$AMOUNT" != "0" && "$AMOUNT" != "0.0" && "$AMOUNT" != "0.00" ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
 [[ "$SUBNET" =~ ^[0-9]+$ && "$SUBNET" -gt 0 ]] || { echo '{"error": "Invalid --subnet: must be a positive integer > 0"}' >&2; exit 1; }
 
 # Pre-flight
@@ -24,6 +24,7 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 
 REGISTRY=$(curl -s "$API_BASE/registry")
 AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
+[[ -z "$AWP_REGISTRY" || "$AWP_REGISTRY" == "null" ]] && { echo '{"error": "Failed to get contract address from /registry"}' >&2; exit 1; }
 
 AMOUNT_WEI=$(python3 -c "print(int(float('$AMOUNT') * 10**18))")
 

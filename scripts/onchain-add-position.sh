@@ -27,7 +27,7 @@ done
 
 # Validate inputs
 [[ "$POSITION" =~ ^[1-9][0-9]*$ ]] || { echo '{"error": "Invalid --position: must be a positive integer"}' >&2; exit 1; }
-[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
+[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ && "$AMOUNT" != "0" && "$AMOUNT" != "0.0" && "$AMOUNT" != "0.00" ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
 [[ "$EXTEND_DAYS" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --extend-days: must be a non-negative number"}' >&2; exit 1; }
 
 # Helper: eth_call

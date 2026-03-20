@@ -23,9 +23,10 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 
 REGISTRY=$(curl -s "$API_BASE/registry")
 AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
+[[ -z "$AWP_REGISTRY" || "$AWP_REGISTRY" == "null" ]] && { echo '{"error": "Failed to get contract address from /registry"}' >&2; exit 1; }
 
 # Validate numeric inputs (shell regex, no python injection risk)
-[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
+[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ && "$AMOUNT" != "0" && "$AMOUNT" != "0.0" && "$AMOUNT" != "0.00" ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
 [[ "$SUBNET" =~ ^[0-9]+$ && "$SUBNET" -gt 0 ]] || { echo '{"error": "Invalid --subnet: must be a positive integer > 0"}' >&2; exit 1; }
 
 # Check unallocated balance

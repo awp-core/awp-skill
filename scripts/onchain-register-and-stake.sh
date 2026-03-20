@@ -26,7 +26,7 @@ done
   { echo '{"error": "Missing required flags: --token, --amount, --lock-days, --agent, --subnet, --allocate-amount"}' >&2; exit 1; }
 
 # Validate numeric inputs (shell regex, no python3 injection risk)
-[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
+[[ "$AMOUNT" =~ ^[0-9]+\.?[0-9]*$ && "$AMOUNT" != "0" && "$AMOUNT" != "0.0" && "$AMOUNT" != "0.00" ]] || { echo '{"error": "Invalid --amount: must be a positive number"}' >&2; exit 1; }
 [[ "$LOCK_DAYS" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --lock-days: must be a positive number"}' >&2; exit 1; }
 [[ "$ALLOCATE_AMOUNT" =~ ^[0-9]+\.?[0-9]*$ ]] || { echo '{"error": "Invalid --allocate-amount: must be a positive number"}' >&2; exit 1; }
 [[ "$AGENT" =~ ^0x[0-9a-fA-F]{40}$ ]] || { echo '{"error": "Invalid --agent: must be 0x + 40 hex chars"}' >&2; exit 1; }
@@ -40,6 +40,7 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 REGISTRY=$(curl -s "$API_BASE/registry")
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
 AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
+[[ -z "$AWP_REGISTRY" || "$AWP_REGISTRY" == "null" ]] && { echo '{"error": "Failed to get contract address from /registry"}' >&2; exit 1; }
 
 # Convert units: human-readable amounts to wei, days to seconds
 AMOUNT_WEI=$(python3 -c "print(int(float('$AMOUNT') * 10**18))")

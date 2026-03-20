@@ -361,7 +361,7 @@ awp-wallet balance --token $TOKEN --chain base
 ## Pre-Flight Checklist (before ANY write action)
 
 ```
-1. Wallet unlocked?     → TOKEN=$(awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
+1. Wallet unlocked?     → TOKEN=$(cat ~/.awp-wallet-password | awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
 2. Wallet address?      → WALLET_ADDR=$(awp-wallet status --token $TOKEN | jq -r '.address')
 3. Registration status? → curl -s https://tapi.awp.sh/api/address/$WALLET_ADDR/check
 4. Has gas?             → awp-wallet balance --token $TOKEN --chain base

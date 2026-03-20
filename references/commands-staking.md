@@ -206,7 +206,7 @@ awp-wallet sign-typed-data --token {T} --data '{
     "name": "AWPRegistry",
     "version": "1",
     "chainId": 8453,
-    "verifyingContract": "0x00003a7fa04c3af3adba2dc3c6622277501400b1"
+    "verifyingContract": "'$AWP_REGISTRY'"  // from GET /api/registry → eip712Domain.verifyingContract
   },
   "message": {
     "agent": "'$WALLET_ADDR'",

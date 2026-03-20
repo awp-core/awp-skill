@@ -30,6 +30,7 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 
 REGISTRY=$(curl -s "$API_BASE/registry")
 AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet')
+[[ -z "$AWP_REGISTRY" || "$AWP_REGISTRY" == "null" ]] && { echo '{"error": "Failed to get contract address from /registry"}' >&2; exit 1; }
 
 # Check current subnet status
 SUBNET_INFO=$(curl -s "$API_BASE/subnets/$SUBNET")

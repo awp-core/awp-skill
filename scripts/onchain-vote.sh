@@ -56,9 +56,9 @@ echo '{"step": "proposalCreatedAt", "proposalId": '"$PROPOSAL"', "createdAt": '"
 POSITIONS=$(curl -s "$API_BASE/staking/user/$WALLET_ADDR/positions")
 
 # Step 3: Filter eligible positions (created_at < proposalCreatedAt, strict less-than)
-ELIGIBLE_TOKEN_IDS=$(python3 -c "
-import json, sys
-positions = json.loads('''$POSITIONS''')
+ELIGIBLE_TOKEN_IDS=$(_POSITIONS="$POSITIONS" python3 -c "
+import json, sys, os
+positions = json.loads(os.environ['_POSITIONS'])
 if not isinstance(positions, list):
     print(json.dumps({'error': 'Unexpected positions response'}), file=sys.stderr)
     sys.exit(1)
@@ -97,13 +97,13 @@ print('0x' + ''.join(parts))
 #   support:    uint8   (static, padded to 32 bytes)
 #   reason:     string  (dynamic)
 #   params:     bytes   (dynamic)
-CALLDATA=$(python3 -c "
-import json
+CALLDATA=$(_REASON="$REASON" _ABI_PARAMS="$ABI_PARAMS" python3 -c "
+import json, os
 
 proposal_id = $PROPOSAL
 support = $SUPPORT
-reason = '''$REASON'''
-params_hex = '$ABI_PARAMS'
+reason = os.environ['_REASON']
+params_hex = os.environ['_ABI_PARAMS']
 
 # Strip 0x prefix from params
 params_bytes = bytes.fromhex(params_hex[2:])

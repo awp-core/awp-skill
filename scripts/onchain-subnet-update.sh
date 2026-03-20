@@ -33,15 +33,17 @@ WALLET_ADDR=$(awp-wallet status --token "$TOKEN" | jq -r '.address')
 
 REGISTRY=$(curl -s "$API_BASE/registry")
 SUBNET_NFT=$(echo "$REGISTRY" | jq -r '.subnetNFT')
+[[ -z "$SUBNET_NFT" || "$SUBNET_NFT" == "null" ]] && { echo '{"error": "Failed to get subnetNFT from /registry"}' >&2; exit 1; }
 
 SUBNET_PADDED=$(python3 -c "print(hex($SUBNET)[2:].zfill(64))")
 
 if [[ -n "$SKILLS_URI" ]]; then
   # setSkillsURI(uint256,string) selector = 0x7c2f4cd6
   # ABI encode: tokenId (32 bytes) + offset to string (32 bytes) + string length (32 bytes) + string data (padded to 32 bytes)
-  CALLDATA=$(python3 -c "
+  CALLDATA=$(_SKILLS_URI="$SKILLS_URI" python3 -c "
+import os
 token_id = $SUBNET
-uri = '$SKILLS_URI'
+uri = os.environ['_SKILLS_URI']
 uri_bytes = uri.encode('utf-8')
 uri_len = len(uri_bytes)
 # Pad URI to 32-byte boundary
