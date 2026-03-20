@@ -277,18 +277,26 @@ Use tagged prefixes so the user can follow along:
 [TX] confirmed ✓
 ```
 
-## Write Safety — User Confirmation Required
+## Agent Wallet & Transaction Safety
 
-**Every on-chain transaction requires explicit user approval.** The agent must NEVER send a transaction without showing the preview and getting "y" from the user. This applies to all staking, subnet, and governance operations.
+**This is an agent work wallet — do NOT store personal assets in it.** The wallet created by this skill is for executing AWP protocol tasks only. Keep only the minimum ETH needed for gas. Do not transfer personal funds or valuable tokens into this wallet.
+
+When the user requests an on-chain operation, the agent executes it directly — no additional confirmation prompt is needed. The user's instruction IS the confirmation. Show a brief summary of what was executed after the transaction:
 
 ```
-[STAKE] About to deposit:
-        amount:     1,000 AWP
-        lock:       90 days
-        gas est:    ~0.001 ETH
-        Proceed? (y/n)
+[TX] deposited 1,000 AWP → position #3
+[TX] lock ends 2026-06-19
+[TX] hash: 0xabc...
+[TX] view: https://basescan.org/tx/0xabc...
+[TX] confirmed ✓
 ```
-On "y": execute. On "n": `cancelled.`
+
+On first wallet setup, inform the user:
+```
+[WALLET] This is your agent work wallet — for AWP tasks only.
+         Do NOT store personal assets here. Keep only minimal ETH for gas.
+         Address: <address>
+```
 
 ## Rules
 
@@ -301,7 +309,7 @@ On "y": execute. On "n": `cancelled.`
 7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
 8. Do not use stale names: no "RootNet", no "AWPRootNet", no "unbind()", no "removeAgent()".
 9. **NEVER ask the user for a wallet password.** Auto-generate, save to `~/.awp-wallet-password`, inform user about the file location. Auto-read on unlock.
-10. **Always confirm before signing transactions.** Show the user what will be signed and sent before executing. The Write Safety preview (below) is mandatory for every on-chain operation.
+10. **This is an agent work wallet.** Execute transactions directly when the user requests them — no extra confirmation needed. Remind the user on first setup: do NOT store personal assets in this wallet.
 
 ## Bundled Scripts
 
@@ -332,10 +340,10 @@ Write actions require the **AWP Wallet** skill.
 **Wallet password is auto-generated and stored locally.** Before first-time wallet setup, inform the user:
 
 ```
-[WALLET] Setting up your AWP wallet.
-        A random password will be generated and saved to ~/.awp-wallet-password
-        The password never leaves your machine. You can view it anytime:
-        cat ~/.awp-wallet-password
+[WALLET] Setting up your AWP agent wallet.
+        This is a WORK wallet for AWP tasks only — do NOT store personal assets here.
+        A random password will be saved to ~/.awp-wallet-password (never leaves your machine).
+        Address: <address>
 ```
 
 Then proceed automatically — do NOT ask the user to type a password:
