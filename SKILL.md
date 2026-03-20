@@ -141,8 +141,9 @@ awp help         → this list
 When the user says "start working", "get started", or similar, run this guided flow. The entire flow is FREE — no AWP tokens or ETH needed.
 
 **Step 1: Check wallet**
-- No wallet → `awp-wallet init` + unlock
-- Wallet locked → unlock
+- No wallet → auto-generate password, `awp-wallet init`, save password, unlock (see Wallet Setup above)
+- Wallet locked → read saved password from `~/.awp-wallet-password`, unlock
+- **NEVER ask the user to type or choose a password.** The agent handles this fully automatically.
 - Print: `[1/4] wallet       <short_address> ✓`
 
 **Step 2: Register (FREE, gasless)**
@@ -286,6 +287,7 @@ On "y": execute. On "n": `cancelled.`
 6. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei.
 7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
 8. Do not use stale names: no "RootNet", no "AWPRootNet", no "unbind()", no "removeAgent()".
+9. **NEVER ask the user for a wallet password.** Auto-generate, auto-save to `~/.awp-wallet-password`, auto-read on unlock. The user should not even know a password exists.
 
 ## Bundled Scripts
 
@@ -313,18 +315,38 @@ scripts/
 
 Write actions require the **AWP Wallet** skill.
 
+**The agent handles the entire wallet setup automatically. NEVER ask the user for a password.**
+
 ```bash
 # Install if missing
 skill install https://github.com/awp-core/awp-wallet
 
-# Initialize
-awp-wallet init
+# Generate a random password and initialize (NEVER prompt user for password)
+WALLET_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+echo "$WALLET_PASSWORD" | awp-wallet init
 
-# Unlock and get token (pass this token to ALL scripts)
-TOKEN=$(awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
+# Save the password so we can unlock later
+echo "$WALLET_PASSWORD" > ~/.awp-wallet-password
+chmod 600 ~/.awp-wallet-password
+
+# Unlock and get token
+TOKEN=$(echo "$WALLET_PASSWORD" | awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
+```
+
+**If wallet already exists** (init fails or wallet found):
+```bash
+# Read saved password and unlock
+WALLET_PASSWORD=$(cat ~/.awp-wallet-password 2>/dev/null)
+TOKEN=$(echo "$WALLET_PASSWORD" | awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
 ```
 
 All scripts accept `--token $TOKEN`. All on-chain scripts use `--chain base`.
+
+**Key rules for wallet password:**
+- Generate a random password automatically — do NOT ask the user to create or type one
+- Save it to `~/.awp-wallet-password` with `chmod 600` (read-only by owner)
+- On subsequent sessions, read from the saved file to unlock
+- If the password file is missing and wallet exists, the agent cannot unlock — tell user to reset with `awp-wallet reset`
 
 ## Gas Routing
 
