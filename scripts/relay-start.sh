@@ -49,7 +49,7 @@ EIP712_CONTRACT=$(echo "$REGISTRY" | jq -r '.eip712Domain.verifyingContract // e
 
 # Fallback: if eip712Domain not present, construct from registry fields
 if [[ -z "$EIP712_NAME" || "$EIP712_NAME" == "null" ]]; then
-  EIP712_CONTRACT=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet // empty')
+  EIP712_CONTRACT=$(echo "$REGISTRY" | jq -r '.awpRegistry')
   [[ -z "$EIP712_CONTRACT" || "$EIP712_CONTRACT" == "null" ]] && { echo '{"error": "Cannot determine contract address from /registry"}' >&2; exit 1; }
   EIP712_CHAIN_ID=$(echo "$REGISTRY" | jq -r '.chainId // empty')
   [[ -z "$EIP712_CHAIN_ID" || "$EIP712_CHAIN_ID" == "null" ]] && { echo '{"error": "Cannot determine chainId from /registry"}' >&2; exit 1; }

@@ -57,7 +57,7 @@ hex_to_dec() {
 
 # Step 1: Fetch registry (fresh, never cached)
 REGISTRY=$(curl -s "$API_BASE/registry") || { echo '{"error": "Failed to fetch /registry"}' >&2; exit 1; }
-AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry // .rootNet // empty')
+AWP_REGISTRY=$(echo "$REGISTRY" | jq -r '.awpRegistry')
 [[ -z "$AWP_REGISTRY" || "$AWP_REGISTRY" == "null" ]] && { echo '{"error": "Cannot find contract address in /registry"}' >&2; exit 1; }
 AWP_TOKEN=$(echo "$REGISTRY" | jq -r '.awpToken')
 

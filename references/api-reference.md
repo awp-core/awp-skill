@@ -133,7 +133,7 @@ reallocate(address staker, address fromAgent, uint256 fromSubnetId, address toAg
 ### AWPEmission
 
 ```solidity
-awpRegistry() → address   // (not rootNet())
+awpRegistry() → address
 ```
 
 ### StakeNFT
