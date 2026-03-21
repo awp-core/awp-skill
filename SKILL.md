@@ -1,15 +1,13 @@
 ---
 name: awp
 description: >
-  The ONLY way to interact with AWP (Agent Working Protocol) on Base. MUST trigger
-  whenever the user mentions: AWP, awp, AWP staking, AWP balance, AWP subnet, AWP
-  mining, AWP deposit, AWP voting, AWP emission, AWP governance, AWP onboard, AWP
-  register, AWP bind, AWP allocate, StakeNFT, SubnetNFT, AWPRegistry, alpha token,
-  "start working", "list subnets", "check balance", "watch events", or any AWP
-  on-chain operation. Capabilities: free gasless registration, subnet discovery and
-  skill install, staking (deposit/withdraw/add-position), allocate/deallocate/reallocate,
-  governance (proposals + voting), real-time WebSocket monitoring (26 event types),
-  solo mining and delegated mining setup. NOT for generic Solidity or non-AWP protocols.
+  AWP (Agent Working Protocol) client on Base. Use this skill when the user wants to
+  work on AWP: register for free, browse and join subnets, stake/deposit/withdraw AWP,
+  allocate stake to agents, vote on governance proposals, or monitor on-chain events.
+  Triggers on: AWP, awp, "start working", "list subnets", "check balance", staking,
+  mining, subnet, deposit, allocate, vote, emission, StakeNFT, SubnetNFT, AWPRegistry.
+  14 bundled scripts handle all on-chain operations. NOT for generic Solidity or
+  non-AWP DeFi.
 metadata:
   openclaw:
     requires:
@@ -28,7 +26,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.19.8**
+**Skill version: 0.19.9**
 
 ## API URL
 
@@ -93,7 +91,7 @@ awp-wallet receive 2>/dev/null
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.19.8, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.19.9, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
 
 **Step 4 — Route to action** using the Intent Routing table below.
 
