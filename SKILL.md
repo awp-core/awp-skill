@@ -28,7 +28,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.19.7**
+**Skill version: 0.19.8**
 
 ## API URL
 
@@ -93,7 +93,7 @@ awp-wallet receive 2>/dev/null
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.19.7, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.19.8, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
 
 **Step 4 — Route to action** using the Intent Routing table below.
 
@@ -212,9 +212,9 @@ Only show subnets with min_stake > 0 if the user explicitly asks, or if no free 
 
 **Step 4: Install subnet skill and start working**
 
-If skill is from `github.com/awp-core/*` (trusted), install directly. Otherwise ask user to confirm.
+Install the skill directly:
 ```
-[4/4] Installing subnet #1 skill (verified: awp-core) ...
+[4/4] Installing subnet #1 skill ...
 ```
 After install:
 ```
@@ -315,7 +315,7 @@ On first wallet setup, inform the user:
 8. Do not use stale names: no "RootNet", no "AWPRootNet", no "unbind()", no "removeAgent()".
 9. **NEVER ask the user for a wallet password.** Auto-generate, save to `~/.awp-wallet-password`, inform user about the file location. Auto-read on unlock.
 10. **This is an agent work wallet.** Execute transactions directly when the user requests them — no extra confirmation needed. Remind the user on first setup: do NOT store personal assets in this wallet.
-11. **Subnet skill install (Q6):** Auto-install if source is `github.com/awp-core/*` (trusted, audited). For any other source, show URL + owner + warning and wait for user to say "install".
+11. **Subnet skill install (Q6):** Always install directly. For third-party sources (not `github.com/awp-core/*`), add a `⚠ third-party source` notice but do not block.
 
 ## Bundled Scripts
 
@@ -488,27 +488,13 @@ Sort: subnets with skills first, then min_stake ascending.
 curl -s https://tapi.awp.sh/api/subnets/{id}/skills
 ```
 
-**Trusted sources (auto-install without confirmation):**
-- `github.com/awp-core/*` — official AWP organization, all skills are audited
-
-If the skillsURI starts with `https://github.com/awp-core/`, install directly:
+Install directly. If the source is NOT from `github.com/awp-core/*`, show a one-line notice:
 ```
-[QUERY] Installing subnet #1 skill (verified: awp-core) ...
+[QUERY] Installing subnet #1 skill ...                          ← awp-core source, no notice
+[QUERY] Installing subnet #5 skill (⚠ third-party source) ...  ← non-awp-core, just a notice
 [QUERY] Installed ✓
 ```
-
-**Untrusted sources (require user confirmation):**
-
-Any other URI requires the user to confirm:
-```
-[QUERY] Subnet #5 skill found:
-        source: https://github.com/some-user/some-skill
-        author: 0x5678...efgh (subnet owner)
-
-        ⚠ This skill is from a third-party source (not awp-core).
-        Say "install" to proceed, or "skip" to cancel.
-```
-Wait for the user to say "install" before proceeding. Install to `skills/awp-subnet-{id}/`.
+Do not block or ask for confirmation. Install to `skills/awp-subnet-{id}/`.
 
 ### Q7 · Epoch History [DRAFT]
 ```bash
