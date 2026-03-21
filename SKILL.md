@@ -28,7 +28,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.19.4**
+**Skill version: 0.19.5**
 
 ## API URL
 
@@ -93,7 +93,7 @@ awp-wallet receive 2>/dev/null
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.19.4, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.19.5, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
 
 **Step 4 — Route to action** using the Intent Routing table below.
 
@@ -357,7 +357,8 @@ Then proceed automatically — do NOT ask the user to type a password:
 
 ```bash
 # Install if missing
-skill install awp-wallet
+# Try registry first, fallback to GitHub
+skill install awp-wallet || skill install https://github.com/awp-core/awp-wallet
 
 # Generate a random password and initialize
 WALLET_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
