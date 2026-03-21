@@ -28,7 +28,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.19.2**
+**Skill version: 0.19.3**
 
 ## API URL
 
@@ -93,7 +93,7 @@ awp-wallet receive 2>/dev/null
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.19.2, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.19.3, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
 
 **Step 4 — Route to action** using the Intent Routing table below.
 
@@ -211,6 +211,13 @@ Auto-selecting #1 Benchmark (free, skill ready)
 Only show subnets with min_stake > 0 if the user explicitly asks, or if no free subnets exist.
 
 **Step 4: Install subnet skill and start working**
+
+Show the skill URI and ask user to confirm before installing:
+```
+[4/4] Subnet #1 skill: https://github.com/awp-core/s1-benchmark-skill
+      Install? (y/n)
+```
+After user confirms:
 ```
 [4/4] installing Benchmark skill...
 [4/4] ready ✓
@@ -309,6 +316,7 @@ On first wallet setup, inform the user:
 8. Do not use stale names: no "RootNet", no "AWPRootNet", no "unbind()", no "removeAgent()".
 9. **NEVER ask the user for a wallet password.** Auto-generate, save to `~/.awp-wallet-password`, inform user about the file location. Auto-read on unlock.
 10. **This is an agent work wallet.** Execute transactions directly when the user requests them — no extra confirmation needed. Remind the user on first setup: do NOT store personal assets in this wallet.
+11. **Always confirm before installing subnet skills (Q6).** Installing a skill downloads and executes external code. Show the URI and ask `Install? (y/n)` before proceeding. This is the only operation that requires explicit user approval.
 
 ## Bundled Scripts
 
@@ -479,7 +487,12 @@ Sort: subnets with skills first, then min_stake ascending.
 ```bash
 curl -s https://tapi.awp.sh/api/subnets/{id}/skills
 ```
-Download the skillsURI, install to `skills/awp-subnet-{id}/`.
+Show the skillsURI to the user and ask for confirmation before installing:
+```
+[QUERY] Subnet #1 skill: https://github.com/awp-core/s1-benchmark-skill
+        Install this skill? (y/n)
+```
+Only install after the user confirms with "y". This is the one operation that requires explicit user approval because it downloads and executes external code. Install to `skills/awp-subnet-{id}/`.
 
 ### Q7 · Epoch History [DRAFT]
 ```bash
