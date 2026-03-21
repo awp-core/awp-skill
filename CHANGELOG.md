@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.19.9
+
+### Security
+- Q6 subnet skill install: auto-install from `awp-core/*`; third-party sources show `⚠ third-party source` notice (non-blocking)
+- Metadata now declares all dependencies: `curl`, `jq`, `python3`, `~/.awp-wallet-password`
+- Wallet password management transparent to user — informed about file location on first setup
+
+### Changed
+- **Agent wallet model** — transactions execute directly, no confirmation prompts. This is a work wallet for AWP tasks only; users are told not to store personal assets.
+- `awp-wallet` installs from registry first, falls back to GitHub: `skill install awp-wallet || skill install https://github.com/awp-core/awp-wallet`
+- Description rewritten: 511 chars (was 916), natural language instead of keyword list
+- Removed all V1 `.rootNet` fallback code — V2 API is now authoritative
+
+### Fixed
+- Deep audit: `$REASON`, `$SKILLS_URI`, `$POSITIONS` injection — now passed via `os.environ`
+- All 9 onchain scripts: added registry/contract null checks
+- `AMOUNT=0` and `POSITION=0` rejected in validation
+- `onchain-withdraw.sh`: hardcoded `remainingTime` selector (removed `web3` dependency)
+- `relay-start.sh`: removed fallback to deleted `/relay/register` endpoint
+- `onchain-vote.sh`: `RPC_URL` → `BASE_RPC_URL` (consistent with other scripts)
+- Pre-Flight unlock now includes password pipe
+
+---
+
 ## v0.19.1 — Initial Public Release
 
 First public release of the AWP Skill for [Claude Code](https://github.com/anthropics/claude-code), [OpenClaw](https://openclaw.ai), and other SKILL.md-compatible agents.
