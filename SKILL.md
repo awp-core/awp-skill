@@ -19,14 +19,12 @@ metadata:
       binaries:
         - curl                 # HTTP requests to REST API
         - jq                   # JSON parsing
-        - python3              # ABI encoding and unit conversion
-      config:
-        - ~/.awp-wallet-password  # auto-generated wallet password (chmod 600)
+        - python3              # ABI encoding and unit conversion (used by on-chain scripts)
 ---
 
 # AWP Registry
 
-**Skill version: 0.20.0**
+**Skill version: 0.20.1**
 
 ## API URL
 
@@ -97,7 +95,7 @@ awp-wallet receive 2>/dev/null
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.20.0, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.20.1, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
 
 **Step 5 — Route to action** using the Intent Routing table below.
 
@@ -156,9 +154,8 @@ awp help         → this list
 When the user says "start working", "get started", or similar, run this guided flow. The entire flow is FREE — no AWP tokens or ETH needed.
 
 **Step 1: Check wallet**
-- No wallet → auto-generate password, `awp-wallet init`, save password, unlock (see Wallet Setup above)
-- Wallet locked → read saved password from `~/.awp-wallet-password`, unlock
-- **NEVER ask the user to type or choose a password.** The agent handles this fully automatically.
+- No wallet → `awp-wallet init` (handles credentials internally, no password needed)
+- Wallet locked → `awp-wallet unlock --scope full --duration 3600`
 - Print: `[1/4] wallet       <short_address> ✓`
 
 **Step 2: Register (FREE, gasless)**
@@ -317,7 +314,7 @@ On first wallet setup, inform the user:
 6. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei.
 7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
 8. Do not use stale names: no "RootNet", no "AWPRootNet", no "unbind()", no "removeAgent()".
-9. **NEVER ask the user for a wallet password.** Auto-generate, save to `~/.awp-wallet-password`, inform user about the file location. Auto-read on unlock.
+9. **Wallet handles credentials internally.** Just run `awp-wallet init` + `awp-wallet unlock`. No password generation, no password files, no user prompts.
 10. **This is an agent work wallet.** Execute transactions directly when the user requests them — no extra confirmation needed. Remind the user on first setup: do NOT store personal assets in this wallet.
 11. **Subnet skill install (Q6):** Always install directly. For third-party sources (not `github.com/awp-core/*`), add a `⚠ third-party source` notice but do not block.
 
@@ -345,50 +342,24 @@ scripts/
 
 ## Wallet Setup
 
-Write actions require the **AWP Wallet** skill.
+Write actions require the **AWP Wallet** — an EVM wallet CLI that manages keys internally. No password management needed in default mode.
 
-**Wallet password is auto-generated and stored locally.** Before first-time wallet setup, inform the user:
+```bash
+# Initialize (auto-generates and stores credentials internally)
+awp-wallet init
 
+# Unlock and get session token
+TOKEN=$(awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
 ```
-[WALLET] Setting up your AWP agent wallet.
+
+On first setup, inform the user:
+```
+[WALLET] AWP agent wallet ready.
         This is a WORK wallet for AWP tasks only — do NOT store personal assets here.
-        A random password will be saved to ~/.awp-wallet-password (never leaves your machine).
         Address: <address>
 ```
 
-Then proceed automatically — do NOT ask the user to type a password:
-
-```bash
-# Install if missing
-# Try registry first, fallback to GitHub
-skill install awp-wallet || skill install https://github.com/awp-core/awp-wallet
-
-# Generate a random password and initialize
-WALLET_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
-echo "$WALLET_PASSWORD" | awp-wallet init
-
-# Save the password locally (chmod 600 = only owner can read)
-echo "$WALLET_PASSWORD" > ~/.awp-wallet-password
-chmod 600 ~/.awp-wallet-password
-
-# Unlock and get session token
-TOKEN=$(echo "$WALLET_PASSWORD" | awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
-```
-
-**If wallet already exists** (init fails or wallet found):
-```bash
-WALLET_PASSWORD=$(cat ~/.awp-wallet-password 2>/dev/null)
-TOKEN=$(echo "$WALLET_PASSWORD" | awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
-```
-
 All scripts accept `--token $TOKEN`. All on-chain scripts use `--chain base`.
-
-**Password management:**
-- Auto-generated random password (32 chars, URL-safe)
-- Saved to `~/.awp-wallet-password` with `chmod 600` (read-only by owner)
-- Never transmitted to any server — used only for local wallet unlock
-- User is informed about the file location before creation
-- If password file is missing and wallet exists, tell user: `cat ~/.awp-wallet-password` or `awp-wallet reset`
 
 ## Gas Routing
 
@@ -403,7 +374,7 @@ awp-wallet balance --token $TOKEN --chain base
 ## Pre-Flight Checklist (before ANY write action)
 
 ```
-1. Wallet unlocked?     → TOKEN=$(cat ~/.awp-wallet-password | awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
+1. Wallet unlocked?     → TOKEN=$(awp-wallet unlock --scope full --duration 3600 | jq -r '.sessionToken')
 2. Wallet address?      → WALLET_ADDR=$(awp-wallet status --token $TOKEN | jq -r '.address')
 3. Registration status? → curl -s https://tapi.awp.sh/api/address/$WALLET_ADDR/check
 4. Has gas?             → awp-wallet balance --token $TOKEN --chain base
