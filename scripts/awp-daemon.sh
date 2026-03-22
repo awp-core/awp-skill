@@ -10,6 +10,8 @@
 set -euo pipefail
 
 API_BASE="${AWP_API_URL:-https://tapi.awp.sh/api}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WALLET_ADDR=""
 CHECK_INTERVAL=300  # seconds between update checks (5 min)
 SKILL_REPO="https://github.com/awp-core/awp-skill"
 WALLET_REPO="https://github.com/awp-core/awp-wallet"
@@ -179,7 +181,7 @@ check_updates() {
 
   # Check awp-skill version
   local remote_skill_version local_skill_version
-  local_skill_version=$(grep "Skill version:" SKILL.md 2>/dev/null | head -1 | sed 's/.*: //' | tr -d '*' | tr -d ' ')
+  local_skill_version=$(grep "Skill version:" "$SCRIPT_DIR/../SKILL.md" 2>/dev/null | head -1 | sed 's/.*: //' | tr -d '*' | tr -d ' ')
 
   remote_skill_version=$(curl -s "https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md" 2>/dev/null | head -30 | grep "Skill version:" | sed 's/.*: //' | tr -d '*' | tr -d ' ')
 
