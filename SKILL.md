@@ -26,7 +26,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.19.9**
+**Skill version: 0.20.0**
 
 ## API URL
 
@@ -80,20 +80,26 @@ no AWP tokens needed to start.
 register for free → pick a subnet → start earning.
 ```
 
-**Step 2 — Session recovery**: Check if wallet is already unlocked:
+**Step 2 — Install wallet dependency** (silent, only if missing):
+```bash
+which awp-wallet >/dev/null 2>&1 || skill install awp-wallet || skill install https://github.com/awp-core/awp-wallet
+```
+Do not print anything if already installed. Only print if installing: `[SETUP] Installing AWP Wallet...`
+
+**Step 3 — Session recovery**: Check if wallet is already unlocked:
 ```bash
 awp-wallet receive 2>/dev/null
 ```
 - If wallet unlocked, restore `wallet_addr`. Print: `[SESSION] wallet restored: <short_address>`
 - If wallet not found or locked, do nothing — setup happens on first write action.
 
-**Step 3 — Version check** (silent if up to date):
+**Step 4 — Version check** (silent if up to date):
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.19.9, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.20.0, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
 
-**Step 4 — Route to action** using the Intent Routing table below.
+**Step 5 — Route to action** using the Intent Routing table below.
 
 ## User Commands
 
