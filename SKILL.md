@@ -24,7 +24,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.20.1**
+**Skill version: 0.20.2**
 
 ## API URL
 
@@ -95,7 +95,7 @@ awp-wallet receive 2>/dev/null
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.20.1, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.20.2, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
 
 **Step 5 — Route to action** using the Intent Routing table below.
 
@@ -324,6 +324,7 @@ Every write operation has a script. Always use the script — never construct ca
 
 ```
 scripts/
+├── awp-daemon.sh                     Background service: install deps, init wallet, monitor, auto-update
 ├── relay-start.sh                    Gasless register or bind (no ETH needed)
 ├── relay-register-subnet.sh          Gasless subnet registration (no ETH needed)
 ├── onchain-register.sh               On-chain register
