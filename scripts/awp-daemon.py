@@ -18,6 +18,7 @@ Requires: Python 3.9+
 
 from __future__ import annotations
 
+import glob
 import json
 import os
 import re
@@ -52,22 +53,29 @@ def warn(msg: str) -> None:
 def err(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] ✗ {msg}", file=sys.stderr)
 
+_openclaw_config_cache: Optional[Tuple[str, str]] = None
+
 def _get_openclaw_config() -> Tuple[str, str]:
-    """从 config 文件读取 OpenClaw channel 和 target。
+    """从 config 文件读取 OpenClaw channel 和 target（带缓存）。
 
     查找顺序:
     1. ~/.awp/openclaw.json  (用户手动配置)
     2. /tmp/awp-worker-*-config.json  (agent 启动时写入)
     3. /tmp/benchmark-worker-*-config.json  (兼容旧格式)
     """
-    import glob
+    global _openclaw_config_cache
+    if _openclaw_config_cache is not None:
+        return _openclaw_config_cache
 
     # 1. 用户配置
     user_config = NOTIFY_DIR / "openclaw.json"
     if user_config.exists():
         try:
             data = json.loads(user_config.read_text())
-            return data.get("channel", ""), data.get("target", "")
+            result = data.get("channel", ""), data.get("target", "")
+            if result[0] and result[1]:
+                _openclaw_config_cache = result
+                return result
         except Exception:
             pass
 
@@ -77,7 +85,10 @@ def _get_openclaw_config() -> Tuple[str, str]:
         if files:
             try:
                 data = json.loads(Path(files[0]).read_text())
-                return data.get("channel", ""), data.get("target", "")
+                result = data.get("channel", ""), data.get("target", "")
+                if result[0] and result[1]:
+                    _openclaw_config_cache = result
+                    return result
             except Exception:
                 pass
 
