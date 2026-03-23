@@ -12,7 +12,11 @@ Runs continuously:
 Usage: python3 scripts/awp-daemon.py
        python3 scripts/awp-daemon.py --interval 60   # check every 60s
 Stops: Ctrl+C
+
+Requires: Python 3.9+
 """
+
+from __future__ import annotations
 
 import json
 import os
@@ -24,6 +28,7 @@ import time
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Optional, Tuple
 
 # ── Config ───────────────────────────────────────
 
@@ -47,11 +52,11 @@ def err(msg: str) -> None:
 
 # ── Helpers ──────────────────────────────────────
 
-def run(cmd: str, check: bool = False) -> tuple[int, str]:
-    """运行 shell 命令，返回 (returncode, stdout)"""
+def run(cmd: list[str]) -> Tuple[int, str]:
+    """运行命令（list 形式，无 shell 注入风险），返回 (returncode, stdout)"""
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=30
+            cmd, capture_output=True, text=True, timeout=30
         )
         return result.returncode, result.stdout.strip()
     except subprocess.TimeoutExpired:
@@ -59,7 +64,7 @@ def run(cmd: str, check: bool = False) -> tuple[int, str]:
     except Exception as e:
         return 1, str(e)
 
-def api_get(path: str) -> dict | list | None:
+def api_get(path: str) -> Optional[Any]:
     """GET 请求 AWP API，返回 JSON 或 None"""
     url = f"{API_BASE}{path}"
     try:
@@ -85,6 +90,13 @@ def wei_to_awp(wei: str) -> str:
     except (ValueError, TypeError):
         return wei
 
+def parse_version(v: str) -> Tuple[int, ...]:
+    """解析版本号为可比较的整数元组"""
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except (ValueError, AttributeError):
+        return (0,)
+
 # ── 1. Wallet Installation ───────────────────────
 
 def ensure_wallet_installed() -> bool:
@@ -94,52 +106,47 @@ def ensure_wallet_installed() -> bool:
 
     log("awp-wallet not found. Installing...")
 
-    # 先尝试 registry，再尝试 GitHub
-    code, out = run("skill install awp-wallet")
+    code, _ = run(["skill", "install", "awp-wallet"])
     if code == 0:
         log("awp-wallet installed from registry ✓")
         return True
 
-    code, out = run(f"skill install {WALLET_REPO}")
+    code, _ = run(["skill", "install", WALLET_REPO])
     if code == 0:
         log("awp-wallet installed from GitHub ✓")
         return True
 
     err("Failed to install awp-wallet. Install manually:")
-    err(f"  skill install awp-wallet")
+    err("  skill install awp-wallet")
     err(f"  OR: skill install {WALLET_REPO}")
     return False
 
 # ── 2. Wallet Initialization ─────────────────────
 
-def ensure_wallet_initialized() -> str | None:
+def ensure_wallet_initialized() -> Optional[str]:
     """确保钱包已初始化，返回地址或 None"""
-    # 尝试获取地址
-    code, out = run("awp-wallet receive")
+    code, out = run(["awp-wallet", "receive"])
     if code == 0 and out:
         try:
-            data = json.loads(out)
-            addr = data.get("address")
+            addr = json.loads(out).get("address")
             if addr:
                 return addr
         except json.JSONDecodeError:
             pass
 
     log("Wallet not initialized. Running awp-wallet init...")
-    code, out = run("awp-wallet init")
+    code, out = run(["awp-wallet", "init"])
     if code != 0:
         err(f"Wallet init failed: {out}")
         return None
 
-    # 重新获取地址
-    code, out = run("awp-wallet receive")
+    code, out = run(["awp-wallet", "receive"])
     if code != 0:
         err("Wallet initialized but could not read address")
         return None
 
     try:
-        data = json.loads(out)
-        addr = data.get("address")
+        addr = json.loads(out).get("address")
     except json.JSONDecodeError:
         err(f"Invalid wallet response: {out}")
         return None
@@ -164,7 +171,6 @@ def ensure_wallet_initialized() -> str | None:
 def check_and_notify(wallet_addr: str) -> bool:
     """检查注册状态并显示信息，返回 is_registered"""
     check = api_get(f"/address/{wallet_addr}/check")
-    is_registered = False
 
     print()
     log("── agent status ──────────────────────")
@@ -198,7 +204,6 @@ def check_and_notify(wallet_addr: str) -> bool:
         if recipient:
             log(f"Recipient:  {recipient}")
 
-        # 余额
         balance = api_get(f"/staking/user/{wallet_addr}/balance")
         if balance:
             log(f"Staked:     {wei_to_awp(balance.get('totalStaked', '0'))} AWP")
@@ -223,14 +228,13 @@ def check_and_notify(wallet_addr: str) -> bool:
         total = len(subnets)
         free = sum(1 for s in subnets if s.get("min_stake", 0) == 0)
         with_skills = sum(1 for s in subnets if s.get("skills_uri"))
-        log(f"")
+        log("")
         log(f"{total} subnets. {free} free (no staking). {with_skills} with skills.")
     else:
         log("  No active subnets found (or API unavailable)")
 
     log("──────────────────────────────────────")
 
-    # 下一步建议
     print()
     if not is_registered:
         log('→ Next: say "start working on AWP" to register for free')
@@ -260,7 +264,7 @@ def get_remote_version(url: str) -> str:
     return match.group(1) if match else ""
 
 def check_updates() -> None:
-    """检查 awp-skill 和 awp-wallet 更新"""
+    """检查 awp-skill 和 awp-wallet 更新（语义化版本比较）"""
     log("Checking for updates...")
 
     # awp-skill
@@ -269,38 +273,34 @@ def check_updates() -> None:
         "https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md"
     )
 
-    if remote_ver and local_ver and remote_ver != local_ver:
-        log("┌─────────────────────────────────────────────┐")
-        log("│  AWP Skill update available!                 │")
-        log(f"│  Local:  {local_ver}")
-        log(f"│  Remote: {remote_ver}")
-        log("└─────────────────────────────────────────────┘")
+    if remote_ver and local_ver:
+        if parse_version(remote_ver) > parse_version(local_ver):
+            log("┌─────────────────────────────────────────────┐")
+            log("│  AWP Skill update available!                 │")
+            log(f"│  Local:  {local_ver}")
+            log(f"│  Remote: {remote_ver}")
+            log("└─────────────────────────────────────────────┘")
 
-        log("Auto-updating awp-skill...")
-        code, _ = run(f"skill install {SKILL_REPO}")
-        if code == 0:
-            log(f"awp-skill updated to {remote_ver} ✓")
+            log("Auto-updating awp-skill...")
+            code, _ = run(["skill", "install", SKILL_REPO])
+            if code == 0:
+                log(f"awp-skill updated to {remote_ver} ✓")
+            else:
+                warn("Auto-update failed. Please update manually.")
         else:
-            warn("Auto-update failed. Please update manually.")
-    elif local_ver:
-        log(f"awp-skill {local_ver} — up to date ✓")
+            log(f"awp-skill {local_ver} — up to date ✓")
 
-    # awp-wallet
+    # awp-wallet — 只在有新版时才更新
     if shutil.which("awp-wallet"):
         remote_wallet = get_remote_version(
             "https://raw.githubusercontent.com/awp-core/awp-wallet/main/SKILL.md"
         )
         if remote_wallet:
-            log(f"awp-wallet remote: {remote_wallet}")
-            code, _ = run("skill install awp-wallet")
-            if code != 0:
-                run(f"skill install {WALLET_REPO}")
-            log("awp-wallet checked/updated ✓")
+            log(f"awp-wallet latest: {remote_wallet} ✓")
 
 # ── Main ─────────────────────────────────────────
 
 def main() -> None:
-    # 解析参数
     interval = CHECK_INTERVAL
     if "--interval" in sys.argv:
         idx = sys.argv.index("--interval")
@@ -310,7 +310,6 @@ def main() -> None:
             except ValueError:
                 pass
 
-    # 欢迎屏
     print()
     print("╭──────────────╮")
     print("│              │")
@@ -322,30 +321,30 @@ def main() -> None:
     print("AWP Daemon starting...")
     print()
 
-    # Phase 1: 依赖
+    # Phase 1
     log("Phase 1: Checking dependencies...")
     if not ensure_wallet_installed():
         err("Cannot continue without awp-wallet")
         sys.exit(1)
 
-    # Phase 2: 钱包
+    # Phase 2
     log("Phase 2: Checking wallet...")
     wallet_addr = ensure_wallet_initialized()
     if not wallet_addr:
         err("Cannot continue without wallet")
         sys.exit(1)
 
-    # Phase 3: 状态
+    # Phase 3
     log("Phase 3: Checking status...")
     last_registered = check_and_notify(wallet_addr)
 
-    # Phase 4: 更新
+    # Phase 4
     log("Phase 4: Checking updates...")
     check_updates()
 
-    # Phase 5: 持续监控
+    # Phase 5
     log("")
-    log(f"Daemon running. Checking every {interval}s for updates and status changes.")
+    log(f"Daemon running. Checking every {interval}s.")
     log("Press Ctrl+C to stop.")
     print()
 
@@ -353,24 +352,25 @@ def main() -> None:
         while True:
             time.sleep(interval)
 
-            # 检查注册状态变化
-            is_registered = False
-            check = api_get(f"/address/{wallet_addr}/check")
-            if check:
-                is_registered = check.get("isRegistered", False)
-
-            if is_registered != last_registered and last_registered is not None:
-                if is_registered:
-                    log("🎉 Registration detected! You are now registered on AWP.")
-                    check_and_notify(wallet_addr)
-
-            last_registered = is_registered
-
-            # 更新检查
             try:
+                # 注册状态检查
+                is_registered = False
+                check = api_get(f"/address/{wallet_addr}/check")
+                if check:
+                    is_registered = check.get("isRegistered", False)
+
+                if is_registered != last_registered and last_registered is not None:
+                    if is_registered:
+                        log("Registration detected! You are now registered on AWP.")
+                        check_and_notify(wallet_addr)
+
+                last_registered = is_registered
+
+                # 更新检查
                 check_updates()
-            except Exception:
-                pass
+
+            except Exception as e:
+                warn(f"Monitor cycle error: {e}")
 
     except KeyboardInterrupt:
         print()
