@@ -6,3 +6,5 @@ AWP_RootNet_SKILL.md
 *.skill
 *.html
 *.log
+contracts/
+__pycache__/
