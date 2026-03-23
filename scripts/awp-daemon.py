@@ -52,6 +52,37 @@ def warn(msg: str) -> None:
 def err(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] ✗ {msg}", file=sys.stderr)
 
+def _get_openclaw_config() -> Tuple[str, str]:
+    """从 config 文件读取 OpenClaw channel 和 target。
+
+    查找顺序:
+    1. ~/.awp/openclaw.json  (用户手动配置)
+    2. /tmp/awp-worker-*-config.json  (agent 启动时写入)
+    3. /tmp/benchmark-worker-*-config.json  (兼容旧格式)
+    """
+    import glob
+
+    # 1. 用户配置
+    user_config = NOTIFY_DIR / "openclaw.json"
+    if user_config.exists():
+        try:
+            data = json.loads(user_config.read_text())
+            return data.get("channel", ""), data.get("target", "")
+        except Exception:
+            pass
+
+    # 2. agent 写入的临时配置
+    for pattern in ["/tmp/awp-worker-*-config.json", "/tmp/benchmark-worker-*-config.json"]:
+        files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
+        if files:
+            try:
+                data = json.loads(Path(files[0]).read_text())
+                return data.get("channel", ""), data.get("target", "")
+            except Exception:
+                pass
+
+    return "", ""
+
 def notify(title: str, message: str, level: str = "info") -> None:
     """发送通知：写入文件 + OpenClaw 消息（如果可用）"""
     timestamp = datetime.now().isoformat()
@@ -80,14 +111,20 @@ def notify(title: str, message: str, level: str = "info") -> None:
         warn(f"Failed to write notification: {e}")
 
     # 2. OpenClaw 消息发送（如果 openclaw CLI 可用）
-    if shutil.which("openclaw"):
-        try:
-            subprocess.run(
-                ["openclaw", "agent", "--message", f"[AWP] {title}: {message}"],
-                capture_output=True, timeout=10
-            )
-        except Exception:
-            pass  # OpenClaw 不可用时静默跳过
+    openclaw_bin = shutil.which("openclaw")
+    if openclaw_bin:
+        channel, target = _get_openclaw_config()
+        if channel and target:
+            try:
+                subprocess.run(
+                    [openclaw_bin, "message", "send",
+                     "--channel", channel,
+                     "--target", target,
+                     "--message", f"[AWP] {title}: {message}"],
+                    capture_output=True, timeout=10
+                )
+            except Exception:
+                pass  # 发送失败时静默跳过
 
     # 3. 终端输出
     log(f"[NOTIFY] {title}: {message}")
