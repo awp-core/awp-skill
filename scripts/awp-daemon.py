@@ -105,7 +105,7 @@ def notify(title: str, message: str, level: str = "info") -> None:
         if NOTIFY_FILE.exists():
             try:
                 notifications = json.loads(NOTIFY_FILE.read_text())
-            except (json.JSONDecodeError, Exception):
+            except (json.JSONDecodeError, OSError):
                 notifications = []
 
         notifications.append({
@@ -220,7 +220,7 @@ def ensure_wallet_initialized() -> Optional[str]:
     code, out = run(["awp-wallet", "receive"])
     if code == 0 and out:
         try:
-            addr = json.loads(out).get("address")
+            addr = json.loads(out).get("eoaAddress")
             if addr:
                 return addr
         except json.JSONDecodeError:
@@ -238,7 +238,7 @@ def ensure_wallet_initialized() -> Optional[str]:
         return None
 
     try:
-        addr = json.loads(out).get("address")
+        addr = json.loads(out).get("eoaAddress")
     except json.JSONDecodeError:
         err(f"Invalid wallet response: {out}")
         return None
@@ -402,9 +402,12 @@ def check_updates() -> None:
                 log(f"awp-wallet update: {local_wallet} → {remote_wallet}")
                 code, _ = run(["skill", "install", "awp-wallet"])
                 if code != 0:
-                    run(["skill", "install", WALLET_REPO])
-                log(f"awp-wallet updated ✓")
-                notify("Wallet Updated", f"awp-wallet updated: {local_wallet} → {remote_wallet}")
+                    code, _ = run(["skill", "install", WALLET_REPO])
+                if code == 0:
+                    log(f"awp-wallet updated ✓")
+                    notify("Wallet Updated", f"awp-wallet updated: {local_wallet} → {remote_wallet}")
+                else:
+                    err(f"awp-wallet update failed (both registry and GitHub)")
             else:
                 log(f"awp-wallet {local_wallet} — up to date ✓")
         elif remote_wallet:
@@ -476,6 +479,9 @@ def main() -> None:
                         log("Registration detected! You are now registered on AWP.")
                         notify("Registered", f"Address {wallet_addr} is now registered on AWP")
                         check_and_notify(wallet_addr)
+                    else:
+                        log("Registration lost — address is no longer registered.")
+                        notify("Deregistered", f"Address {wallet_addr} is no longer registered on AWP")
 
                 last_registered = is_registered
 

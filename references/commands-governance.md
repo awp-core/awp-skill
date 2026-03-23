@@ -2,12 +2,13 @@
 
 **API Base URL**: `{API_BASE}/api` (deployment-specific — do not hardcode)
 
-> **Note**: On-chain command templates below use `cast` (Foundry) for calldata encoding.
-> If `cast` is not available, pre-compute the 4-byte function selectors and use python3 for ABI encoding.
+> **IMPORTANT**: Always use the bundled `scripts/*.py` files for write operations — they handle ABI encoding natively in Python, require only python3, and work without Foundry or curl/jq.
+> The `cast calldata` examples below are for reference only; do NOT run them directly.
 
-## Setup (run once per session)
+## Setup (reference only — bundled scripts handle this automatically)
 
 ```bash
+# 以下为参考说明，实际操作使用 scripts/*.py 自动完成
 REGISTRY=$(curl -s {API_BASE}/api/registry)
 AWP_REGISTRY=$(echo $REGISTRY | jq -r '.awpRegistry')
 AWP_TOKEN=$(echo $REGISTRY | jq -r '.awpToken')
@@ -16,7 +17,7 @@ SUBNET_NFT=$(echo $REGISTRY | jq -r '.subnetNFT')
 DAO_ADDR=$(echo $REGISTRY | jq -r '.dao')
 TREASURY=$(echo $REGISTRY | jq -r '.treasury')
 
-WALLET_ADDR=$(awp-wallet status --token {T} | jq -r '.address')
+WALLET_ADDR=$(awp-wallet receive | jq -r '.eoaAddress')
 ```
 
 ---
@@ -75,7 +76,7 @@ function proposalCreatedAt(uint256 proposalId) view returns (uint64)   // Timest
 # Step 1: Get eligible tokenIds
 POSITIONS=$(curl -s {API_BASE}/api/staking/user/$WALLET_ADDR/positions)
 # Get proposalCreatedAt from chain
-PROPOSAL_CREATED=$(cast call $DAO_ADDR "proposalCreatedAt(uint256)" {proposalId} --rpc-url $RPC_URL | cast --to-dec)
+PROPOSAL_CREATED=$(cast call $DAO_ADDR "proposalCreatedAt(uint256)" {proposalId} --rpc-url $EVM_RPC_URL | cast --to-dec)
 # Filter: only positions with created_at < PROPOSAL_CREATED (positions with createdAt >= are blocked)
 # Build tokenIds array: e.g. [1, 7, 12]
 

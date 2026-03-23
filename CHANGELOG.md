@@ -1,11 +1,49 @@
 # Changelog
 
+## v0.21.0
+
+### Changed — Shell → Python Migration
+- **All 14 shell scripts converted to Python** — eliminates `curl`/`jq`/`sed` dependencies, only `python3` required
+- New shared library `scripts/awp_lib.py` (~285 lines) — API calls, wallet commands, ABI encoding, input validation, EIP-712 builder
+- Shell injection surface fully eliminated — no more `python3 -c` inline, no `$VAR` interpolation in subshells
+- All scripts now use native Python `urllib` for HTTP and `argparse` for CLI parsing
+- Dependencies reduced from `curl + jq + python3` to `python3` only
+- Reference docs updated: `scripts/*.sh` → `scripts/*.py`
+
+---
+
+## v0.20.7
+
+### Fixed — Deep Code Review
+- **CRITICAL**: `awp-wallet status` command does not exist → replaced with `awp-wallet receive` across 14 scripts + 3 reference files + SKILL.md
+- **CRITICAL**: `.address` field does not exist → replaced with `.eoaAddress` across all 20 files
+- **CRITICAL**: `--scope full` parameter does not exist → removed from `awp-wallet unlock` (3 places)
+- `onchain-vote.sh`: `$ELIGIBLE_TOKEN_IDS` shell injection → now passed via `os.environ`
+- `relay-start.sh`: `sed` injection risk → replaced with `jq` for safe JSON construction
+- `onchain-deposit.sh`: `--lock-days 0` incorrectly passed validation → now rejected
+- `AWP_TOKEN` null check missing in `onchain-deposit.sh` and `onchain-register-and-stake.sh` → added
+- `awp-daemon.py`: wallet update falsely reported success on failure → now checks return code
+- `awp-daemon.py`: deregistration event silently dropped → now logs and notifies
+- `awp-daemon.py`: `except Exception` too broad → narrowed to `(JSONDecodeError, OSError)`
+- `$RPC_URL` → `$EVM_RPC_URL` in `commands-subnet.md` and `commands-governance.md`
+- SKILL.md: stale example date `2025-12-01` → `2026-12-01`
+
+### Changed
+- **Multi-EVM**: `BASE_RPC_URL` → `EVM_RPC_URL` across all scripts and references
+- Description updated: "on Base" → "on EVM" to reflect all EVM-compatible chains
+- README badges: added Ethereum, EVM Compatible; updated descriptions for multi-chain
+- README: removed stale "Proceed? (y/n)" UX description (agent wallet model executes directly)
+- Reference docs: clarified that `cast` examples are for reference only; agents must use bundled scripts
+- Version history in README aligned with 0.x.x scheme
+
+---
+
 ## v0.19.9
 
 ### Security
 - Q6 subnet skill install: auto-install from `awp-core/*`; third-party sources show `⚠ third-party source` notice (non-blocking)
-- Metadata now declares all dependencies: `curl`, `jq`, `python3`, `~/.awp-wallet-password`
-- Wallet password management transparent to user — informed about file location on first setup
+- Metadata now declares all dependencies: `curl`, `jq`, `python3`
+- Wallet auto-manages credentials in default mode — no password files needed
 
 ### Changed
 - **Agent wallet model** — transactions execute directly, no confirmation prompts. This is a work wallet for AWP tasks only; users are told not to store personal assets.
@@ -30,7 +68,7 @@ First public release of the AWP Skill for [Claude Code](https://github.com/anthr
 
 ### What is AWP Skill?
 
-A natural-language interface to the **AWP (Agent Working Protocol)** on Base (EVM). Install it in any compatible agent, and the agent can register on AWP, join subnets, stake tokens, vote on governance proposals, and monitor real-time on-chain events — all through conversation.
+A natural-language interface to the **AWP (Agent Working Protocol)** on EVM-compatible chains. Install it in any compatible agent, and the agent can register on AWP, join subnets, stake tokens, vote on governance proposals, and monitor real-time on-chain events — all through conversation.
 
 ```bash
 skill install https://github.com/awp-core/awp-skill
@@ -57,20 +95,21 @@ awp-skill/
 │   ├── commands-governance.md    G1-G4 + supplementary endpoints
 │   └── protocol.md              Structs, 26 events, constants
 ├── scripts/                    14 executable bash scripts
-│   ├── relay-start.sh            Gasless register/bind
-│   ├── relay-register-subnet.sh  Gasless subnet registration
-│   ├── onchain-register.sh       On-chain register
-│   ├── onchain-bind.sh           On-chain bind
-│   ├── onchain-deposit.sh        Deposit AWP
-│   ├── onchain-allocate.sh       Allocate stake
-│   ├── onchain-deallocate.sh     Deallocate stake
-│   ├── onchain-reallocate.sh     Reallocate stake
-│   ├── onchain-withdraw.sh       Withdraw expired position
-│   ├── onchain-add-position.sh   Add to existing position
-│   ├── onchain-register-and-stake.sh  One-click register+deposit+allocate
-│   ├── onchain-vote.sh           Cast DAO vote
-│   ├── onchain-subnet-lifecycle.sh  Activate/pause/resume subnet
-│   └── onchain-subnet-update.sh  Set skillsURI or minStake
+│   ├── awp_lib.py                Shared library (API, wallet, ABI, validation)
+│   ├── relay-start.py            Gasless register/bind
+│   ├── relay-register-subnet.py  Gasless subnet registration
+│   ├── onchain-register.py       On-chain register
+│   ├── onchain-bind.py           On-chain bind
+│   ├── onchain-deposit.py        Deposit AWP
+│   ├── onchain-allocate.py       Allocate stake
+│   ├── onchain-deallocate.py     Deallocate stake
+│   ├── onchain-reallocate.py     Reallocate stake
+│   ├── onchain-withdraw.py       Withdraw expired position
+│   ├── onchain-add-position.py   Add to existing position
+│   ├── onchain-register-and-stake.py  One-click register+deposit+allocate
+│   ├── onchain-vote.py           Cast DAO vote
+│   ├── onchain-subnet-lifecycle.py  Activate/pause/resume subnet
+│   └── onchain-subnet-update.py  Set skillsURI or minStake
 ├── assets/
 │   └── banner.png
 ├── README.md
@@ -91,7 +130,7 @@ awp-skill/
 
 - ASCII art welcome screen with quick-start commands
 - `awp status` / `awp wallet` / `awp subnets` / `awp help` quick commands
-- Write safety — confirmation preview before every transaction with `Proceed? (y/n)`
+- Agent wallet model — transactions execute directly (work wallet, no personal assets)
 - Balance change notifications with +/- delta after writes
 - Tagged output: `[QUERY]`, `[STAKE]`, `[TX]`, `[NEXT]`, `[!]` prefixes
 - Transaction links to basescan.org
@@ -127,14 +166,14 @@ Nonce from `GET /nonce/{address}`. EIP-712 domain from `GET /registry → eip712
 
 | Parameter | Value |
 |-----------|-------|
-| Chain | Base (Chain ID 8453) |
+| Chain | EVM-compatible (testnet: Base, Chain ID 8453) |
 | Gas Token | ETH |
 | Epoch Duration | 1 day |
 | Initial Daily Emission | 15,800,000 AWP |
 | Decay | ~0.3156% per epoch |
 | Max Active Subnets | 10,000 |
 | Voting Power | `amount × √(min(remainingTime, 54w) / 7d)` |
-| Explorer | basescan.org |
+| Explorer | deployment-specific (default: basescan.org) |
 
 ### Security
 

@@ -7,15 +7,16 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/EVM_Compatible-3C3C3D?style=flat&logo=ethereum&logoColor=white" alt="EVM">
   <img src="https://img.shields.io/badge/Base-0052FF?style=flat&logo=coinbase&logoColor=white" alt="Base">
+  <img src="https://img.shields.io/badge/Ethereum-3C3C3D?style=flat&logo=ethereum&logoColor=white" alt="Ethereum">
   <img src="https://img.shields.io/badge/BNB_Chain-F0B90B?style=flat&logo=bnbchain&logoColor=white" alt="BNB Chain">
-  <img src="https://img.shields.io/badge/x402_Protocol-7C3AED?style=flat" alt="x402">
   <img src="https://img.shields.io/badge/SKILL.md-000000?style=flat" alt="SKILL.md">
   <img src="https://img.shields.io/badge/AI_Agent-10B981?style=flat&logo=openai&logoColor=white" alt="AI Agent">
   <img src="https://img.shields.io/badge/License-MIT-97CA00?style=flat" alt="MIT">
 </p>
 
-**Skill for interacting with the AWP (Agent Working Protocol) on Base/EVM.** Query protocol state, bind and delegate, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
+**Skill for interacting with the AWP (Agent Working Protocol) on EVM-compatible chains.** Query protocol state, bind and delegate, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
 
 ### Works with
 
@@ -37,11 +38,11 @@
 
 ---
 
-> **Testnet.** AWP is currently in testnet on BASE mainnet. AWP mainnet deployment (ETH, Base, BSC, ...) is planned. Protocol parameters may change before the official mainnet launch.
+> **Testnet.** AWP is currently in testnet on Base. Multi-chain EVM deployment (Ethereum, Base, BSC, Arbitrum, etc.) is planned. Protocol parameters may change before the official mainnet launch.
 
 ## Overview
 
-AWP is a decentralized **Agent Working** protocol on EVM (deployed on Base). Users bind to a tree-based hierarchy, stake AWP via position NFTs, allocate to agents on subnets, and earn emissions. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
+AWP is a decentralized **Agent Working** protocol on EVM-compatible chains (testnet on Base). Users bind to a tree-based hierarchy, stake AWP via position NFTs, allocate to agents on subnets, and earn emissions. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
 This repository is a single skill with **20 actions**, **14 bundled scripts**, and **26 real-time event types** — covering Query, Staking, Subnet Management, Governance, and WebSocket Monitoring.
 
@@ -118,27 +119,28 @@ awp-skill/
 │   └── protocol.md                         # Shared structs, 26 events, constants
 ├── scripts/
 │   ├── awp-daemon.py                       # Background service: deps, init, monitor, auto-update
-│   ├── relay-start.sh                      # Gasless onboarding (bind or set-recipient)
-│   ├── relay-register-subnet.sh            # Gasless subnet registration (dual EIP-712)
-│   ├── onchain-register.sh                 # On-chain register (optional)
-│   ├── onchain-bind.sh                     # On-chain bind
-│   ├── onchain-deposit.sh                  # Deposit AWP (approve + deposit)
-│   ├── onchain-allocate.sh                 # Allocate stake
-│   ├── onchain-deallocate.sh               # Deallocate stake
-│   ├── onchain-reallocate.sh               # Reallocate stake (6-param safety)
-│   ├── onchain-withdraw.sh                 # Withdraw from expired position
-│   ├── onchain-add-position.sh             # Add AWP to existing position
-│   ├── onchain-register-and-stake.sh       # One-click register+deposit+allocate
-│   ├── onchain-vote.sh                     # Cast DAO vote (nested ABI encode)
-│   ├── onchain-subnet-lifecycle.sh         # Activate/pause/resume with state check
-│   └── onchain-subnet-update.sh            # Set skillsURI or minStake on SubnetNFT
+│   ├── awp_lib.py                          # Shared library (API, wallet, ABI, validation)
+│   ├── relay-start.py                      # Gasless onboarding (bind or set-recipient)
+│   ├── relay-register-subnet.py            # Gasless subnet registration (dual EIP-712)
+│   ├── onchain-register.py                 # On-chain register (optional)
+│   ├── onchain-bind.py                     # On-chain bind
+│   ├── onchain-deposit.py                  # Deposit AWP (approve + deposit)
+│   ├── onchain-allocate.py                 # Allocate stake
+│   ├── onchain-deallocate.py               # Deallocate stake
+│   ├── onchain-reallocate.py               # Reallocate stake (6-param safety)
+│   ├── onchain-withdraw.py                 # Withdraw from expired position
+│   ├── onchain-add-position.py             # Add AWP to existing position
+│   ├── onchain-register-and-stake.py       # One-click register+deposit+allocate
+│   ├── onchain-vote.py                     # Cast DAO vote (nested ABI encode)
+│   ├── onchain-subnet-lifecycle.py         # Activate/pause/resume with state check
+│   └── onchain-subnet-update.py            # Set skillsURI or minStake on SubnetNFT
 ├── README.md
 └── LICENSE
 ```
 
 **Progressive loading**: The agent loads only what it needs per action. Query and Monitor actions use SKILL.md alone. Write actions load the specific command reference file, and all on-chain operations use bundled scripts — preventing manual calldata construction errors.
 
-**14 bundled scripts** cover every write operation. Each script handles:
+**14 bundled Python scripts** (+ shared `awp_lib.py` library) cover every write operation. Each script handles:
 
 - Input validation (address regex, numeric checks)
 - Correct contract targeting (AWPRegistry vs StakeNFT vs SubnetNFT vs DAO)
@@ -168,7 +170,7 @@ The skill provides a polished user experience with:
 - **4-step guided onboarding** — wallet setup, registration, subnet discovery, skill install
 - **Option A / Option B** — Solo Mining (quick start) vs Delegated Mining (link wallet)
 - **User commands** — `awp status`, `awp wallet`, `awp subnets`, `awp help`
-- **Write safety** — confirmation preview before every transaction with `Proceed? (y/n)`
+- **Agent wallet model** — transactions execute directly (work wallet only, no personal assets)
 - **Balance notifications** — auto-show +/- delta after balance-changing operations
 - **Tagged output** — 11 prefixes: `[QUERY]`, `[STAKE]`, `[TX]`, `[NEXT]`, `[!]`, etc.
 - **Transaction links** — every write shows txHash + BaseScan link
@@ -205,7 +207,7 @@ Root (cold wallet):                    Agent (hot wallet):
 
 | Parameter | Value |
 |-----------|-------|
-| Chain | EVM (deployed on Base, Chain ID 8453) |
+| Chain | EVM-compatible (testnet: Base, Chain ID 8453) |
 | Epoch Duration | 1 day (86,400 seconds) |
 | Initial Daily Emission | 15,800,000 AWP |
 | Decay Factor | ~0.3156% per epoch |
@@ -253,17 +255,10 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
-| 1.9.0 | UI enhancements (ASCII welcome, guided onboarding, tagged output, write safety, balance notifications), 8 new safety scripts (vote, registerAndStake, reallocate, addToPosition, deallocate, withdraw, subnet-update, subnet-lifecycle), 15+ bug fixes from 3 rounds of code review |
-| 1.8.0 | V2 API overhaul: AWPRegistry (renamed from RootNet), Account System V2 (tree-based binding, grantDelegate/revokeDelegate, no mandatory registration), 26 events, SubnetParams 6 fields (skillsURI added back), EIP-712 domain "AWPRegistry", deployment-agnostic URLs |
-| 1.7.0 | Anti-hallucination: on-chain scripts (register/bind/deposit/allocate), pre-flight checklist, DO NOT list, fixed bind selector 0x81bac14f, dynamic chainId |
-| 1.6.1 | Remove cast/foundry dependency from scripts, dev branch separation |
-| 1.6.0 | Bundled gasless relay scripts, enforce script usage over manual EIP-712 |
-| 1.5.0 | SubnetParams 5 fields, 27 events, relay 100/IP/1h, emission [DRAFT] |
-| 1.4.0 | Merged awp + awp-monitor into single skill |
-| 1.3.0 | Split api-reference into focused command files, session state tracking |
-| 1.2.0 | On Skill Load protocol, intent routing, version check |
-| 1.1.0 | Welcome messages, executable command templates, EIP-712 templates |
-| 1.0.0 | Initial release — 21 actions + 28 event types |
+| 0.21.0 | All 14 shell scripts converted to Python + shared `awp_lib.py` library; dependencies reduced to python3-only; shell injection surface eliminated |
+| 0.20.7 | Deep review: fixed `awp-wallet receive` / `.eoaAddress` across 20 files, removed `--scope full`, injection fixes (vote.sh, relay-start.sh), daemon deregistration notify, multi-EVM support, `BASE_RPC_URL` → `EVM_RPC_URL` |
+| 0.19.9 | Security audit: agent wallet model (no confirmation prompts), Q6 trust model, wallet password auto-management, shell injection fixes, registry null checks |
+| 0.19.1 | Initial public release — 20 actions, 14 bundled scripts, gasless onboarding, 26 event types |
 
 ## Contributing
 

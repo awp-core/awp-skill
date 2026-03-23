@@ -2,13 +2,13 @@
 
 **API Base URL**: `{API_BASE}/api` (deployment-specific — do not hardcode)
 
-> **Note**: On-chain command templates below use `cast` (Foundry) for calldata encoding.
-> For gasless operations, use the bundled scripts instead — they require only curl+jq+python3.
-> If `cast` is not available, pre-compute the 4-byte function selectors and use python3 for ABI encoding.
+> **IMPORTANT**: Always use the bundled `scripts/*.py` files for write operations — they handle ABI encoding natively in Python, require only python3, and work without Foundry or curl/jq.
+> The `cast calldata` examples below are for reference only; do NOT run them directly.
 
-## Setup (run once per session)
+## Setup (reference only — bundled scripts handle this automatically)
 
 ```bash
+# 以下为参考说明，实际操作使用 scripts/*.py 自动完成
 REGISTRY=$(curl -s {API_BASE}/api/registry)
 AWP_REGISTRY=$(echo $REGISTRY | jq -r '.awpRegistry')
 AWP_TOKEN=$(echo $REGISTRY | jq -r '.awpToken')
@@ -16,7 +16,7 @@ STAKE_NFT=$(echo $REGISTRY | jq -r '.stakeNFT')
 SUBNET_NFT=$(echo $REGISTRY | jq -r '.subnetNFT')
 DAO_ADDR=$(echo $REGISTRY | jq -r '.dao')
 
-WALLET_ADDR=$(awp-wallet status --token {T} | jq -r '.address')
+WALLET_ADDR=$(awp-wallet receive | jq -r '.eoaAddress')
 ```
 
 ## Wallet CLI Reference
@@ -177,7 +177,7 @@ EIP712_DOMAIN=$(echo $REGISTRY | jq '.eip712Domain')
 
 **On-chain bind (has ETH gas):**
 ```bash
-bash scripts/onchain-bind.sh --token {T} --target {targetAddress}
+python3 scripts/onchain-bind.py --token {T} --target {targetAddress}
 ```
 
 **Gasless bind (no ETH) — EIP-712 signature flow:**
