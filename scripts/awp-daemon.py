@@ -290,13 +290,30 @@ def check_updates() -> None:
         else:
             log(f"awp-skill {local_ver} — up to date ✓")
 
-    # awp-wallet — 只在有新版时才更新
+    # awp-wallet — 比较版本，有新版才更新
     if shutil.which("awp-wallet"):
         remote_wallet = get_remote_version(
             "https://raw.githubusercontent.com/awp-core/awp-wallet/main/SKILL.md"
         )
-        if remote_wallet:
-            log(f"awp-wallet latest: {remote_wallet} ✓")
+        # 获取本地 wallet 版本
+        local_wallet = ""
+        wcode, wout = run(["awp-wallet", "--version"])
+        if wcode == 0 and wout:
+            match = re.search(r"[\d.]+", wout)
+            if match:
+                local_wallet = match.group(0)
+
+        if remote_wallet and local_wallet:
+            if parse_version(remote_wallet) > parse_version(local_wallet):
+                log(f"awp-wallet update: {local_wallet} → {remote_wallet}")
+                code, _ = run(["skill", "install", "awp-wallet"])
+                if code != 0:
+                    run(["skill", "install", WALLET_REPO])
+                log(f"awp-wallet updated ✓")
+            else:
+                log(f"awp-wallet {local_wallet} — up to date ✓")
+        elif remote_wallet:
+            log(f"awp-wallet latest: {remote_wallet}")
 
 # ── Main ─────────────────────────────────────────
 
