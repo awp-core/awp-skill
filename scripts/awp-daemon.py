@@ -83,8 +83,8 @@ def notify(title: str, message: str, level: str = "info") -> None:
     if shutil.which("openclaw"):
         try:
             subprocess.run(
-                ["openclaw", "notify", "--title", title, "--message", message],
-                capture_output=True, timeout=5
+                ["openclaw", "agent", "--message", f"[AWP] {title}: {message}"],
+                capture_output=True, timeout=10
             )
         except Exception:
             pass  # OpenClaw 不可用时静默跳过
