@@ -24,7 +24,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.20.4**
+**Skill version: 0.20.5**
 
 ## API URL
 
@@ -84,20 +84,22 @@ which awp-wallet >/dev/null 2>&1 || skill install awp-wallet || skill install ht
 ```
 Do not print anything if already installed. Only print if installing: `[SETUP] Installing AWP Wallet...`
 
-**Step 3 — Session recovery**: Check if wallet is already unlocked:
+**Step 3 — Check notifications**: If `~/.awp/notifications.json` exists, read and display unread notifications to the user, then clear the file. The daemon writes notifications here for wallet installs, updates, and registration changes.
+
+**Step 4 — Session recovery**: Check if wallet is already unlocked:
 ```bash
 awp-wallet receive 2>/dev/null
 ```
 - If wallet unlocked, restore `wallet_addr`. Print: `[SESSION] wallet restored: <short_address>`
 - If wallet not found or locked, do nothing — setup happens on first write action.
 
-**Step 4 — Version check** (silent if up to date):
+**Step 5 — Version check** (silent if up to date):
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.20.4, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.20.5, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
 
-**Step 5 — Route to action** using the Intent Routing table below.
+**Step 6 — Route to action** using the Intent Routing table below.
 
 ## User Commands
 

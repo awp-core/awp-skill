@@ -38,8 +38,10 @@ SKILL_REPO = "https://github.com/awp-core/awp-skill"
 WALLET_REPO = "https://github.com/awp-core/awp-wallet"
 SCRIPT_DIR = Path(__file__).parent.resolve()
 SKILL_MD = SCRIPT_DIR.parent / "SKILL.md"
+NOTIFY_DIR = Path.home() / ".awp"
+NOTIFY_FILE = NOTIFY_DIR / "notifications.json"
 
-# ── Logging ──────────────────────────────────────
+# ── Logging & Notifications ──────────────────────
 
 def log(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] {msg}")
@@ -49,6 +51,46 @@ def warn(msg: str) -> None:
 
 def err(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] ✗ {msg}", file=sys.stderr)
+
+def notify(title: str, message: str, level: str = "info") -> None:
+    """发送通知：写入文件 + OpenClaw 消息（如果可用）"""
+    timestamp = datetime.now().isoformat()
+
+    # 1. 写入 ~/.awp/notifications.json
+    try:
+        NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
+        notifications = []
+        if NOTIFY_FILE.exists():
+            try:
+                notifications = json.loads(NOTIFY_FILE.read_text())
+            except (json.JSONDecodeError, Exception):
+                notifications = []
+
+        notifications.append({
+            "timestamp": timestamp,
+            "level": level,
+            "title": title,
+            "message": message,
+        })
+
+        # 只保留最近 50 条
+        notifications = notifications[-50:]
+        NOTIFY_FILE.write_text(json.dumps(notifications, indent=2))
+    except Exception as e:
+        warn(f"Failed to write notification: {e}")
+
+    # 2. OpenClaw 消息发送（如果 openclaw CLI 可用）
+    if shutil.which("openclaw"):
+        try:
+            subprocess.run(
+                ["openclaw", "notify", "--title", title, "--message", message],
+                capture_output=True, timeout=5
+            )
+        except Exception:
+            pass  # OpenClaw 不可用时静默跳过
+
+    # 3. 终端输出
+    log(f"[NOTIFY] {title}: {message}")
 
 # ── Helpers ──────────────────────────────────────
 
@@ -109,11 +151,13 @@ def ensure_wallet_installed() -> bool:
     code, _ = run(["skill", "install", "awp-wallet"])
     if code == 0:
         log("awp-wallet installed from registry ✓")
+        notify("Wallet Installed", "awp-wallet installed from registry")
         return True
 
     code, _ = run(["skill", "install", WALLET_REPO])
     if code == 0:
         log("awp-wallet installed from GitHub ✓")
+        notify("Wallet Installed", "awp-wallet installed from GitHub")
         return True
 
     err("Failed to install awp-wallet. Install manually:")
@@ -156,6 +200,7 @@ def ensure_wallet_initialized() -> Optional[str]:
         return None
 
     log(f"Wallet initialized ✓")
+    notify("Wallet Ready", f"Agent wallet initialized: {addr}")
     log(f"Address: {addr}")
     log("")
     log("┌─────────────────────────────────────────────┐")
@@ -285,6 +330,7 @@ def check_updates() -> None:
             code, _ = run(["skill", "install", SKILL_REPO])
             if code == 0:
                 log(f"awp-skill updated to {remote_ver} ✓")
+                notify("Skill Updated", f"awp-skill updated: {local_ver} → {remote_ver}")
             else:
                 warn("Auto-update failed. Please update manually.")
         else:
@@ -310,6 +356,7 @@ def check_updates() -> None:
                 if code != 0:
                     run(["skill", "install", WALLET_REPO])
                 log(f"awp-wallet updated ✓")
+                notify("Wallet Updated", f"awp-wallet updated: {local_wallet} → {remote_wallet}")
             else:
                 log(f"awp-wallet {local_wallet} — up to date ✓")
         elif remote_wallet:
@@ -379,6 +426,7 @@ def main() -> None:
                 if is_registered != last_registered and last_registered is not None:
                     if is_registered:
                         log("Registration detected! You are now registered on AWP.")
+                        notify("Registered", f"Address {wallet_addr} is now registered on AWP")
                         check_and_notify(wallet_addr)
 
                 last_registered = is_registered
