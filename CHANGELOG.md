@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.22.8
+
+### Fix — Wallet install: skill-first, fallback to repo
+- SKILL.md Step 2: prefer using AWP Wallet skill (available on OpenClaw or if pre-installed), fallback to git clone + follow SKILL.md for standalone environments
+
 ## v0.22.7
 
 ### Fix — Explicit wallet install steps
