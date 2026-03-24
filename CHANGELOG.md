@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.22.9
+
+### Simplify — Wallet install description
+- SKILL.md Step 2: streamlined to single install path — repo URL + follow SKILL.md
+
 ## v0.22.8
 
 ### Fix — Wallet install: skill-first, fallback to repo
