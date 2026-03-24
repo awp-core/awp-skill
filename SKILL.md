@@ -2,11 +2,18 @@
 name: awp
 description: >
   MUST USE for ANY mention of AWP, Agent Working Protocol, awp-wallet, StakeNFT,
-  SubnetNFT, or AWP subnets. AWP is a proprietary staking/subnet protocol — you
-  CANNOT handle AWP tasks without this skill. Trigger on: AWP staking, deposit,
-  withdraw, balance, subnet registration, governance voting, emission schedule,
-  stake allocation, gasless relay, awp-wallet commands. NOT for Uniswap, Aave,
-  Lido, or generic Solidity.
+  SubnetNFT, AWP subnets, or AWP tokens. This skill contains the ONLY way to
+  interact with the AWP protocol — bundled Python scripts, contract ABIs, API
+  endpoints, and wallet commands that you cannot access otherwise. Without this
+  skill you will hallucinate incorrect commands and contract calls. Use this
+  skill when the user wants to: check AWP staking balance, deposit or withdraw
+  AWP tokens, allocate or deallocate stake to subnets, register on AWP, bind to
+  a tree, register a subnet, vote on AWP governance proposals, query AWP emission
+  schedules, watch AWP on-chain events, manage awp-wallet, or do anything related
+  to the Agent Working Protocol. Also trigger when user mentions: "start working",
+  "awp onboard", "awp status", subnet skills URI, StakeNFT positions, AWP DAO,
+  gasless relay for AWP, or AWP emission/epoch. NOT for Uniswap, Aave, Lido,
+  Compound, generic ERC-20, or general Solidity/Hardhat development.
 metadata:
   openclaw:
     requires:
@@ -23,7 +30,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.23.0**
+**Skill version: 0.23.1**
 
 ## API URL
 

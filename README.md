@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.23.1 | Expanded skill description for better triggering accuracy |
 | 0.22.9 | Security hardening: no auto-install/init in daemon, removed /tmp scanning, explicit wallet install via repo, simplified update notices, code review fixes |
 | 0.22.0 | awp-wallet CLI compatibility: added `wallet-raw-call.mjs` bridge, fixed all on-chain scripts |
 | 0.21.0 | All 14 shell scripts converted to Python + shared `awp_lib.py` library; dependencies reduced to python3-only |

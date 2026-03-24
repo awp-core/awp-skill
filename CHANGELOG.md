@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.23.1
+
+### Improve — Skill description for better triggering
+- Expanded description with explicit action list (deposit, withdraw, allocate, register, vote, etc.)
+- Added "hallucination warning" — tells model it CANNOT handle AWP without this skill
+- Added trigger phrases: "start working", "awp onboard", "awp status"
+- Added negative scope: Compound, generic ERC-20, Hardhat
+
 ## v0.23.0
 
 ### Code Review — 16 fixes
