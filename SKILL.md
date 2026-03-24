@@ -109,12 +109,11 @@ awp-wallet receive 2>/dev/null
 
 **Step 6 — Version check** (optional, informational only):
 
-Compare the local version string (`0.22.9`) against the remote version. **Do not auto-update or auto-download.** Only print an informational notice:
+Compare the local version string (`0.22.9`) against the remote version. If a newer version exists, notify the user:
 ```
-[UPDATE] New version X.Y.Z available (current: 0.22.9).
-         Please re-pull from https://github.com/awp-core/awp-skill and reinstall.
+[UPDATE] AWP Skill X.Y.Z available (current: 0.22.9).
 ```
-Skip this step if the network is unavailable. Never fetch or execute remote code during the version check.
+Skip this step if the network is unavailable.
 
 **Step 7 — Route to action** using the Intent Routing table below.
 
