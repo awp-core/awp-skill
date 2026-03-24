@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.23.2
+
+### Fix — Install review findings
+- Add `node` to required binaries (wallet-raw-call.mjs requires Node.js)
+- Move `EVM_RPC_URL`, `OPENCLAW_CHANNEL`, `OPENCLAW_TARGET` from `env` to `optional_env` (they have defaults or are runtime-provided)
+- Clarify wallet init is agent-initiated (not unattended auto-init) in Step 5, Onboarding, and error table
+- Fix version string in Step 6 version check
+
 ## v0.23.1
 
 ### Improve — Skill description for better triggering

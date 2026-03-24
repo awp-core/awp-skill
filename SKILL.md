@@ -19,18 +19,20 @@ metadata:
     requires:
       env:
         - AWP_API_URL          # REST API base URL (default: https://tapi.awp.sh/api)
-        - EVM_RPC_URL          # optional: EVM chain RPC (default: https://mainnet.base.org)
-        - OPENCLAW_CHANNEL     # optional: OpenClaw notification channel (only in OpenClaw runtime)
-        - OPENCLAW_TARGET      # optional: OpenClaw notification target (only in OpenClaw runtime)
+      optional_env:
+        - EVM_RPC_URL          # EVM chain RPC (default: https://mainnet.base.org)
+        - OPENCLAW_CHANNEL     # OpenClaw notification channel (only provided by OpenClaw runtime)
+        - OPENCLAW_TARGET      # OpenClaw notification target (only provided by OpenClaw runtime)
       skills:
         - AWP Wallet           # awp-wallet CLI — install from https://github.com/awp-core/awp-wallet
       binaries:
         - python3              # All scripts are pure Python (API, ABI encoding, validation)
+        - node                 # Required by wallet-raw-call.mjs (Node.js bridge for raw contract calls)
 ---
 
 # AWP Registry
 
-**Skill version: 0.23.1**
+**Skill version: 0.23.2**
 
 ## API URL
 
@@ -110,7 +112,7 @@ Skip entirely if either variable is unset or empty. These variables are only pro
 awp-wallet receive 2>/dev/null
 ```
 - If wallet unlocked, restore `wallet_addr`. Print: `[SESSION] wallet restored: <short_address>`
-- If wallet not found → run `awp-wallet init` (creates agent work wallet, handles credentials internally).
+- If wallet not found → agent runs `awp-wallet init` (creates agent work wallet, handles credentials internally — this is agent-initiated, not unattended).
 - If wallet locked, do nothing — unlock happens on first write action.
 
 **Step 6 — Version check** (optional, informational only):
@@ -119,7 +121,7 @@ Fetch the remote version:
 ```bash
 curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | grep -oP 'Skill version: \K[\d.]+'
 ```
-If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.23.0).` Skip this step if the network is unavailable.
+If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.23.2).` Skip this step if the network is unavailable.
 
 **Step 7 — Route to action** using the Intent Routing table below.
 
@@ -178,7 +180,7 @@ awp help         → this list
 When the user says "start working", "get started", or similar, run this guided flow. The entire flow is FREE — no AWP tokens or ETH needed.
 
 **Step 1: Check wallet**
-- No wallet → run `awp-wallet init` (handles credentials internally, no password needed)
+- No wallet → agent runs `awp-wallet init` (handles credentials internally, no password needed)
 - Wallet locked → `awp-wallet unlock --duration 3600 --scope transfer`
 - Print: `[1/4] wallet       <short_address> ✓`
 
@@ -655,5 +657,5 @@ Subscribe to `EpochSettled` + `RecipientAWPDistributed` + `DAOMatchDistributed`.
 | "insufficient balance" | `[!] insufficient balance` | Guide to S2 |
 | PositionExpired | `[!] position expired. withdraw first.` | Guide to S2 |
 | Session expired | `[!] re-unlocking wallet...` | Auto re-unlock |
-| Wallet not found | `[!] initializing wallet...` | Auto init |
+| Wallet not found | `[!] initializing wallet...` | Agent runs `awp-wallet init` |
 | WS disconnected | `[WATCH] reconnecting...` | Backoff reconnect |

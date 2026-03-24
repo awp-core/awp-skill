@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.23.2 | Fix install review: add node binary, separate optional env vars, clarify agent-initiated wallet init |
 | 0.23.1 | Expanded skill description for better triggering accuracy |
 | 0.22.9 | Security hardening: no auto-install/init in daemon, removed /tmp scanning, explicit wallet install via repo, simplified update notices, code review fixes |
 | 0.22.0 | awp-wallet CLI compatibility: added `wallet-raw-call.mjs` bridge, fixed all on-chain scripts |
