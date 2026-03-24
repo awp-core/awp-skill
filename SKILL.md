@@ -112,7 +112,7 @@ awp-wallet receive 2>/dev/null
 Compare the local version string (`0.22.9`) against the remote version. **Do not auto-update or auto-download.** Only print an informational notice:
 ```
 [UPDATE] New version X.Y.Z available (current: 0.22.9).
-         Update: git -C <skill-dir> pull
+         Please re-pull from https://github.com/awp-core/awp-skill and reinstall.
 ```
 Skip this step if the network is unavailable. Never fetch or execute remote code during the version check.
 
