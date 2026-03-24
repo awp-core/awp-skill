@@ -13,6 +13,8 @@ metadata:
       env:
         - AWP_API_URL          # REST API base URL (default: https://tapi.awp.sh/api)
         - EVM_RPC_URL          # optional: EVM chain RPC (default: https://mainnet.base.org)
+        - OPENCLAW_CHANNEL     # optional: OpenClaw notification channel (only in OpenClaw runtime)
+        - OPENCLAW_TARGET      # optional: OpenClaw notification target (only in OpenClaw runtime)
       skills:
         - AWP Wallet           # awp-wallet CLI for signing and sending transactions
       binaries:
@@ -21,7 +23,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.22.0**
+**Skill version: 0.22.1**
 
 ## API URL
 
@@ -77,23 +79,28 @@ no AWP tokens needed to start.
 register for free → pick a subnet → start earning.
 ```
 
-**Step 2 — Install wallet dependency** (silent, only if missing):
+**Step 2 — Check wallet dependency** (never auto-install):
 ```bash
-if ! which awp-wallet >/dev/null 2>&1; then
-  curl -sSL https://raw.githubusercontent.com/awp-core/awp-wallet/main/install.sh | bash
-fi
+which awp-wallet >/dev/null 2>&1
 ```
-Do not print anything if already installed. Only print if installing: `[SETUP] Installing AWP Wallet...`
-If `install.sh` installs to `~/.local/bin/`, add it to PATH: `export PATH="$HOME/.local/bin:$PATH"`
+- If found: proceed silently.
+- If NOT found: print installation instructions and **stop** — do not auto-download or auto-execute remote scripts.
+```
+[SETUP] awp-wallet is required but not installed.
+        Install it manually:
+          curl -sSL https://raw.githubusercontent.com/awp-core/awp-wallet/main/install.sh | bash
+        Then restart this session.
+```
+**Never run `curl | bash` automatically.** The user must review and execute the install command themselves.
 
 **Step 3 — Write OpenClaw notification config** (only if running inside OpenClaw):
 
-If the environment provides `OPENCLAW_CHANNEL` and `OPENCLAW_TARGET`, save them so the daemon can send notifications to the user:
+If the environment provides **both** `OPENCLAW_CHANNEL` and `OPENCLAW_TARGET` (declared in `requires.env`), save them for the daemon's notification system:
 ```bash
 mkdir -p ~/.awp
 echo '{"channel": "'"$OPENCLAW_CHANNEL"'", "target": "'"$OPENCLAW_TARGET"'"}' > ~/.awp/openclaw.json
 ```
-Skip if not in OpenClaw or if these variables are not set.
+Skip entirely if either variable is unset or empty. These variables are only provided by the OpenClaw runtime.
 
 **Step 4 — Check notifications**: If `~/.awp/notifications.json` exists, read and display unread notifications to the user, then clear the file.
 
@@ -104,11 +111,14 @@ awp-wallet receive 2>/dev/null
 - If wallet unlocked, restore `wallet_addr`. Print: `[SESSION] wallet restored: <short_address>`
 - If wallet not found or locked, do nothing — setup happens on first write action.
 
-**Step 6 — Version check** (silent if up to date):
-```bash
-curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
+**Step 6 — Version check** (optional, informational only):
+
+Compare the local version string (`0.22.1`) against the remote version. **Do not auto-update or auto-download.** Only print an informational notice:
 ```
-If remote version > 0.22.0, show: `[UPDATE] New version available. Run: git -C <skill-dir> pull` or re-download the .skill file.
+[UPDATE] New version X.Y.Z available (current: 0.22.1).
+         Update: git -C <skill-dir> pull
+```
+Skip this step if the network is unavailable. Never fetch or execute remote code during the version check.
 
 **Step 7 — Route to action** using the Intent Routing table below.
 
@@ -167,7 +177,7 @@ awp help         → this list
 When the user says "start working", "get started", or similar, run this guided flow. The entire flow is FREE — no AWP tokens or ETH needed.
 
 **Step 1: Check wallet**
-- No wallet → `awp-wallet init` (handles credentials internally, no password needed)
+- No wallet → tell the user: `awp-wallet init` will create a new agent work wallet. Ask for confirmation before running it.
 - Wallet locked → `awp-wallet unlock --duration 3600 --scope transfer`
 - Print: `[1/4] wallet       <short_address> ✓`
 
@@ -337,7 +347,7 @@ Every write operation has a script. Always use the script — never construct ca
 
 ```
 scripts/
-├── awp-daemon.py                     Background service: install deps, init wallet, monitor, auto-update
+├── awp-daemon.py                     Background monitor: check deps, show status, notify updates (no auto-install/init)
 ├── awp_lib.py                        Shared library (API, wallet, ABI encoding, validation)
 ├── wallet-raw-call.mjs               Node.js bridge: sends raw contract calls via awp-wallet signing
 ├── relay-start.py                    Gasless register or bind (no ETH needed)

@@ -118,7 +118,7 @@ awp-skill/
 │   ├── commands-governance.md              # G1-G4 commands + supplementary endpoints
 │   └── protocol.md                         # Shared structs, 26 events, constants
 ├── scripts/
-│   ├── awp-daemon.py                       # Background service: deps, init, monitor, auto-update
+│   ├── awp-daemon.py                       # Background monitor: check deps, show status, notify updates
 │   ├── awp_lib.py                          # Shared library (API, wallet, ABI, validation)
 │   ├── relay-start.py                      # Gasless onboarding (bind or set-recipient)
 │   ├── relay-register-subnet.py            # Gasless subnet registration (dual EIP-712)

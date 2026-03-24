@@ -5,7 +5,7 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 - **commands-subnet.md** — M1 Register Subnet, M2 Lifecycle, M3-M4 Settings
 - **commands-governance.md** — G1 Proposals, G2 Voting, G3/G4 Queries, Supplementary
 
-**API Base URL**: `{API_BASE}/api` (deployment-specific — do not hardcode)
+**API Base URL**: `{API_BASE}/api` (default `https://tapi.awp.sh/api`, override via `AWP_API_URL` env var)
 
 ---
 

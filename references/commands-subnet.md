@@ -1,6 +1,6 @@
 # AWP Subnet Commands
 
-**API Base URL**: `{API_BASE}/api` (deployment-specific — do not hardcode)
+**API Base URL**: `{API_BASE}/api` (default `https://tapi.awp.sh/api`, override via `AWP_API_URL` env var)
 
 > **IMPORTANT**: Always use the bundled `scripts/*.py` files for write operations — they handle ABI encoding natively in Python, require only python3, and work without Foundry or curl/jq.
 > The `cast calldata` examples below are for reference only; do NOT run them directly.

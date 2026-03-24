@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """
-AWP Daemon — background service for AWP skill.
+AWP Daemon — background monitoring service for AWP skill.
 
 Runs continuously:
-  1. Check and install awp-wallet dependency
-  2. Initialize wallet if needed
+  1. Check that awp-wallet is installed (does NOT auto-install)
+  2. Check that wallet is initialized (does NOT auto-init)
   3. Show registration status + available subnets
-  4. Auto-check and auto-update awp-skill and awp-wallet
+  4. Check for version updates (informational only, no auto-update)
   5. Monitor registration state changes
+
+Security notes:
+  - Never auto-downloads or auto-executes remote scripts
+  - Never auto-initializes wallets without explicit user action
+  - Only reads config from ~/.awp/openclaw.json (no /tmp glob scanning)
+  - Update checks are informational — user must update manually
 
 Usage: python3 scripts/awp-daemon.py
        python3 scripts/awp-daemon.py --interval 60   # check every 60s
@@ -18,7 +24,6 @@ Requires: Python 3.9+
 
 from __future__ import annotations
 
-import glob
 import json
 import os
 import re
@@ -57,18 +62,15 @@ def err(msg: str) -> None:
 _openclaw_config_cache: Optional[Tuple[str, str]] = None
 
 def _get_openclaw_config() -> Tuple[str, str]:
-    """从 config 文件读取 OpenClaw channel 和 target（带缓存）。
+    """从 ~/.awp/openclaw.json 读取 OpenClaw channel 和 target（带缓存）。
 
-    查找顺序:
-    1. ~/.awp/openclaw.json  (用户手动配置)
-    2. /tmp/awp-worker-*-config.json  (agent 启动时写入)
-    3. /tmp/benchmark-worker-*-config.json  (兼容旧格式)
+    只读取用户显式配置的文件，不扫描 /tmp 或其他临时目录。
+    该文件由 SKILL.md Step 3 在 OpenClaw 环境下创建。
     """
     global _openclaw_config_cache
     if _openclaw_config_cache is not None:
         return _openclaw_config_cache
 
-    # 1. 用户配置
     user_config = NOTIFY_DIR / "openclaw.json"
     if user_config.exists():
         try:
@@ -79,19 +81,6 @@ def _get_openclaw_config() -> Tuple[str, str]:
                 return result
         except Exception:
             pass
-
-    # 2. agent 写入的临时配置
-    for pattern in ["/tmp/awp-worker-*-config.json", "/tmp/benchmark-worker-*-config.json"]:
-        files = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
-        if files:
-            try:
-                data = json.loads(Path(files[0]).read_text())
-                result = data.get("channel", ""), data.get("target", "")
-                if result[0] and result[1]:
-                    _openclaw_config_cache = result
-                    return result
-            except Exception:
-                pass
 
     return "", ""
 
@@ -191,59 +180,36 @@ def parse_version(v: str) -> Tuple[int, ...]:
 # ── 1. Wallet Installation ───────────────────────
 
 def ensure_wallet_installed() -> bool:
-    """检查 awp-wallet 是否安装，未装则通过 install.sh 自动安装。
+    """检查 awp-wallet 是否已安装（不自动下载或执行远程脚本）。
 
-    awp-wallet 未发布到 npm registry，安装方式是：
-    git clone → npm install → npm link，全部封装在 install.sh 中。
+    如果未安装，打印安装说明并返回 False。
+    用户需要自行审查并执行安装命令。
     """
     if shutil.which("awp-wallet"):
         return True
 
-    log("awp-wallet not found. Running install script...")
-
-    # 下载并执行官方安装脚本
-    try:
-        req = urllib.request.Request(
-            WALLET_INSTALL_SCRIPT,
-            headers={"User-Agent": "awp-daemon/1.0"},
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            script = resp.read()
-    except Exception as e:
-        err(f"Failed to download install script: {e}")
-        err(f"Install manually: curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
-        return False
-
-    # 写入临时文件并执行
-    tmp_script = Path("/tmp/awp-wallet-install.sh")
-    tmp_script.write_bytes(script)
-    tmp_script.chmod(0o755)
-
-    code, out = run(["bash", str(tmp_script)])
-    tmp_script.unlink(missing_ok=True)
-
-    if code == 0 and shutil.which("awp-wallet"):
-        log("awp-wallet installed ✓")
-        notify("Wallet Installed", "awp-wallet installed via install.sh")
-        return True
-
-    # npm link 后可能需要刷新 PATH
+    # 也检查 ~/.local/bin（install.sh 的默认安装位置）
     wallet_local = Path.home() / ".local" / "bin" / "awp-wallet"
     if wallet_local.exists():
         os.environ["PATH"] = f"{wallet_local.parent}:{os.environ.get('PATH', '')}"
         if shutil.which("awp-wallet"):
-            log("awp-wallet installed ✓ (added ~/.local/bin to PATH)")
-            notify("Wallet Installed", "awp-wallet installed via install.sh")
             return True
 
-    err("Install script finished but awp-wallet not found in PATH.")
-    err(f"Install manually: curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
+    err("awp-wallet is required but not installed.")
+    err("Install it manually:")
+    err(f"  curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
+    err("")
+    err("Review the script before running, then restart the daemon.")
     return False
 
 # ── 2. Wallet Initialization ─────────────────────
 
 def ensure_wallet_initialized() -> Optional[str]:
-    """确保钱包已初始化，返回地址或 None"""
+    """检查钱包是否已初始化，返回地址或 None。
+
+    不自动初始化钱包 — 钱包创建会生成密钥对，
+    必须由用户显式执行 `awp-wallet init`。
+    """
     code, out = run(["awp-wallet", "receive"])
     if code == 0 and out:
         try:
@@ -253,38 +219,14 @@ def ensure_wallet_initialized() -> Optional[str]:
         except json.JSONDecodeError:
             pass
 
-    log("Wallet not initialized. Running awp-wallet init...")
-    code, out = run(["awp-wallet", "init"])
-    if code != 0:
-        err(f"Wallet init failed: {out}")
-        return None
-
-    code, out = run(["awp-wallet", "receive"])
-    if code != 0:
-        err("Wallet initialized but could not read address")
-        return None
-
-    try:
-        addr = json.loads(out).get("eoaAddress")
-    except json.JSONDecodeError:
-        err(f"Invalid wallet response: {out}")
-        return None
-
-    if not addr:
-        err("Wallet address is empty")
-        return None
-
-    log(f"Wallet initialized ✓")
-    notify("Wallet Ready", f"Agent wallet initialized: {addr}")
-    log(f"Address: {addr}")
-    log("")
-    log("┌─────────────────────────────────────────────┐")
-    log("│  This is an AGENT WORK WALLET.              │")
-    log("│  Do NOT store personal assets here.          │")
-    log("│  Keep only minimal ETH for gas.              │")
-    log("└─────────────────────────────────────────────┘")
-
-    return addr
+    err("Wallet not initialized.")
+    err("Initialize it manually:")
+    err("  awp-wallet init")
+    err("")
+    err("This creates an agent work wallet (key pair stored locally).")
+    err("Do NOT store personal assets in this wallet.")
+    err("After init, restart the daemon.")
+    return None
 
 # ── 3. Check Registration & Show Status ──────────
 
@@ -384,7 +326,7 @@ def get_remote_version(url: str) -> str:
     return match.group(1) if match else ""
 
 def check_updates() -> None:
-    """检查 awp-skill 和 awp-wallet 更新（语义化版本比较）"""
+    """检查 awp-skill 和 awp-wallet 更新（仅通知，不自动下载或执行）"""
     log("Checking for updates...")
 
     # awp-skill
@@ -462,25 +404,25 @@ def main() -> None:
     print("AWP Daemon starting...")
     print()
 
-    # Phase 1
-    log("Phase 1: Checking dependencies...")
+    # Phase 1: 检查依赖（不自动安装）
+    log("Phase 1: Checking awp-wallet dependency...")
     if not ensure_wallet_installed():
-        err("Cannot continue without awp-wallet")
+        err("Cannot continue without awp-wallet. Install it and restart.")
         sys.exit(1)
 
-    # Phase 2
+    # Phase 2: 检查钱包（不自动初始化）
     log("Phase 2: Checking wallet...")
     wallet_addr = ensure_wallet_initialized()
     if not wallet_addr:
-        err("Cannot continue without wallet")
+        err("Cannot continue without wallet. Run 'awp-wallet init' and restart.")
         sys.exit(1)
 
-    # Phase 3
+    # Phase 3: 显示状态
     log("Phase 3: Checking status...")
     last_registered = check_and_notify(wallet_addr)
 
-    # Phase 4
-    log("Phase 4: Checking updates...")
+    # Phase 4: 检查更新（仅通知，不自动更新）
+    log("Phase 4: Checking for updates (informational only)...")
     check_updates()
 
     # Phase 5

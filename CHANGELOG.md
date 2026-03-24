@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.22.1
+
+### Security Hardening
+- **Removed auto-install**: daemon no longer downloads or executes remote install scripts (`curl | bash`). Prints manual install instructions instead
+- **Removed auto-init**: daemon no longer runs `awp-wallet init` automatically. User must explicitly initialize wallet
+- **Removed `/tmp` glob scanning**: `_get_openclaw_config()` no longer reads `/tmp/awp-worker-*-config.json` patterns (writable by any process). Only reads `~/.awp/openclaw.json`
+- **Declared OpenClaw env vars**: added `OPENCLAW_CHANNEL` and `OPENCLAW_TARGET` to `requires.env` (optional)
+- **Clarified update checks**: version checks are informational only, no auto-download or auto-execute
+- **Reference docs**: added default value (`https://tapi.awp.sh/api`) and `AWP_API_URL` env var to all 4 API Base URL annotations
+
 ## v0.22.0
 
 ### Fixed — awp-wallet CLI Compatibility
