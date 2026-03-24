@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.22.3
+
+### Fix — Wallet install via skill, not bash script
+- SKILL.md Step 2: removed hardcoded `curl | bash` install command. Now directs agent to install the AWP Wallet skill (from ClawHub or repo), which handles installation and setup
+- Onboarding Step 1 & Session recovery Step 5: delegate wallet init to the AWP Wallet skill
+- AWP skill no longer contains any remote install scripts — wallet lifecycle is fully owned by the wallet skill
+
 ## v0.22.2
 
 ### UX Fix — Agent handles install & init
