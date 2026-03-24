@@ -109,11 +109,7 @@ awp-wallet receive 2>/dev/null
 
 **Step 6 — Version check** (optional, informational only):
 
-Compare the local version string (`0.22.9`) against the remote version. If a newer version exists, notify the user:
-```
-[UPDATE] AWP Skill X.Y.Z available (current: 0.22.9).
-```
-Skip this step if the network is unavailable.
+Compare the local version string (`0.22.9`) against the remote version. If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.22.9).` Skip this step if the network is unavailable.
 
 **Step 7 — Route to action** using the Intent Routing table below.
 
@@ -280,7 +276,7 @@ If the user later wants to work on a subnet that requires staking, guide them to
 
 ## Output Format
 
-Use tagged prefixes so the user can follow along:
+**All structured output (status panels, query results, transaction confirmations, progress steps) must be wrapped in markdown code blocks** so the user sees clean, monospaced, aligned text. Use tagged prefixes so the user can follow along:
 
 | Tag | When |
 |-----|------|
