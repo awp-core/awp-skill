@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.22.2
+
+### UX Fix — Agent handles install & init
+- SKILL.md Step 2: agent directly runs `curl | bash` to install awp-wallet (not the user)
+- SKILL.md Step 5: agent runs `awp-wallet init` if wallet not found (not the user)
+- Onboarding Step 1: agent runs `awp-wallet init` directly
+- Note: daemon script (`awp-daemon.py`) remains check-only — it does not auto-install or auto-init
+
 ## v0.22.1
 
 ### Security Hardening
