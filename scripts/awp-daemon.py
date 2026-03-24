@@ -381,7 +381,12 @@ def main() -> None:
         idx = sys.argv.index("--interval")
         if idx + 1 < len(sys.argv):
             try:
-                interval = int(sys.argv[idx + 1])
+                val = int(sys.argv[idx + 1])
+                if val >= 10:
+                    interval = val
+                else:
+                    warn(f"--interval {val} too small, using minimum 10s")
+                    interval = 10
             except ValueError:
                 pass
 

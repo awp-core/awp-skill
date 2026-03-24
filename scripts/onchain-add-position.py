@@ -61,10 +61,6 @@ def main() -> None:
     else:
         new_lock_end = current_lock_end
 
-    # 合约要求 newLockEndTime >= currentLockEndTime
-    if new_lock_end < current_lock_end:
-        die(f"newLockEndTime ({new_lock_end}) < currentLockEndTime ({current_lock_end}). Contract requires newLockEndTime >= currentLockEndTime.")
-
     # ── Step 4: Approve AWP to StakeNFT ──
     amount_wei = to_wei(amount)
     step("approve", spender=stake_nft, amount=f"{amount} AWP")

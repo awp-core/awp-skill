@@ -136,9 +136,6 @@ GET /vanity/salts/count
 ### Complete Command Templates
 
 ```bash
-# On-chain registration (requires ETH for gas + AWP for LP cost):
-python3 scripts/relay-register-subnet.py --token {T} --name "MySubnet" --symbol "MSUB" --skills-uri "ipfs://QmHash"
-
 # Gasless registration (recommended — no ETH needed, AWP only):
 python3 scripts/relay-register-subnet.py --token {T} --name "MySubnet" --symbol "MSUB" --skills-uri "ipfs://QmHash"
 ```
@@ -149,8 +146,8 @@ For fully gasless registration via `POST /relay/register-subnet`, the user signs
 
 **1. ERC-2612 Permit signature** (authorizes AWPRegistry to spend AWP):
 ```bash
-# Get permit nonce
-PERMIT_NONCE=$(cast call $AWP_TOKEN "nonces(address)" $WALLET_ADDR --rpc-url $EVM_RPC_URL | cast --to-dec)
+# Get permit nonce (from API, no Foundry needed)
+PERMIT_NONCE=$(curl -s {API_BASE}/api/nonce/$WALLET_ADDR | python3 -c "import sys,json; print(json.load(sys.stdin).get('nonce',0))")
 DEADLINE=$(date -d '+1 hour' +%s)
 
 awp-wallet sign-typed-data --token {T} --data '{
@@ -188,8 +185,8 @@ awp-wallet sign-typed-data --token {T} --data '{
 
 **2. EIP-712 RegisterSubnet signature** (authorizes registration parameters):
 ```bash
-# Get AWPRegistry nonce
-NONCE=$(cast call $AWP_REGISTRY "nonces(address)" $WALLET_ADDR --rpc-url $EVM_RPC_URL | cast --to-dec)
+# Get AWPRegistry nonce (from API, no Foundry needed)
+NONCE=$(curl -s {API_BASE}/api/nonce/$WALLET_ADDR | python3 -c "import sys,json; print(json.load(sys.stdin).get('nonce',0))")
 
 awp-wallet sign-typed-data --token {T} --data '{
   "types": {

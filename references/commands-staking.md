@@ -274,7 +274,7 @@ python3 scripts/onchain-bind.py --token {T} --target {targetAddress}
 # grantDelegate/revokeDelegate/setRecipient: no bundled Python scripts exist for these.
 # Use wallet-raw-call.mjs directly to send raw contract calls. Example:
 #   node scripts/wallet-raw-call.mjs --token {T} --to {awpRegistryAddr} \
-#     --calldata $(cast calldata "grantDelegate(address)" {delegateAddr})
+#     --data $(cast calldata "grantDelegate(address)" {delegateAddr})
 ```
 
 ---

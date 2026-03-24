@@ -27,7 +27,7 @@ const { values: args } = parseArgs({
     value:  { type: "string", default: "0" },
     chain:  { type: "string", default: "base" },
   },
-  strict: false,
+  strict: true,
 })
 
 if (!args.token || !args.to || !args.data) {
@@ -40,7 +40,7 @@ if (!/^0x[0-9a-fA-F]{40}$/.test(args.to)) {
   console.error(JSON.stringify({ error: `Invalid --to address: ${args.to}` }))
   process.exit(1)
 }
-if (!/^0x[0-9a-fA-F]*$/.test(args.data)) {
+if (!/^0x[0-9a-fA-F]{8,}$/.test(args.data)) {
   console.error(JSON.stringify({ error: `Invalid --data hex: ${args.data}` }))
   process.exit(1)
 }
@@ -89,6 +89,10 @@ try {
   const chainId = resolveChainId(args.chain)
   const chainObj = viemChain(chainId)
   const { account: signer } = loadSigner()
+  if (!signer) {
+    console.error(JSON.stringify({ error: "Failed to load signer from keystore" }))
+    process.exit(1)
+  }
 
   const walletClient = createWalletClient({
     account: signer,

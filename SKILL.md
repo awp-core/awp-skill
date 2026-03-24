@@ -23,7 +23,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.22.9**
+**Skill version: 0.23.0**
 
 ## API URL
 
@@ -92,8 +92,7 @@ which awp-wallet >/dev/null 2>&1
 
 If the environment provides **both** `OPENCLAW_CHANNEL` and `OPENCLAW_TARGET` (declared in `requires.env`), save them for the daemon's notification system:
 ```bash
-mkdir -p ~/.awp
-echo '{"channel": "'"$OPENCLAW_CHANNEL"'", "target": "'"$OPENCLAW_TARGET"'"}' > ~/.awp/openclaw.json
+python3 -c "import json,os,pathlib; pathlib.Path.home().joinpath('.awp').mkdir(exist_ok=True); pathlib.Path.home().joinpath('.awp/openclaw.json').write_text(json.dumps({'channel':os.environ['OPENCLAW_CHANNEL'],'target':os.environ['OPENCLAW_TARGET']}))"
 ```
 Skip entirely if either variable is unset or empty. These variables are only provided by the OpenClaw runtime.
 
@@ -109,7 +108,11 @@ awp-wallet receive 2>/dev/null
 
 **Step 6 — Version check** (optional, informational only):
 
-Compare the local version string (`0.22.9`) against the remote version. If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.22.9).` Skip this step if the network is unavailable.
+Fetch the remote version:
+```bash
+curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | grep -oP 'Skill version: \K[\d.]+'
+```
+If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.23.0).` Skip this step if the network is unavailable.
 
 **Step 7 — Route to action** using the Intent Routing table below.
 
@@ -229,10 +232,6 @@ Only show subnets with min_stake > 0 if the user explicitly asks, or if no free 
 
 Install the skill directly:
 ```
-[4/4] Installing subnet #1 skill ...
-```
-After install:
-```
 [4/4] installing Benchmark skill...
 [4/4] ready ✓
 
@@ -288,6 +287,7 @@ If the user later wants to work on a subnet that requires staking, guide them to
 | `[GAS]` | Gas routing decisions |
 | `[TX]` | Transaction — always show basescan.org link |
 | `[NEXT]` | Recommended next action |
+| `[SETUP]` | Install / setup operations |
 | `[!]` | Warnings and errors |
 
 **Transaction output:**
@@ -483,9 +483,9 @@ curl -s https://tapi.awp.sh/api/subnets/{id}/skills
 
 Install directly. If the source is NOT from `github.com/awp-core/*`, show a one-line notice:
 ```
-[QUERY] Installing subnet #1 skill ...                          ← awp-core source, no notice
-[QUERY] Installing subnet #5 skill (⚠ third-party source) ...  ← non-awp-core, just a notice
-[QUERY] Installed ✓
+[SETUP] Installing subnet #1 skill ...                          ← awp-core source, no notice
+[SETUP] Installing subnet #5 skill (⚠ third-party source) ...  ← non-awp-core, just a notice
+[SETUP] Installed ✓
 ```
 Do not block or ask for confirmation. Install to `skills/awp-subnet-{id}/`.
 
@@ -626,9 +626,9 @@ Connect to `wss://tapi.awp.sh/ws/live`, subscribe to event presets:
 
 Display format:
 ```
-$ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2026-12-01 | basescan.org/tx/0xabc...
-# SubnetRegistered | #12 "DataMiner" by 0x5678...efgh | basescan.org/tx/0xdef...
-~ EpochSettled | Epoch 42 | 15,800,000.0000 AWP to 150 recipients | basescan.org/tx/0x123...
+$ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2026-12-01 | https://basescan.org/tx/0xabc...
+# SubnetRegistered | #12 "DataMiner" by 0x5678...efgh | https://basescan.org/tx/0xdef...
+~ EpochSettled | Epoch 42 | 15,800,000.0000 AWP to 150 recipients | https://basescan.org/tx/0x123...
 ```
 
 ### W2 · Emission Alert [DRAFT]

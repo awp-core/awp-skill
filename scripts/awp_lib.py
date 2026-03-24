@@ -226,7 +226,10 @@ def pad_uint256(val: int) -> str:
 
 def to_wei(human_amount: str) -> int:
     """人类可读 AWP 数量转 wei（使用 Decimal 避免浮点精度丢失）"""
-    result = int(Decimal(human_amount) * Decimal(10**18))
+    try:
+        result = int(Decimal(human_amount) * Decimal(10**18))
+    except Exception:
+        die(f"to_wei: invalid amount: {human_amount}")
     if result <= 0:
         die(f"to_wei: converted amount is zero (input: {human_amount})")
     return result
@@ -261,7 +264,7 @@ def validate_positive_number(val: str, name: str = "amount") -> str:
     """验证正数（允许小数）"""
     if not re.match(r"^[0-9]+\.?[0-9]*$", val):
         die(f"Invalid --{name}: must be a positive number")
-    if float(val) <= 0:
+    if Decimal(val) <= 0:
         die(f"Invalid --{name}: must be > 0")
     return val
 

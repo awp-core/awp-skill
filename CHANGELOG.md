@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.23.0
+
+### Code Review — 16 fixes
+
+**SKILL.md:**
+- Fix shell injection in OpenClaw config write (use python3 json.dumps instead of shell interpolation)
+- Add curl command for version check (Step 6 was unimplementable)
+- Remove duplicate Step 4 onboarding label with inconsistent capitalization
+- Change `[QUERY]` → `[SETUP]` tag for skill install operations
+- Add `https://` to W1 WebSocket event basescan links
+
+**Python scripts:**
+- `awp_lib.py`: `float()` → `Decimal()` in `validate_positive_number` (precision on large amounts)
+- `awp_lib.py`: `to_wei()` now catches `InvalidOperation` from `Decimal()`
+- `onchain-add-position.py`: remove dead guard (`max()` makes `< current` impossible)
+- `onchain-vote.py`: `int(p["created_at"])` now wrapped in try/except
+- `awp-daemon.py`: enforce `--interval >= 10` (prevent CPU spin loop)
+
+**wallet-raw-call.mjs:**
+- `--data` regex now requires ≥8 hex chars (function selector), rejects empty `0x`
+- `strict: true` in parseArgs (unknown flags now error instead of silent ignore)
+- Null-check `signer` after `loadSigner()`
+
+**Reference docs:**
+- `commands-staking.md`: `--calldata` → `--data` (matching actual script flag)
+- `commands-subnet.md`: remove duplicate on-chain/gasless command template
+- `commands-subnet.md`: replace `cast` (Foundry) with API+python3 for nonce queries
+
+**README.md:**
+- Add `wallet-raw-call.mjs` to architecture tree
+- Update version history through 0.22.9
+- Fix wallet install timing description (skill load, not write operations)
+
 ## v0.22.9
 
 ### Simplify — Wallet install description

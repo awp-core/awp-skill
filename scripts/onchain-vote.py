@@ -100,11 +100,16 @@ def main() -> None:
         die("Unexpected positions response")
 
     # ── Step 3: 筛选符合条件的仓位（created_at < proposalCreatedAt，严格小于） ──
-    eligible_ids: list[int] = [
-        p["token_id"] for p in positions
-        if "token_id" in p and "created_at" in p
-        and int(p["created_at"]) < proposal_created_at
-    ]
+    eligible_ids: list[int] = []
+    for p in positions:
+        if "token_id" not in p or "created_at" not in p:
+            continue
+        try:
+            created = int(p["created_at"])
+        except (ValueError, TypeError):
+            continue
+        if created < proposal_created_at:
+            eligible_ids.append(p["token_id"])
 
     if not eligible_ids:
         die(

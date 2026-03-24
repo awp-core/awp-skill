@@ -52,7 +52,7 @@ This repository is a single skill with **20 actions**, **14 bundled scripts**, a
 skill install https://github.com/awp-core/awp-skill
 ```
 
-The skill automatically installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) dependency when needed for write operations.
+The skill installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) dependency on first load if missing.
 
 ## Features — 20 Actions
 
@@ -120,6 +120,7 @@ awp-skill/
 ├── scripts/
 │   ├── awp-daemon.py                       # Background monitor: check deps, show status, notify updates
 │   ├── awp_lib.py                          # Shared library (API, wallet, ABI, validation)
+│   ├── wallet-raw-call.mjs                 # Node.js bridge: raw contract calls via awp-wallet
 │   ├── relay-start.py                      # Gasless onboarding (bind or set-recipient)
 │   ├── relay-register-subnet.py            # Gasless subnet registration (dual EIP-712)
 │   ├── onchain-register.py                 # On-chain register (optional)
@@ -255,9 +256,11 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
-| 0.21.0 | All 14 shell scripts converted to Python + shared `awp_lib.py` library; dependencies reduced to python3-only; shell injection surface eliminated |
-| 0.20.7 | Deep review: fixed `awp-wallet receive` / `.eoaAddress` across 20 files, removed `--scope full`, injection fixes (vote.sh, relay-start.sh), daemon deregistration notify, multi-EVM support, `BASE_RPC_URL` → `EVM_RPC_URL` |
-| 0.19.9 | Security audit: agent wallet model (no confirmation prompts), Q6 trust model, wallet password auto-management, shell injection fixes, registry null checks |
+| 0.22.9 | Security hardening: no auto-install/init in daemon, removed /tmp scanning, explicit wallet install via repo, simplified update notices, code review fixes |
+| 0.22.0 | awp-wallet CLI compatibility: added `wallet-raw-call.mjs` bridge, fixed all on-chain scripts |
+| 0.21.0 | All 14 shell scripts converted to Python + shared `awp_lib.py` library; dependencies reduced to python3-only |
+| 0.20.7 | Deep review: fixed `awp-wallet receive` / `.eoaAddress`, injection fixes, daemon notify, multi-EVM support |
+| 0.19.9 | Security audit: agent wallet model, Q6 trust model, shell injection fixes, registry null checks |
 | 0.19.1 | Initial public release — 20 actions, 14 bundled scripts, gasless onboarding, 26 event types |
 
 ## Contributing
