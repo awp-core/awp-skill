@@ -16,14 +16,14 @@ metadata:
         - OPENCLAW_CHANNEL     # optional: OpenClaw notification channel (only in OpenClaw runtime)
         - OPENCLAW_TARGET      # optional: OpenClaw notification target (only in OpenClaw runtime)
       skills:
-        - AWP Wallet           # awp-wallet CLI — install from ClawHub or https://github.com/awp-core/awp-wallet
+        - AWP Wallet           # awp-wallet CLI — install from https://github.com/awp-core/awp-wallet
       binaries:
         - python3              # All scripts are pure Python (API, ABI encoding, validation)
 ---
 
 # AWP Registry
 
-**Skill version: 0.22.3**
+**Skill version: 0.22.4**
 
 ## API URL
 
@@ -79,16 +79,17 @@ no AWP tokens needed to start.
 register for free → pick a subnet → start earning.
 ```
 
-**Step 2 — Check wallet dependency** (if missing, guide agent to install):
+**Step 2 — Install wallet dependency** (if missing):
 ```bash
 which awp-wallet >/dev/null 2>&1
 ```
 - If found: proceed silently.
-- If NOT found: install the **AWP Wallet** skill, which will guide the agent through installation. Two ways to install:
-  - From ClawHub: `awp-wallet` skill
-  - From repo: `https://github.com/awp-core/awp-wallet`
-
-  The wallet skill handles all installation and setup steps. After install, re-check `which awp-wallet` and continue.
+- If NOT found: install `awp-wallet` from source:
+```bash
+git clone https://github.com/awp-core/awp-wallet.git ~/.awp/awp-wallet
+cd ~/.awp/awp-wallet && npm install && npm link
+```
+After install, verify: `which awp-wallet`. If `~/.local/bin` is used, add to PATH: `export PATH="$HOME/.local/bin:$PATH"`
 
 **Step 3 — Write OpenClaw notification config** (only if running inside OpenClaw):
 
@@ -106,14 +107,14 @@ Skip entirely if either variable is unset or empty. These variables are only pro
 awp-wallet receive 2>/dev/null
 ```
 - If wallet unlocked, restore `wallet_addr`. Print: `[SESSION] wallet restored: <short_address>`
-- If wallet not found → the AWP Wallet skill handles initialization. Ensure the wallet skill is installed first.
+- If wallet not found → run `awp-wallet init` (creates agent work wallet, handles credentials internally).
 - If wallet locked, do nothing — unlock happens on first write action.
 
 **Step 6 — Version check** (optional, informational only):
 
-Compare the local version string (`0.22.3`) against the remote version. **Do not auto-update or auto-download.** Only print an informational notice:
+Compare the local version string (`0.22.4`) against the remote version. **Do not auto-update or auto-download.** Only print an informational notice:
 ```
-[UPDATE] New version X.Y.Z available (current: 0.22.3).
+[UPDATE] New version X.Y.Z available (current: 0.22.4).
          Update: git -C <skill-dir> pull
 ```
 Skip this step if the network is unavailable. Never fetch or execute remote code during the version check.
@@ -175,7 +176,7 @@ awp help         → this list
 When the user says "start working", "get started", or similar, run this guided flow. The entire flow is FREE — no AWP tokens or ETH needed.
 
 **Step 1: Check wallet**
-- No wallet → the AWP Wallet skill handles wallet creation (install it first if not present)
+- No wallet → run `awp-wallet init` (handles credentials internally, no password needed)
 - Wallet locked → `awp-wallet unlock --duration 3600 --scope transfer`
 - Print: `[1/4] wallet       <short_address> ✓`
 

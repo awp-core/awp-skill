@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.22.4
+
+### Fix — Inline wallet install instructions
+- SKILL.md Step 2: provide `git clone → npm install → npm link` steps directly, instead of depending on a wallet skill that may not be loaded in the current session
+- Wallet init (`awp-wallet init`) runs directly — no external skill dependency needed
+- Avoids the "start a new session to load the wallet skill" problem
+
 ## v0.22.3
 
 ### Fix — Wallet install via skill, not bash script
