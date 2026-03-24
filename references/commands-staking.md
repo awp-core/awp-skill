@@ -166,10 +166,10 @@ POST /relay/set-recipient
 **Step 1: Get nonce and EIP-712 domain**
 ```bash
 # Get nonce from REST API
-NONCE=$(curl -s https://tapi.awp.sh/api/nonce/$WALLET_ADDR | jq -r '.nonce')
+NONCE=$(curl -s {API_BASE}/api/nonce/$WALLET_ADDR | jq -r '.nonce')
 
 # Get EIP-712 domain from registry
-REGISTRY=$(curl -s https://tapi.awp.sh/api/registry)
+REGISTRY=$(curl -s {API_BASE}/api/registry)
 EIP712_DOMAIN=$(echo $REGISTRY | jq '.eip712Domain')
 # → {"name": "AWPRegistry", "version": "1", "chainId": 8453, "verifyingContract": "0x..."}
 ```
@@ -216,7 +216,7 @@ awp-wallet sign-typed-data --token {T} --data '{
 }'
 
 # 4. Submit to relay:
-curl -X POST https://tapi.awp.sh/api/relay/bind \
+curl -X POST {API_BASE}/api/relay/bind \
   -H "Content-Type: application/json" \
   -d '{"agent": "'$WALLET_ADDR'", "target": "'$TARGET'", "deadline": '$DEADLINE', "signature": "{signatureHex}"}'
 ```
@@ -271,8 +271,10 @@ python3 scripts/relay-start.py --token {T} --mode agent --target {targetAddress}
 # For on-chain binding:
 python3 scripts/onchain-bind.py --token {T} --target {targetAddress}
 
-# grantDelegate/revokeDelegate/setRecipient: use the Python scripts which
-# call wallet-raw-call.mjs internally for raw contract calls.
+# grantDelegate/revokeDelegate/setRecipient: no bundled Python scripts exist for these.
+# Use wallet-raw-call.mjs directly to send raw contract calls. Example:
+#   node scripts/wallet-raw-call.mjs --token {T} --to {awpRegistryAddr} \
+#     --calldata $(cast calldata "grantDelegate(address)" {delegateAddr})
 ```
 
 ---
@@ -351,7 +353,6 @@ function reallocate(address staker, address fromAgent, uint256 fromSubnetId, add
 ```solidity
 function userTotalAllocated(address staker) view returns (uint256)
 function getAgentStake(address staker, address agent, uint256 subnetId) view returns (uint256)
-function subnetTotalStake(uint256 subnetId) view returns (uint256)
 function getSubnetTotalStake(uint256 subnetId) view returns (uint256)
 function getAgentSubnets(address staker, address agent) view returns (uint256[])
 ```

@@ -137,8 +137,7 @@ GET /vanity/salts/count
 
 ```bash
 # On-chain registration (requires ETH for gas + AWP for LP cost):
-# The script handles approve + ABI encoding + raw call via wallet-raw-call.mjs
-# (awp-wallet send does NOT support raw calldata)
+python3 scripts/relay-register-subnet.py --token {T} --name "MySubnet" --symbol "MSUB" --skills-uri "ipfs://QmHash"
 
 # Gasless registration (recommended — no ETH needed, AWP only):
 python3 scripts/relay-register-subnet.py --token {T} --name "MySubnet" --symbol "MSUB" --skills-uri "ipfs://QmHash"
@@ -226,7 +225,7 @@ awp-wallet sign-typed-data --token {T} --data '{
     "subnetManager": "0x0000000000000000000000000000000000000000",
     "salt": "'$SALT'",
     "minStake": {minStakeWei},
-    "skillsURI": "{skillsUri}",
+    "skillsURI": "{skillsURI}",
     "nonce": '$NONCE',
     "deadline": '$DEADLINE'
   }
@@ -242,7 +241,7 @@ curl -X POST {API_BASE}/api/relay/register-subnet \
     "name": "{subnetName}", "symbol": "{subnetSymbol}",
     "subnetManager": "0x0000000000000000000000000000000000000000",
     "salt": "'$SALT'", "minStake": "{minStakeWei}",
-    "skillsUri": "{skillsUri}",
+    "skillsURI": "{skillsURI}",
     "deadline": '$DEADLINE',
     "permitSignature": "{permitSigHex}",
     "registerSignature": "{registerSigHex}"

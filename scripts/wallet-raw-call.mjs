@@ -35,6 +35,16 @@ if (!args.token || !args.to || !args.data) {
   process.exit(1)
 }
 
+// ── 格式校验 ──────────────────────────────────────────
+if (!/^0x[0-9a-fA-F]{40}$/.test(args.to)) {
+  console.error(JSON.stringify({ error: `Invalid --to address: ${args.to}` }))
+  process.exit(1)
+}
+if (!/^0x[0-9a-fA-F]*$/.test(args.data)) {
+  console.error(JSON.stringify({ error: `Invalid --data hex: ${args.data}` }))
+  process.exit(1)
+}
+
 // ── 定位 awp-wallet 安装目录 ──────────────────────────
 function findAwpWalletDir() {
   // 1. 环境变量
@@ -93,7 +103,12 @@ try {
 
   // 支持发送 ETH（value > 0 的合约调用）
   if (args.value && args.value !== "0") {
-    tx.value = BigInt(args.value)
+    try {
+      tx.value = BigInt(args.value)
+    } catch {
+      console.error(JSON.stringify({ error: `Invalid --value (must be integer wei): ${args.value}` }))
+      process.exit(1)
+    }
   }
 
   const hash = await walletClient.sendTransaction(tx)
@@ -102,7 +117,7 @@ try {
   const client = publicClient(chainId)
   const receipt = await client.waitForTransactionReceipt({
     hash,
-    timeout: 120_000,
+    timeout: 90_000,
     confirmations: 1,
   })
 

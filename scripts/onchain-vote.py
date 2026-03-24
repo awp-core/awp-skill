@@ -102,7 +102,8 @@ def main() -> None:
     # ── Step 3: 筛选符合条件的仓位（created_at < proposalCreatedAt，严格小于） ──
     eligible_ids: list[int] = [
         p["token_id"] for p in positions
-        if int(p["created_at"]) < proposal_created_at
+        if "token_id" in p and "created_at" in p
+        and int(p["created_at"]) < proposal_created_at
     ]
 
     if not eligible_ids:

@@ -251,7 +251,7 @@ If the user later wants to work on a subnet that requires staking, guide them to
 
 | User wants to... | Action | Reference file to load |
 |-------------------|--------|------------------------|
-| Start / onboard / setup | ONBOARD | **commands-staking.md** |
+| Start / onboard / setup | ONBOARD | **references/commands-staking.md** |
 | Query subnet info | Q1 | None |
 | Check balance / positions | Q2 | None |
 | View emission / epoch info | Q3 [DRAFT] | None |
@@ -259,15 +259,15 @@ If the user later wants to work on a subnet that requires staking, guide them to
 | Browse subnets | Q5 | None |
 | Find / install subnet skill | Q6 | None |
 | View epoch history | Q7 [DRAFT] | None |
-| Set recipient / bind / start mining | S1 | **commands-staking.md** |
-| Deposit / stake AWP | S2 | **commands-staking.md** |
-| Allocate / deallocate / reallocate | S3 | **commands-staking.md** |
-| Register a new subnet | M1 | **commands-subnet.md** |
-| Activate / pause / resume subnet | M2 | **commands-subnet.md** |
-| Update skills URI | M3 | **commands-subnet.md** |
-| Set minimum stake | M4 | **commands-subnet.md** |
-| Create governance proposal | G1 | **commands-governance.md** |
-| Vote on proposal | G2 | **commands-governance.md** |
+| Set recipient / bind / start mining | S1 | **references/commands-staking.md** |
+| Deposit / stake AWP | S2 | **references/commands-staking.md** |
+| Allocate / deallocate / reallocate | S3 | **references/commands-staking.md** |
+| Register a new subnet | M1 | **references/commands-subnet.md** |
+| Activate / pause / resume subnet | M2 | **references/commands-subnet.md** |
+| Update skills URI | M3 | **references/commands-subnet.md** |
+| Set minimum stake | M4 | **references/commands-subnet.md** |
+| Create governance proposal | G1 | **references/commands-governance.md** |
+| Vote on proposal | G2 | **references/commands-governance.md** |
 | Query proposals | G3 | None |
 | Check treasury | G4 | None |
 | Watch / monitor events | W1 | None (presets below) |

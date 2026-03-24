@@ -172,7 +172,7 @@ def main() -> None:
         "subnetManager": subnet_manager,
         "salt": salt,
         "minStake": str(min_stake),
-        "skillsUri": skills_uri,
+        "skillsURI": skills_uri,
         "deadline": deadline,
         "permitSignature": permit_signature,
         "registerSignature": register_signature,
