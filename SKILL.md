@@ -23,7 +23,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.22.6**
+**Skill version: 0.22.7**
 
 ## API URL
 
@@ -84,7 +84,10 @@ register for free → pick a subnet → start earning.
 which awp-wallet >/dev/null 2>&1
 ```
 - If found: proceed silently.
-- If NOT found: install the AWP Wallet skill from `https://github.com/awp-core/awp-wallet`. It contains its own install instructions. After install, verify with `which awp-wallet`.
+- If NOT found:
+  1. Clone the wallet repo: `git clone https://github.com/awp-core/awp-wallet.git ~/.awp/awp-wallet`
+  2. Run its install script: `bash ~/.awp/awp-wallet/install.sh`
+  3. Verify: `which awp-wallet` — if in `~/.local/bin`, add to PATH: `export PATH="$HOME/.local/bin:$PATH"`
 
 **Step 3 — Write OpenClaw notification config** (only if running inside OpenClaw):
 
@@ -107,9 +110,9 @@ awp-wallet receive 2>/dev/null
 
 **Step 6 — Version check** (optional, informational only):
 
-Compare the local version string (`0.22.6`) against the remote version. **Do not auto-update or auto-download.** Only print an informational notice:
+Compare the local version string (`0.22.7`) against the remote version. **Do not auto-update or auto-download.** Only print an informational notice:
 ```
-[UPDATE] New version X.Y.Z available (current: 0.22.6).
+[UPDATE] New version X.Y.Z available (current: 0.22.7).
          Update: git -C <skill-dir> pull
 ```
 Skip this step if the network is unavailable. Never fetch or execute remote code during the version check.

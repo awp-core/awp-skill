@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.22.7
+
+### Fix — Explicit wallet install steps
+- SKILL.md Step 2: give agent concrete 3-step instructions (clone → bash install.sh → verify), not vague "it contains its own install instructions" which agent won't follow
+
 ## v0.22.6
 
 ### Simplify — Just tell agent where the wallet skill is
