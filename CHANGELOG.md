@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.22.6
+
+### Simplify — Just tell agent where the wallet skill is
+- SKILL.md Step 2: point agent to `https://github.com/awp-core/awp-wallet`, let it handle installation — no hardcoded install commands
+
 ## v0.22.5
 
 ### Fix — Install from local repo, not remote pipe
