@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.22.0
+
+### Fixed — awp-wallet CLI Compatibility
+- **CRITICAL**: `awp-wallet send --data` does NOT exist — `send` only supports token transfers (`--to`, `--amount`, `--asset`). Added `wallet-raw-call.mjs` bridge script that imports awp-wallet internal modules (keystore/session/viem) for raw contract calls
+- **CRITICAL**: `awp_lib.py:wallet_send()` was silently failing — all on-chain Python scripts broken. Fixed to use bridge script
+- `--chain base` is a global option, NOT per-subcommand — removed from `approve`, `balance` calls
+- `awp-wallet unlock --scope` EXISTS (read|transfer|full) — re-added with `--scope transfer` default
+- `awp-wallet status --token` EXISTS — added `wallet_status()` to awp_lib.py
+- awp-wallet install: `skill install` → `curl -sSL install.sh | bash` (not on npm registry)
+- awp-daemon: wallet version check was reading non-existent SKILL.md from awp-wallet repo → now reads package.json
+- Reference docs: replaced all broken `awp-wallet send --data $(cast calldata ...)` templates with bundled Python script commands
+- CHANGELOG v0.20.7 correction: `--scope full` DOES exist — it was incorrectly removed in that version
+
+---
+
 ## v0.21.0
 
 ### Changed — Shell → Python Migration

@@ -11,6 +11,7 @@ import time
 import urllib.request
 import urllib.error
 from decimal import Decimal
+from pathlib import Path
 
 _UINT256_MAX = 2**256 - 1
 
@@ -135,15 +136,28 @@ def get_wallet_address() -> str:
     return addr
 
 
-def wallet_send(token: str, to: str, data: str) -> str:
-    """发送交易，返回结果 JSON"""
-    return wallet_cmd(["send", "--token", token, "--to", to, "--data", data, "--chain", "base"])
+def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
+    """发送原始合约调用（calldata），返回结果 JSON。
+
+    awp-wallet send 只支持代币转账，不支持 calldata。
+    此函数通过 wallet-raw-call.mjs 桥接脚本调用 awp-wallet 内部签名模块。
+    """
+    bridge = str(Path(__file__).parent / "wallet-raw-call.mjs")
+    args = ["node", bridge, "--token", token, "--to", to, "--data", data, "--value", value]
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        die("wallet-raw-call timed out after 120s")
+        return ""  # unreachable
+    if result.returncode != 0:
+        die(f"wallet-raw-call failed: {result.stderr.strip() or result.stdout.strip()}")
+    return result.stdout.strip()
 
 
 def wallet_approve(token: str, asset: str, spender: str, amount: str) -> str:
     """授权代币，返回结果 JSON"""
     return wallet_cmd(["approve", "--token", token, "--asset", asset,
-                        "--spender", spender, "--amount", amount, "--chain", "base"])
+                        "--spender", spender, "--amount", amount])
 
 
 def wallet_sign_typed_data(token: str, data: dict) -> str:
@@ -159,9 +173,17 @@ def wallet_sign_typed_data(token: str, data: dict) -> str:
     return sig
 
 
-def wallet_balance(token: str) -> str:
+def wallet_balance(token: str, asset: str | None = None) -> str:
     """查询余额"""
-    return wallet_cmd(["balance", "--token", token, "--chain", "base"])
+    args = ["balance", "--token", token]
+    if asset:
+        args += ["--asset", asset]
+    return wallet_cmd(args)
+
+
+def wallet_status(token: str) -> str:
+    """查询钱包状态（地址、session 有效性）"""
+    return wallet_cmd(["status", "--token", token])
 
 
 # ── 合约注册表 ───────────────────────────────────

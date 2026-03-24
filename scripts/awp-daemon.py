@@ -35,8 +35,9 @@ from typing import Any, Optional, Tuple
 
 API_BASE = os.environ.get("AWP_API_URL", "https://tapi.awp.sh/api")
 CHECK_INTERVAL = 300  # seconds (5 min default)
-SKILL_REPO = "https://github.com/awp-core/awp-skill"
-WALLET_REPO = "https://github.com/awp-core/awp-wallet"
+SKILL_REPO = "https://github.com/awp-core/awp-skill.git"
+WALLET_REPO = "https://github.com/awp-core/awp-wallet.git"
+WALLET_INSTALL_SCRIPT = "https://raw.githubusercontent.com/awp-core/awp-wallet/main/install.sh"
 SCRIPT_DIR = Path(__file__).parent.resolve()
 SKILL_MD = SCRIPT_DIR.parent / "SKILL.md"
 NOTIFY_DIR = Path.home() / ".awp"
@@ -190,27 +191,53 @@ def parse_version(v: str) -> Tuple[int, ...]:
 # ── 1. Wallet Installation ───────────────────────
 
 def ensure_wallet_installed() -> bool:
-    """检查 awp-wallet 是否安装，未装则自动安装"""
+    """检查 awp-wallet 是否安装，未装则通过 install.sh 自动安装。
+
+    awp-wallet 未发布到 npm registry，安装方式是：
+    git clone → npm install → npm link，全部封装在 install.sh 中。
+    """
     if shutil.which("awp-wallet"):
         return True
 
-    log("awp-wallet not found. Installing...")
+    log("awp-wallet not found. Running install script...")
 
-    code, _ = run(["skill", "install", "awp-wallet"])
-    if code == 0:
-        log("awp-wallet installed from registry ✓")
-        notify("Wallet Installed", "awp-wallet installed from registry")
+    # 下载并执行官方安装脚本
+    try:
+        req = urllib.request.Request(
+            WALLET_INSTALL_SCRIPT,
+            headers={"User-Agent": "awp-daemon/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            script = resp.read()
+    except Exception as e:
+        err(f"Failed to download install script: {e}")
+        err(f"Install manually: curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
+        return False
+
+    # 写入临时文件并执行
+    tmp_script = Path("/tmp/awp-wallet-install.sh")
+    tmp_script.write_bytes(script)
+    tmp_script.chmod(0o755)
+
+    code, out = run(["bash", str(tmp_script)])
+    tmp_script.unlink(missing_ok=True)
+
+    if code == 0 and shutil.which("awp-wallet"):
+        log("awp-wallet installed ✓")
+        notify("Wallet Installed", "awp-wallet installed via install.sh")
         return True
 
-    code, _ = run(["skill", "install", WALLET_REPO])
-    if code == 0:
-        log("awp-wallet installed from GitHub ✓")
-        notify("Wallet Installed", "awp-wallet installed from GitHub")
-        return True
+    # npm link 后可能需要刷新 PATH
+    wallet_local = Path.home() / ".local" / "bin" / "awp-wallet"
+    if wallet_local.exists():
+        os.environ["PATH"] = f"{wallet_local.parent}:{os.environ.get('PATH', '')}"
+        if shutil.which("awp-wallet"):
+            log("awp-wallet installed ✓ (added ~/.local/bin to PATH)")
+            notify("Wallet Installed", "awp-wallet installed via install.sh")
+            return True
 
-    err("Failed to install awp-wallet. Install manually:")
-    err("  skill install awp-wallet")
-    err(f"  OR: skill install {WALLET_REPO}")
+    err("Install script finished but awp-wallet not found in PATH.")
+    err(f"Install manually: curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
     return False
 
 # ── 2. Wallet Initialization ─────────────────────
@@ -372,24 +399,27 @@ def check_updates() -> None:
             log("│  AWP Skill update available!                 │")
             log(f"│  Local:  {local_ver}")
             log(f"│  Remote: {remote_ver}")
+            log("│                                              │")
+            log("│  If git repo:  git pull                      │")
+            log("│  Otherwise:    re-download .skill file       │")
             log("└─────────────────────────────────────────────┘")
-
-            log("Auto-updating awp-skill...")
-            code, _ = run(["skill", "install", SKILL_REPO])
-            if code == 0:
-                log(f"awp-skill updated to {remote_ver} ✓")
-                notify("Skill Updated", f"awp-skill updated: {local_ver} → {remote_ver}")
-            else:
-                warn("Auto-update failed. Please update manually.")
+            notify("Update Available",
+                   f"awp-skill {remote_ver} available (current: {local_ver})")
         else:
             log(f"awp-skill {local_ver} — up to date ✓")
 
-    # awp-wallet — 比较版本，有新版才更新
+    # awp-wallet — 版本比较，只通知不自动更新
     if shutil.which("awp-wallet"):
-        remote_wallet = get_remote_version(
-            "https://raw.githubusercontent.com/awp-core/awp-wallet/main/SKILL.md"
-        )
-        # 获取本地 wallet 版本
+        remote_wallet = ""
+        try:
+            pkg_text = fetch_text(
+                "https://raw.githubusercontent.com/awp-core/awp-wallet/main/package.json"
+            )
+            if pkg_text:
+                remote_wallet = json.loads(pkg_text).get("version", "")
+        except (json.JSONDecodeError, KeyError):
+            pass
+
         local_wallet = ""
         wcode, wout = run(["awp-wallet", "--version"])
         if wcode == 0 and wout:
@@ -399,15 +429,11 @@ def check_updates() -> None:
 
         if remote_wallet and local_wallet:
             if parse_version(remote_wallet) > parse_version(local_wallet):
-                log(f"awp-wallet update: {local_wallet} → {remote_wallet}")
-                code, _ = run(["skill", "install", "awp-wallet"])
-                if code != 0:
-                    code, _ = run(["skill", "install", WALLET_REPO])
-                if code == 0:
-                    log(f"awp-wallet updated ✓")
-                    notify("Wallet Updated", f"awp-wallet updated: {local_wallet} → {remote_wallet}")
-                else:
-                    err(f"awp-wallet update failed (both registry and GitHub)")
+                log(f"awp-wallet update available: {local_wallet} → {remote_wallet}")
+                log(f"  Update: curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
+                notify("Update Available",
+                       f"awp-wallet {remote_wallet} available (current: {local_wallet}). "
+                       f"Run: curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
             else:
                 log(f"awp-wallet {local_wallet} — up to date ✓")
         elif remote_wallet:

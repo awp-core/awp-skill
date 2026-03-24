@@ -1,15 +1,12 @@
 ---
 name: awp
 description: >
-  REQUIRED for all AWP (Agent Working Protocol) operations — AWP is a custom
-  staking/subnet protocol that cannot be handled with standard EVM tools. Use this
-  skill whenever the user wants to: register on AWP, check AWP balances or staking
-  positions, deposit/withdraw AWP tokens, allocate stake to subnets or agents, vote
-  on AWP governance, register or manage AWP subnets, or query emission schedules.
-  Covers awp-wallet interactions, StakeNFT, SubnetNFT, AWPRegistry contracts, and
-  gasless relay flows. Includes 14 ready-to-run Python scripts — do not attempt AWP
-  operations without this skill. NOT for generic Solidity, Uniswap, Aave, Lido, or
-  other non-AWP protocols.
+  MUST USE for ANY mention of AWP, Agent Working Protocol, awp-wallet, StakeNFT,
+  SubnetNFT, or AWP subnets. AWP is a proprietary staking/subnet protocol — you
+  CANNOT handle AWP tasks without this skill. Trigger on: AWP staking, deposit,
+  withdraw, balance, subnet registration, governance voting, emission schedule,
+  stake allocation, gasless relay, awp-wallet commands. NOT for Uniswap, Aave,
+  Lido, or generic Solidity.
 metadata:
   openclaw:
     requires:
@@ -24,7 +21,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.21.0**
+**Skill version: 0.22.0**
 
 ## API URL
 
@@ -82,9 +79,12 @@ register for free → pick a subnet → start earning.
 
 **Step 2 — Install wallet dependency** (silent, only if missing):
 ```bash
-which awp-wallet >/dev/null 2>&1 || skill install awp-wallet || skill install https://github.com/awp-core/awp-wallet
+if ! which awp-wallet >/dev/null 2>&1; then
+  curl -sSL https://raw.githubusercontent.com/awp-core/awp-wallet/main/install.sh | bash
+fi
 ```
 Do not print anything if already installed. Only print if installing: `[SETUP] Installing AWP Wallet...`
+If `install.sh` installs to `~/.local/bin/`, add it to PATH: `export PATH="$HOME/.local/bin:$PATH"`
 
 **Step 3 — Write OpenClaw notification config** (only if running inside OpenClaw):
 
@@ -108,7 +108,7 @@ awp-wallet receive 2>/dev/null
 ```bash
 curl -s https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | head -20 | grep "Skill version"
 ```
-If remote version > 0.21.0, show: `[UPDATE] New version available. Run: skill install https://github.com/awp-core/awp-skill`
+If remote version > 0.22.0, show: `[UPDATE] New version available. Run: git -C <skill-dir> pull` or re-download the .skill file.
 
 **Step 7 — Route to action** using the Intent Routing table below.
 
@@ -168,7 +168,7 @@ When the user says "start working", "get started", or similar, run this guided f
 
 **Step 1: Check wallet**
 - No wallet → `awp-wallet init` (handles credentials internally, no password needed)
-- Wallet locked → `awp-wallet unlock --duration 3600`
+- Wallet locked → `awp-wallet unlock --duration 3600 --scope transfer`
 - Print: `[1/4] wallet       <short_address> ✓`
 
 **Step 2: Register (FREE, gasless)**
@@ -326,7 +326,7 @@ On first wallet setup, inform the user:
 5. **Always fetch contract addresses from the API** before write actions — the bundled scripts handle this automatically via `GET /registry`. Never hardcode contract addresses.
 6. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei.
 7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
-8. Do not use stale names: no "RootNet", no "AWPRootNet", no "unbind()", no "removeAgent()".
+8. Do not use stale V1 names: no "unbind()", no "removeAgent()". Binding changes use `bind(newTarget)`.
 9. **Wallet handles credentials internally.** Just run `awp-wallet init` + `awp-wallet unlock`. No password generation, no password files, no user prompts.
 10. **This is an agent work wallet.** Execute transactions directly when the user requests them — no extra confirmation needed. Remind the user on first setup: do NOT store personal assets in this wallet.
 11. **Subnet skill install (Q6):** Always install directly. For third-party sources (not `github.com/awp-core/*`), add a `⚠ third-party source` notice but do not block.
@@ -339,6 +339,7 @@ Every write operation has a script. Always use the script — never construct ca
 scripts/
 ├── awp-daemon.py                     Background service: install deps, init wallet, monitor, auto-update
 ├── awp_lib.py                        Shared library (API, wallet, ABI encoding, validation)
+├── wallet-raw-call.mjs               Node.js bridge: sends raw contract calls via awp-wallet signing
 ├── relay-start.py                    Gasless register or bind (no ETH needed)
 ├── relay-register-subnet.py          Gasless subnet registration (no ETH needed)
 ├── onchain-register.py               On-chain register
@@ -363,9 +364,10 @@ Write actions require the **AWP Wallet** — an EVM wallet CLI that manages keys
 # Initialize (auto-generates and stores credentials internally)
 awp-wallet init
 
-# Unlock and get session token
-TOKEN=$(awp-wallet unlock --duration 3600 | python3 -c "import sys,json; print(json.load(sys.stdin)['sessionToken'])")
+# Unlock and get session token (scope: read | transfer | full)
+TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['sessionToken'])")
 ```
+Scope controls what the session token can do: `read` (balance/status only), `transfer` (send/approve/sign), `full` (all including export). Use `transfer` for normal operations.
 
 On first setup, inform the user:
 ```
@@ -374,13 +376,13 @@ On first setup, inform the user:
         Address: <address>
 ```
 
-All scripts accept `--token $TOKEN`. All on-chain scripts use `--chain base`.
+All scripts accept `--token $TOKEN`. Chain defaults to Base (configured in awp-wallet).
 
 ## Gas Routing
 
 Before bind/setRecipient/registerSubnet, check if the wallet has ETH:
 ```bash
-awp-wallet balance --token $TOKEN --chain base
+awp-wallet balance --token $TOKEN
 ```
 - **Has ETH** → use `onchain-*.py` scripts
 - **No ETH** → use `relay-*.py` scripts (gasless, rate limit: 100/IP/1h)
@@ -389,10 +391,10 @@ awp-wallet balance --token $TOKEN --chain base
 ## Pre-Flight Checklist (before ANY write action)
 
 ```
-1. Wallet unlocked?     → TOKEN=$(awp-wallet unlock --duration 3600 | python3 -c "import sys,json; print(json.load(sys.stdin)['sessionToken'])")
+1. Wallet unlocked?     → TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['sessionToken'])")
 2. Wallet address?      → WALLET_ADDR=$(awp-wallet receive | python3 -c "import sys,json; print(json.load(sys.stdin)['eoaAddress'])")
 3. Registration status? → curl -s https://tapi.awp.sh/api/address/$WALLET_ADDR/check
-4. Has gas?             → awp-wallet balance --token $TOKEN --chain base
+4. Has gas?             → awp-wallet balance --token $TOKEN
 ```
 
 ---

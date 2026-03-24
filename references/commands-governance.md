@@ -73,18 +73,9 @@ function proposalCreatedAt(uint256 proposalId) view returns (uint64)   // Timest
 ### Complete Command Template
 
 ```bash
-# Step 1: Get eligible tokenIds
-POSITIONS=$(curl -s {API_BASE}/api/staking/user/$WALLET_ADDR/positions)
-# Get proposalCreatedAt from chain
-PROPOSAL_CREATED=$(cast call $DAO_ADDR "proposalCreatedAt(uint256)" {proposalId} --rpc-url $EVM_RPC_URL | cast --to-dec)
-# Filter: only positions with created_at < PROPOSAL_CREATED (positions with createdAt >= are blocked)
-# Build tokenIds array: e.g. [1, 7, 12]
-
-# Step 2: Encode params (tokenIds as raw ABI-encoded uint256[], NO function selector)
-PARAMS=$(cast abi-encode "(uint256[])" "([{tokenId1},{tokenId2},...])")
-
-# Step 3: Cast vote (support: 0=Against, 1=For, 2=Abstain)
-awp-wallet send --token {T} --to $DAO_ADDR --data $(cast calldata "castVoteWithReasonAndParams(uint256,uint8,string,bytes)" {proposalId} {support} "{reason}" $PARAMS) --chain base
+# The bundled script handles position filtering, ABI encoding, and raw call automatically:
+python3 scripts/onchain-vote.py --token {T} --proposal {proposalId} --support 1 --reason "I support this"
+# support: 0=Against, 1=For, 2=Abstain
 ```
 
 ---
