@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.22.5
+
+### Fix — Install from local repo, not remote pipe
+- SKILL.md Step 2: `git clone` → `bash install.sh`（先拉到本地再执行，不用 `curl | bash` 远程管道）
+- daemon: all install/update messages use `git clone` + local `install.sh` instead of `curl | bash`
+- Removed `WALLET_INSTALL_SCRIPT` (raw.githubusercontent.com URL) from daemon
+
 ## v0.22.4
 
 ### Fix — Inline wallet install instructions

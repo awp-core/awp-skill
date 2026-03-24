@@ -23,7 +23,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.22.4**
+**Skill version: 0.22.5**
 
 ## API URL
 
@@ -84,10 +84,10 @@ register for free → pick a subnet → start earning.
 which awp-wallet >/dev/null 2>&1
 ```
 - If found: proceed silently.
-- If NOT found: install `awp-wallet` from source:
+- If NOT found: clone the repo and run its install script:
 ```bash
 git clone https://github.com/awp-core/awp-wallet.git ~/.awp/awp-wallet
-cd ~/.awp/awp-wallet && npm install && npm link
+bash ~/.awp/awp-wallet/install.sh
 ```
 After install, verify: `which awp-wallet`. If `~/.local/bin` is used, add to PATH: `export PATH="$HOME/.local/bin:$PATH"`
 
@@ -112,9 +112,9 @@ awp-wallet receive 2>/dev/null
 
 **Step 6 — Version check** (optional, informational only):
 
-Compare the local version string (`0.22.4`) against the remote version. **Do not auto-update or auto-download.** Only print an informational notice:
+Compare the local version string (`0.22.5`) against the remote version. **Do not auto-update or auto-download.** Only print an informational notice:
 ```
-[UPDATE] New version X.Y.Z available (current: 0.22.4).
+[UPDATE] New version X.Y.Z available (current: 0.22.5).
          Update: git -C <skill-dir> pull
 ```
 Skip this step if the network is unavailable. Never fetch or execute remote code during the version check.

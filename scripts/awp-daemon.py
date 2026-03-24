@@ -42,7 +42,7 @@ API_BASE = os.environ.get("AWP_API_URL", "https://tapi.awp.sh/api")
 CHECK_INTERVAL = 300  # seconds (5 min default)
 SKILL_REPO = "https://github.com/awp-core/awp-skill.git"
 WALLET_REPO = "https://github.com/awp-core/awp-wallet.git"
-WALLET_INSTALL_SCRIPT = "https://raw.githubusercontent.com/awp-core/awp-wallet/main/install.sh"
+WALLET_INSTALL_DIR = Path.home() / ".awp" / "awp-wallet"
 SCRIPT_DIR = Path(__file__).parent.resolve()
 SKILL_MD = SCRIPT_DIR.parent / "SKILL.md"
 NOTIFY_DIR = Path.home() / ".awp"
@@ -196,10 +196,11 @@ def ensure_wallet_installed() -> bool:
             return True
 
     err("awp-wallet is required but not installed.")
-    err("Install it manually:")
-    err(f"  curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
+    err("Install it:")
+    err(f"  git clone {WALLET_REPO} {WALLET_INSTALL_DIR}")
+    err(f"  bash {WALLET_INSTALL_DIR}/install.sh")
     err("")
-    err("Review the script before running, then restart the daemon.")
+    err("Then restart the daemon.")
     return False
 
 # ── 2. Wallet Initialization ─────────────────────
@@ -372,10 +373,10 @@ def check_updates() -> None:
         if remote_wallet and local_wallet:
             if parse_version(remote_wallet) > parse_version(local_wallet):
                 log(f"awp-wallet update available: {local_wallet} → {remote_wallet}")
-                log(f"  Update: curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
+                log(f"  Update: cd {WALLET_INSTALL_DIR} && git pull && bash install.sh")
                 notify("Update Available",
                        f"awp-wallet {remote_wallet} available (current: {local_wallet}). "
-                       f"Run: curl -sSL {WALLET_INSTALL_SCRIPT} | bash")
+                       f"Run: cd {WALLET_INSTALL_DIR} && git pull && bash install.sh")
             else:
                 log(f"awp-wallet {local_wallet} — up to date ✓")
         elif remote_wallet:
