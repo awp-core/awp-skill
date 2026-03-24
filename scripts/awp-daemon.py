@@ -338,14 +338,7 @@ def check_updates() -> None:
 
     if remote_ver and local_ver:
         if parse_version(remote_ver) > parse_version(local_ver):
-            log("┌─────────────────────────────────────────────┐")
-            log("│  AWP Skill update available!                 │")
-            log(f"│  Local:  {local_ver}")
-            log(f"│  Remote: {remote_ver}")
-            log("│                                              │")
-            log("│  If git repo:  git pull                      │")
-            log("│  Otherwise:    re-download .skill file       │")
-            log("└─────────────────────────────────────────────┘")
+            log(f"awp-skill {remote_ver} available (current: {local_ver})")
             notify("Update Available",
                    f"awp-skill {remote_ver} available (current: {local_ver})")
         else:
@@ -372,11 +365,9 @@ def check_updates() -> None:
 
         if remote_wallet and local_wallet:
             if parse_version(remote_wallet) > parse_version(local_wallet):
-                log(f"awp-wallet update available: {local_wallet} → {remote_wallet}")
-                log(f"  Update: cd {WALLET_INSTALL_DIR} && git pull && bash install.sh")
+                log(f"awp-wallet {remote_wallet} available (current: {local_wallet})")
                 notify("Update Available",
-                       f"awp-wallet {remote_wallet} available (current: {local_wallet}). "
-                       f"Run: cd {WALLET_INSTALL_DIR} && git pull && bash install.sh")
+                       f"awp-wallet {remote_wallet} available (current: {local_wallet})")
             else:
                 log(f"awp-wallet {local_wallet} — up to date ✓")
         elif remote_wallet:
