@@ -28,7 +28,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.24.6**
+**Skill version: 0.24.7**
 
 ## API URL
 
@@ -121,7 +121,7 @@ Fetch the remote version:
 ```bash
 curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | sed -n 's/.*Skill version: \([0-9.]*\).*/\1/p'
 ```
-If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.24.6).` Skip this step if the network is unavailable.
+If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.24.7).` Skip this step if the network is unavailable.
 
 **Step 7 — Start background daemon**:
 

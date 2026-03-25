@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.24.7
+
+### Fix — Welcome title update
+
+- 欢迎语标题统一为 "Hello World from the World of Agents!"（SKILL.md + daemon 推送）
+
 ## v0.24.6
 
 ### Fix — Onboarding auto-select + redundant setRecipient after bind
