@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.24.6 | Fix: onboarding must let user choose Option A/B (no auto-select); bind already sets reward path (no redundant setRecipient) |
 | 0.24.5 | Code review (29 issues), notification redesign (benchmark-worker pattern), description optimization (20/20 trigger eval) |
 | 0.24.4 | Fix daemon startup false positive (pgrep self-match), OpenClaw CLI discovery for non-PATH installs |
 | 0.24.3 | Notification infra: daemon.log, status.json, `awp notifications` + `awp log` commands |

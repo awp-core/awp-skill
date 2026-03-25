@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.24.6
+
+### Fix — Onboarding auto-select + redundant setRecipient after bind
+
+- **注册时必须让用户选择**: Onboarding Step 2 不再标注 "(recommended)"，明确要求 agent 展示 Option A/B 并等待用户选择，不得自动选择
+- **bind 后不再冗余调用 setRecipient**: 明确说明 `bind(target)` 后 `resolveRecipient()` 沿绑定链解析收益地址，已自动指向 target——无需再调用 `setRecipient()`。在 S1 节、Onboarding Step 2、Rules 三处均添加此规则
+
 ## v0.24.5
 
 ### Fix — Code review (29 issues), notification redesign, description optimization

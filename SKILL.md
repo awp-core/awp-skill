@@ -28,7 +28,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.24.5**
+**Skill version: 0.24.6**
 
 ## API URL
 
@@ -121,7 +121,7 @@ Fetch the remote version:
 ```bash
 curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | sed -n 's/.*Skill version: \([0-9.]*\).*/\1/p'
 ```
-If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.24.5).` Skip this step if the network is unavailable.
+If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.24.6).` Skip this step if the network is unavailable.
 
 **Step 7 — Start background daemon**:
 
@@ -215,30 +215,35 @@ When the user says "start working", "get started", or similar, run this guided f
 curl -s https://tapi.awp.sh/api/address/{addr}/check
 ```
 - Already registered → proceed to Step 3
-- Not registered → ask user:
+- Not registered → **present both options and WAIT for the user to choose.** Do NOT auto-select either option. The user must explicitly pick one.
 
 ```
 ── how do you want to start? ─────
 
-  Option A: Quick Start (recommended)
-  Register automatically. Free, gasless.
-  No AWP tokens needed.
+  Option A: Quick Start
+  Register as an independent agent.
+  Free, gasless. No AWP tokens needed.
 
   Option B: Link Your Wallet
-  Link to your existing crypto wallet.
+  Bind to your existing crypto wallet
+  so rewards flow to that address.
   Free, gasless. No AWP tokens needed.
+
+  Which do you prefer? (A or B)
 ───────────────────────────────────
 ```
 
-**Option A** (Solo Mining):
+**Option A** (Solo Mining) — after user picks A:
 ```bash
 python3 scripts/relay-start.py --token $TOKEN --mode principal
 ```
 
-**Option B** (Delegated Mining):
+**Option B** (Delegated Mining) — after user picks B:
+Ask the user for their wallet address, then:
 ```bash
 python3 scripts/relay-start.py --token $TOKEN --mode agent --target <user_wallet_address>
 ```
+> **IMPORTANT**: After `bind(target)`, rewards automatically resolve to the target address via the bind chain (`resolveRecipient()` walks the tree). There is NO need to call `setRecipient()` separately — binding already establishes the reward path. Do NOT suggest or execute `setRecipient()` after a successful bind.
 
 Print: `[2/4] registered   ✓  (free, no AWP required)`
 
@@ -368,6 +373,8 @@ On first wallet setup, inform the user:
 9. **Wallet handles credentials internally.** Just run `awp-wallet init` + `awp-wallet unlock`. No password generation, no password files, no user prompts.
 10. **This is an agent work wallet.** Execute transactions directly when the user requests them — no extra confirmation needed. Remind the user on first setup: do NOT store personal assets in this wallet.
 11. **Subnet skill install (Q6):** Always install directly. For third-party sources (not `github.com/awp-core/*`), add a `⚠ third-party source` notice but do not block.
+12. **Onboarding requires user choice.** Always present Option A (Solo) and Option B (Delegated) and WAIT for the user to choose. Never auto-select an option.
+13. **Bind already sets the reward path.** After `bind(target)`, rewards resolve to the target via the bind chain. Do NOT call `setRecipient()` after a successful bind — it's redundant.
 
 ## Bundled Scripts
 
@@ -538,6 +545,8 @@ curl -s "https://tapi.awp.sh/api/emission/epochs?page=1&limit=20"
 ### S1 · Register / Bind (FREE, gasless)
 
 Registration is free and gasless. No AWP or ETH needed.
+
+> **Bind sets the reward path.** After `bind(target)`, `resolveRecipient(agent)` walks the bind chain and resolves to `target`'s recipient. There is NO need to call `setRecipient()` after binding — it's redundant. Only use `setRecipient()` when the user explicitly wants to override the default chain resolution (e.g., send rewards to a different address than the bind target).
 
 **Solo Mining (bind to self):**
 ```bash
