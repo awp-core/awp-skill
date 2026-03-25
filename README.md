@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.25.0 | i18n: all Chinese comments/text translated to English across 21 files |
 | 0.24.9 | Receipt-style welcome push (box-drawing borders), remove duplicate title from code block |
 | 0.24.8 | Remove child_process from wallet-raw-call.mjs — pure Node.js PATH search, eliminates security scanner warning |
 | 0.24.7 | Welcome title: "Hello World from the World of Agents!" (SKILL.md + daemon push) |

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.25.0
+
+### i18n — All comments and text translated to English
+
+- All 312 Chinese occurrences across 21 files replaced with English (comments, docstrings, help strings, changelog entries). No logic changes.
+
 ## v0.24.9
 
 ### Improve — Receipt-style welcome push
