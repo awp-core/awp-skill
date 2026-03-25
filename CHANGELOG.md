@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.24.9
+
+### Improve — Receipt-style welcome push
+
+- 推送欢迎消息改为小票排版（box-drawing 边框），子网列表同步改版
+- SKILL.md code block 内移除重复标题行（标题已在 code block 外）
+
 ## v0.24.8
 
 ### Fix — Remove child_process from wallet-raw-call.mjs
