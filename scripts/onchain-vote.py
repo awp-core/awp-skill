@@ -109,7 +109,7 @@ def main() -> None:
         except (ValueError, TypeError):
             continue
         if created < proposal_created_at:
-            eligible_ids.append(p["token_id"])
+            eligible_ids.append(int(p["token_id"]))
 
     if not eligible_ids:
         die(

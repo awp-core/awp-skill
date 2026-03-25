@@ -61,6 +61,10 @@ def main() -> None:
     else:
         new_lock_end = current_lock_end
 
+    # uint64 溢出保护（newLockEndTime 参数类型为 uint64）
+    if new_lock_end > 2**64 - 1:
+        die(f"new_lock_end too large: {new_lock_end} exceeds uint64 max")
+
     # ── Step 4: Approve AWP to StakeNFT ──
     amount_wei = to_wei(amount)
     step("approve", spender=stake_nft, amount=f"{amount} AWP")

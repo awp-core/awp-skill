@@ -41,6 +41,7 @@ Returned by `AWPRegistry.getSubnetFull(subnetId)`. Combined: AWPRegistry state +
 | createdAt | uint64 | Unix timestamp when subnet was registered |
 | activatedAt | uint64 | Unix timestamp when activated (0 if never activated) |
 | name | string | Alpha token name |
+| symbol | string | Alpha token symbol |
 | skillsURI | string | Skills file URI (set via SubnetNFT.setSkillsURI) |
 | minStake | uint128 | Minimum stake for agents (0 = no minimum) |
 | owner | address | SubnetNFT owner |

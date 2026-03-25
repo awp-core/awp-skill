@@ -31,6 +31,10 @@ def main() -> None:
     amount_wei = to_wei(amount)
     lock_seconds = days_to_seconds(lock_days)
 
+    # uint64 溢出保护（lockDuration 参数类型为 uint64）
+    if lock_seconds > 2**64 - 1:
+        die(f"lock-days too large: {lock_days} days ({lock_seconds}s) exceeds uint64 max")
+
     # 步骤 1：授权 AWP 给 StakeNFT
     step("approve", spender=stake_nft, amount=f"{amount} AWP")
     wallet_approve(token, awp_token, stake_nft, amount)

@@ -51,6 +51,14 @@ def parse_args() -> tuple[str, str, str, str, int, str, str]:
         die("Invalid --min-stake: must be a non-negative integer (wei)")
     min_stake = int(args.min_stake)
 
+    # 验证 subnet-manager 地址格式
+    if not re.match(r"^0x[0-9a-fA-F]{40}$", args.subnet_manager):
+        die("Invalid --subnet-manager: must be 0x + 40 hex chars")
+
+    # 验证 salt 格式（bytes32）
+    if not re.match(r"^0x[0-9a-fA-F]{64}$", args.salt):
+        die("Invalid --salt: must be 0x + 64 hex chars (bytes32)")
+
     return args.token, args.name, args.symbol, args.salt, min_stake, args.subnet_manager, args.skills_uri
 
 

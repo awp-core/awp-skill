@@ -247,7 +247,7 @@ awp-wallet sign-typed-data --token {T} --data '{
   "domain": {
     "name": "AWPRegistry",
     "version": "1",
-    "chainId": '$CHAIN_ID',
+    "chainId": 8453,
     "verifyingContract": "'$AWP_REGISTRY'"
   },
   "message": {

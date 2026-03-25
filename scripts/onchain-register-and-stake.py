@@ -41,6 +41,10 @@ def main() -> None:
     lock_seconds = days_to_seconds(lock_days)
     allocate_wei = to_wei(allocate_amount)
 
+    # 分配金额不能超过存款金额
+    if allocate_wei > amount_wei:
+        die(f"allocate-amount ({allocate_amount} AWP) exceeds deposit amount ({amount} AWP)")
+
     # 步骤 1：授权 AWP 给 AWP_REGISTRY（注意：目标是 AWP_REGISTRY，不是 StakeNFT）
     step("approve", spender=awp_registry,
          note="Approve target is AWP_REGISTRY, NOT StakeNFT",

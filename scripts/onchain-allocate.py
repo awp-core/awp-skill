@@ -40,6 +40,8 @@ def main() -> None:
 
     amount_wei = to_wei(amount)
     unallocated_int = int(unallocated)
+    # 注意：API 数据可能有延迟（约几秒），链上状态可能已变更。
+    # 此检查用于提前捕获明显错误，最终以链上校验为准。
     if amount_wei > unallocated_int:
         die(f"Insufficient unallocated balance: have {unallocated_int / 10**18} AWP, need {amount} AWP")
 

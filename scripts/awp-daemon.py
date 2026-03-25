@@ -61,29 +61,23 @@ def warn(msg: str) -> None:
 def err(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] ✗ {msg}", file=sys.stderr)
 
-_openclaw_config_cache: Optional[Tuple[str, str]] = None
-
 def _get_openclaw_config() -> Tuple[str, str]:
-    """从 ~/.awp/openclaw.json 读取 OpenClaw channel 和 target（带缓存）。
+    """从 ~/.awp/openclaw.json 读取 OpenClaw channel 和 target。
 
-    只读取用户显式配置的文件，不扫描 /tmp 或其他临时目录。
-    该文件由 SKILL.md Step 3 在 OpenClaw 环境下创建。
+    每次调用都读文件（支持热加载 — agent 可随时写入配置）。
+    该文件由 agent 在 skill load 时写入，格式：
+    {"channel": "telegram", "target": "123456"}
     """
-    global _openclaw_config_cache
-    if _openclaw_config_cache is not None:
-        return _openclaw_config_cache
-
     user_config = NOTIFY_DIR / "openclaw.json"
     if user_config.exists():
         try:
             data = json.loads(user_config.read_text())
-            result = data.get("channel", ""), data.get("target", "")
-            if result[0] and result[1]:
-                _openclaw_config_cache = result
-                return result
+            ch = data.get("channel", "")
+            tg = data.get("target", "")
+            if ch and tg:
+                return ch, tg
         except Exception:
             pass
-
     return "", ""
 
 def _find_openclaw() -> Optional[str]:
@@ -134,9 +128,11 @@ def notify(title: str, message: str, level: str = "info") -> None:
             "message": message,
         })
 
-        # 只保留最近 50 条
+        # 只保留最近 50 条，原子写入（先写临时文件再重命名）
         notifications = notifications[-50:]
-        NOTIFY_FILE.write_text(json.dumps(notifications, indent=2))
+        tmp_file = NOTIFY_FILE.with_suffix(".tmp")
+        tmp_file.write_text(json.dumps(notifications, indent=2))
+        tmp_file.rename(NOTIFY_FILE)
     except Exception as e:
         warn(f"Failed to write notification: {e}")
 
@@ -223,7 +219,7 @@ def write_status(
     elif not wallet_addr:
         phase = "wallet_not_initialized"
         next_step = 'Tell your agent: "initialize my wallet"'
-    elif not registered:
+    elif registered is None or not registered:
         phase = "not_registered"
         next_step = 'Tell your agent: "start working on AWP" (free, gasless)'
     else:
@@ -321,7 +317,7 @@ def detect_new_subnets(
     new_subnets = []
     for s in current:
         sid = s.get("subnet_id")
-        if sid is not None and sid not in known_ids:
+        if sid is not None and int(sid) not in known_ids:
             new_subnets.append(s)
     return new_subnets
 
@@ -525,26 +521,20 @@ def check_updates() -> None:
 # ── Main ─────────────────────────────────────────
 
 def main() -> None:
-    interval = CHECK_INTERVAL
-    if "--interval" in sys.argv:
-        idx = sys.argv.index("--interval")
-        if idx + 1 < len(sys.argv):
-            try:
-                val = int(sys.argv[idx + 1])
-                if val >= 10:
-                    interval = val
-                else:
-                    warn(f"--interval {val} too small, using minimum 10s")
-                    interval = 10
-            except ValueError:
-                pass
+    import argparse
+    parser = argparse.ArgumentParser(description="AWP Daemon")
+    parser.add_argument("--interval", type=int, default=CHECK_INTERVAL,
+                        help=f"检查间隔秒数（最小 10，默认 {CHECK_INTERVAL}）")
+    args = parser.parse_args()
+
+    interval = max(args.interval, 10)
 
     # Phase 1: 获取子网 + 发送欢迎消息
     log("Phase 1: Welcome...")
     initial_subnets = fetch_active_subnets()
     send_welcome(initial_subnets)
     known_subnet_ids: set[int] = {
-        s.get("subnet_id") for s in initial_subnets if s.get("subnet_id") is not None
+        int(s["subnet_id"]) for s in initial_subnets if s.get("subnet_id") is not None
     }
 
     # Phase 2: 检查依赖（不自动安装，缺失时通知后继续）
@@ -564,15 +554,17 @@ def main() -> None:
         last_registered = check_and_notify(wallet_addr)
         # 钱包就绪但未注册 → 引导注册
         if not last_registered:
+            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
             notify("Wallet Ready — Next Step",
-                   f"Wallet is ready: {wallet_addr[:8]}...{wallet_addr[-4:]}\n"
+                   f"Wallet is ready: {short_addr}\n"
                    "You are not registered yet. Registration is FREE (gasless).\n"
                    'Tell your agent: "start working on AWP"',
                    "info")
         # 钱包就绪且已注册 → 引导选择子网开始工作
         else:
+            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
             notify("Registered — Ready to Work",
-                   f"Wallet {wallet_addr[:8]}...{wallet_addr[-4:]} is registered on AWP.\n"
+                   f"Wallet {short_addr} is registered on AWP.\n"
                    'Next steps:\n'
                    '  - Tell your agent: "list subnets" to browse available subnets\n'
                    '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
@@ -609,9 +601,14 @@ def main() -> None:
     log("Press Ctrl+C to stop.")
     print()
 
+    # 更新检查间隔：每 12 个周期（约 1 小时）检查一次，避免每周期都发网络请求
+    UPDATE_CHECK_EVERY = 12
+    cycle_count = 0
+
     try:
         while True:
             time.sleep(interval)
+            cycle_count += 1
 
             try:
                 # 如果之前钱包不可用，每次循环重新检查
@@ -625,8 +622,9 @@ def main() -> None:
                         last_registered = check_and_notify(wallet_addr)
                         # 钱包刚就绪 → 推送下一步引导
                         if not last_registered:
+                            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
                             notify("Wallet Ready — Next Step",
-                                   f"Wallet is now ready: {wallet_addr[:8]}...{wallet_addr[-4:]}\n"
+                                   f"Wallet is now ready: {short_addr}\n"
                                    "You are not registered yet. Registration is FREE (gasless).\n"
                                    'Tell your agent: "start working on AWP"',
                                    "info")
@@ -641,8 +639,9 @@ def main() -> None:
                     if is_registered != last_registered and last_registered is not None:
                         if is_registered:
                             log("Registration detected! You are now registered on AWP.")
+                            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
                             notify("Registered — Ready to Work",
-                                   f"Wallet {wallet_addr[:8]}...{wallet_addr[-4:]} is now registered on AWP!\n"
+                                   f"Wallet {short_addr} is now registered on AWP!\n"
                                    'Next steps:\n'
                                    '  - Tell your agent: "list subnets" to browse available subnets\n'
                                    '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
@@ -651,8 +650,9 @@ def main() -> None:
                             check_and_notify(wallet_addr)
                         else:
                             log("Registration lost — address is no longer registered.")
+                            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
                             notify("Deregistered",
-                                   f"Address {wallet_addr[:8]}...{wallet_addr[-4:]} is no longer registered on AWP.\n"
+                                   f"Address {short_addr} is no longer registered on AWP.\n"
                                    'To re-register (free), tell your agent: "start working on AWP"',
                                    "warning")
 
@@ -666,7 +666,8 @@ def main() -> None:
                         sid = s.get("subnet_id", "?")
                         name = s.get("name", "Unknown")
                         symbol = s.get("symbol", "")
-                        owner = s.get("owner", "")[:10] + "..."
+                        owner_raw = s.get("owner", "") or ""
+                        owner = (owner_raw[:10] + "...") if len(owner_raw) > 10 else owner_raw
                         min_stake = s.get("min_stake", 0)
                         skills = s.get("skills_uri", "")
                         msg = f"#{sid} \"{name}\" ({symbol}) by {owner}"
@@ -679,15 +680,16 @@ def main() -> None:
                         notify("New Subnet", msg)
                     # 更新已知子网集合
                     known_subnet_ids.update(
-                        s.get("subnet_id") for s in new_subnets if s.get("subnet_id") is not None
+                        int(s["subnet_id"]) for s in new_subnets if s.get("subnet_id") is not None
                     )
 
                 # 更新状态文件
                 write_status(wallet_ready, wallet_addr, last_registered,
                              len(current_subnets), datetime.now().isoformat())
 
-                # 更新检查
-                check_updates()
+                # 更新检查（每 UPDATE_CHECK_EVERY 个周期检查一次）
+                if cycle_count % UPDATE_CHECK_EVERY == 0:
+                    check_updates()
 
             except Exception as e:
                 warn(f"Monitor cycle error: {e}")

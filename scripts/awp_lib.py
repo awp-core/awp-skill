@@ -124,7 +124,7 @@ def wallet_cmd(args: list[str]) -> str:
 
 
 def get_wallet_address() -> str:
-    """获取钱包地址（不需要 token）"""
+    """获取钱包地址（不需要 token），验证返回的地址格式"""
     out = wallet_cmd(["receive"])
     try:
         addr = json.loads(out).get("eoaAddress")
@@ -133,6 +133,8 @@ def get_wallet_address() -> str:
         return ""  # unreachable
     if not addr or addr == "null":
         die("Wallet address is empty")
+    if not ADDR_RE.match(addr):
+        die(f"Wallet returned invalid address format: {addr}")
     return addr
 
 
@@ -207,14 +209,15 @@ def require_contract(registry: dict, key: str) -> str:
 # ── ABI 编码 ─────────────────────────────────────
 
 def pad_address(addr: str) -> str:
-    """将 0x 地址补齐为 64 字符（左补零）"""
+    """将 0x 地址补齐为 64 字符（左补零），验证 hex 格式"""
     raw = addr.lower()
     if raw.startswith("0x"):
         raw = raw[2:]
-    result = raw.zfill(64)
-    if len(result) != 64:
+    if not re.match(r"^[0-9a-f]+$", raw):
+        die(f"pad_address: invalid hex characters in address: {addr}")
+    if len(raw) > 64:
         die(f"pad_address: address too long after stripping 0x prefix: {addr}")
-    return result
+    return raw.zfill(64)
 
 
 def pad_uint256(val: int) -> str:
@@ -228,8 +231,9 @@ def to_wei(human_amount: str) -> int:
     """人类可读 AWP 数量转 wei（使用 Decimal 避免浮点精度丢失）"""
     try:
         result = int(Decimal(human_amount) * Decimal(10**18))
-    except Exception:
-        die(f"to_wei: invalid amount: {human_amount}")
+    except (ValueError, TypeError, ArithmeticError) as e:
+        die(f"to_wei: invalid amount: {human_amount} ({e})")
+        return 0  # unreachable
     if result <= 0:
         die(f"to_wei: converted amount is zero (input: {human_amount})")
     return result
@@ -237,14 +241,20 @@ def to_wei(human_amount: str) -> int:
 
 def days_to_seconds(days: str) -> int:
     """天数转秒数（使用 Decimal 避免浮点截断）"""
-    result = int(Decimal(days) * Decimal(86400))
+    try:
+        result = int(Decimal(days) * Decimal(86400))
+    except (ValueError, TypeError, ArithmeticError) as e:
+        die(f"days_to_seconds: invalid input: {days} ({e})")
+        return 0  # unreachable
     if result <= 0:
         die(f"days_to_seconds: result is zero (input: {days} days)")
     return result
 
 
 def encode_calldata(selector: str, *params: str) -> str:
-    """拼接 selector + 参数"""
+    """拼接 selector + 参数，验证 selector 格式（0x + 8 hex）"""
+    if not re.match(r"^0x[0-9a-fA-F]{8}$", selector):
+        die(f"encode_calldata: invalid selector format: {selector} (expected 0x + 8 hex chars)")
     return selector + "".join(params)
 
 

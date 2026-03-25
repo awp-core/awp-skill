@@ -40,7 +40,7 @@ if (!/^0x[0-9a-fA-F]{40}$/.test(args.to)) {
   console.error(JSON.stringify({ error: `Invalid --to address: ${args.to}` }))
   process.exit(1)
 }
-if (!/^0x[0-9a-fA-F]{8,}$/.test(args.data)) {
+if (!/^0x(?:[0-9a-fA-F]{2}){4,}$/.test(args.data)) {
   console.error(JSON.stringify({ error: `Invalid --data hex: ${args.data}` }))
   process.exit(1)
 }

@@ -1,18 +1,17 @@
 ---
 name: awp
 description: >
-  REQUIRED for ALL AWP (Agent Working Protocol) tasks — invoke this skill BEFORE
-  attempting any AWP operation. Provides 14 Python scripts with verified ABI
-  encodings, contract addresses, and function selectors that CANNOT be guessed
-  correctly. Without loading this skill first, you will hallucinate wrong contract
-  calls, API endpoints, and wallet commands. Covers: staking (deposit, withdraw,
-  allocate, deallocate, reallocate StakeNFT positions), subnet management (register,
-  activate, pause, update skillsURI/minStake), governance (create proposals, vote
-  with NFT positions), wallet operations (awp-wallet), gasless EIP-712 relay, and
-  WebSocket event monitoring. Trigger on ANY mention of: AWP, Agent Working Protocol,
-  awp-wallet, StakeNFT, SubnetNFT, AWP subnet, AWP token, AWP DAO, "start working",
-  "awp onboard", "awp status", AWP emission, AWP epoch, or gasless relay for AWP.
-  NOT for: Uniswap, Aave, Lido, Compound, generic ERC-20, or general Solidity/Hardhat.
+  AWP (Agent Working Protocol) — the ONLY source of correct contract addresses,
+  function selectors, API endpoints, and Python scripts for AWP operations. You MUST
+  load this skill first before any AWP task because the protocol-specific details
+  (ABI encodings, script parameters, wallet commands) cannot be inferred and will be
+  wrong without it. Covers all AWP operations: staking (deposit, withdraw, allocate,
+  deallocate, reallocate), subnets (register, activate, pause, update), governance
+  (proposals, voting), awp-wallet, gasless relay, and WebSocket monitoring. Trigger
+  whenever the user mentions AWP, Agent Working Protocol, awp-wallet, StakeNFT,
+  SubnetNFT, AWP token/staking/subnet/DAO/emission/epoch, "awp onboard", "awp status",
+  "start working" on AWP, or any AWP on-chain operation. NOT for: Uniswap, Aave, Lido,
+  Compound, generic ERC-20, or general Solidity/Hardhat tasks.
 metadata:
   openclaw:
     requires:
@@ -20,8 +19,6 @@ metadata:
         - AWP_API_URL          # REST API base URL (default: https://tapi.awp.sh/api)
       optional_env:
         - EVM_RPC_URL          # EVM chain RPC (default: https://mainnet.base.org)
-        - OPENCLAW_CHANNEL     # OpenClaw notification channel (only provided by OpenClaw runtime)
-        - OPENCLAW_TARGET      # OpenClaw notification target (only provided by OpenClaw runtime)
       skills:
         - AWP Wallet           # awp-wallet CLI — install from https://github.com/awp-core/awp-wallet
       binaries:
@@ -31,7 +28,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.24.4**
+**Skill version: 0.24.5**
 
 ## API URL
 
@@ -96,13 +93,17 @@ which awp-wallet >/dev/null 2>&1
   - Install from repo: `https://github.com/awp-core/awp-wallet`, then follow its SKILL.md, which will run `bash install.sh` and configure PATH.
   - Verify after install: `which awp-wallet`
 
-**Step 3 — Write OpenClaw notification config** (only if running inside OpenClaw):
-
-If the environment provides **both** `OPENCLAW_CHANNEL` and `OPENCLAW_TARGET` (declared in `requires.env`), save them for the daemon's notification system:
+**Step 3 — Configure notifications**: Write `~/.awp/openclaw.json` so the daemon can push messages via `openclaw message send`:
 ```bash
-python3 -c "import json,os,pathlib; pathlib.Path.home().joinpath('.awp').mkdir(exist_ok=True); pathlib.Path.home().joinpath('.awp/openclaw.json').write_text(json.dumps({'channel':os.environ['OPENCLAW_CHANNEL'],'target':os.environ['OPENCLAW_TARGET']}))"
+mkdir -p ~/.awp
+cat > ~/.awp/openclaw.json << EOF
+{
+  "channel": "<detected_channel>",
+  "target": "<detected_target>"
+}
+EOF
 ```
-Skip entirely if either variable is unset or empty. These variables are only provided by the OpenClaw runtime.
+Fill in the current session's channel and target. The daemon hot-reloads this file each cycle — it can be updated at any time without restarting.
 
 **Step 4 — Check notifications**: If `~/.awp/notifications.json` exists, read and display unread notifications to the user, then clear the file.
 
@@ -110,7 +111,7 @@ Skip entirely if either variable is unset or empty. These variables are only pro
 ```bash
 awp-wallet receive 2>/dev/null
 ```
-- If wallet unlocked, restore `wallet_addr`. Print: `[SESSION] wallet restored: <short_address>`
+- If wallet unlocked (exit code 0), parse `wallet_addr` from the JSON output: `wallet_addr = json["eoaAddress"]`. Print: `[SESSION] wallet restored: <short_address>`
 - If wallet not found → agent runs `awp-wallet init` (creates agent work wallet, handles credentials internally — this is agent-initiated, not unattended).
 - If wallet locked, do nothing — unlock happens on first write action.
 
@@ -118,16 +119,19 @@ awp-wallet receive 2>/dev/null
 
 Fetch the remote version:
 ```bash
-curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | grep -oP 'Skill version: \K[\d.]+'
+curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | sed -n 's/.*Skill version: \([0-9.]*\).*/\1/p'
 ```
-If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.24.3).` Skip this step if the network is unavailable.
+If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.24.5).` Skip this step if the network is unavailable.
 
 **Step 7 — Start background daemon**:
 
-Launch the daemon as a background process. It monitors registration status, checks for updates, and sends notifications — it keeps running even if dependencies are missing (notifies the user and retries each cycle). Daemon logs are written to `~/.awp/daemon.log`.
+Launch the daemon as a background process. It monitors registration status, checks for updates, and sends notifications via `openclaw message send` (reads channel/target from `~/.awp/openclaw.json` written in Step 3). Daemon logs are written to `~/.awp/daemon.log`.
 ```bash
-pgrep -xf "python3 .*awp-daemon\\.py.*" >/dev/null 2>&1 || nohup python3 scripts/awp-daemon.py --interval 300 >> ~/.awp/daemon.log 2>&1 &
+mkdir -p ~/.awp && pgrep -f "python3.*awp-daemon" >/dev/null 2>&1 || \
+  nohup python3 scripts/awp-daemon.py --interval 300 \
+    >> ~/.awp/daemon.log 2>&1 &
 ```
+> Note: Resolve the absolute path to `scripts/awp-daemon.py` relative to the skill directory.
 
 **Step 8 — Route to action** using the Intent Routing table below.
 
@@ -203,7 +207,7 @@ When the user says "start working", "get started", or similar, run this guided f
 
 **Step 1: Check wallet**
 - No wallet → agent runs `awp-wallet init` (handles credentials internally, no password needed)
-- Wallet locked → `awp-wallet unlock --duration 3600 --scope transfer`
+- Wallet locked → `TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")` — capture the session token for subsequent script calls
 - Print: `[1/4] wallet       <short_address> ✓`
 
 **Step 2: Register (FREE, gasless)**
@@ -399,7 +403,7 @@ Write actions require the **AWP Wallet** — an EVM wallet CLI that manages keys
 awp-wallet init
 
 # Unlock and get session token (scope: read | transfer | full)
-TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['sessionToken'])")
+TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 ```
 Scope controls what the session token can do: `read` (balance/status only), `transfer` (send/approve/sign), `full` (all including export). Use `transfer` for normal operations.
 
@@ -425,7 +429,7 @@ awp-wallet balance --token $TOKEN
 ## Pre-Flight Checklist (before ANY write action)
 
 ```
-1. Wallet unlocked?     → TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['sessionToken'])")
+1. Wallet unlocked?     → TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 2. Wallet address?      → WALLET_ADDR=$(awp-wallet receive | python3 -c "import sys,json; print(json.load(sys.stdin)['eoaAddress'])")
 3. Registration status? → curl -s https://tapi.awp.sh/api/address/$WALLET_ADDR/check
 4. Has gas?             → awp-wallet balance --token $TOKEN

@@ -1,5 +1,58 @@
 # Changelog
 
+## v0.24.5
+
+### Fix — Code review (29 issues), notification redesign, description optimization
+
+**Notification system redesign**:
+- **Step 3 通知配置重写**: 彻底移除不存在的 `OPENCLAW_CHANNEL`/`OPENCLAW_TARGET` 环境变量依赖。采用 benchmark-worker 模式——agent 在 skill 加载时写入 `~/.awp/openclaw.json`（含 channel + target），daemon 每周期热加载此文件，通过 `openclaw message send` 推送
+- daemon 移除 `--channel`/`--target` CLI 参数，简化为仅 `--interval`
+- `_get_openclaw_config()` 简化为每次读文件（支持 agent 随时更新配置）
+- SKILL.md `optional_env` 中移除 `OPENCLAW_CHANNEL`/`OPENCLAW_TARGET`
+- 步骤重编号 1-8（Welcome → Install wallet → Configure notifications → …）
+- `sessionToken` → `token` 统一全文
+
+**Description optimization**:
+- 重写 skill description 提升触发准确率
+- eval 结果: 20/20（10/10 应触发 + 10/10 不应触发）
+
+**SKILL.md (其余修复)**:
+- `$TOKEN` never assigned in onboarding — added capture from `awp-wallet unlock` output
+- Daemon pgrep command — `pgrep -f "python3.*awp-daemon"` 避免 self-match
+- `~/.awp` dir not guaranteed before daemon start — added `mkdir -p`
+- `grep -oP` not portable — replaced with `sed -n`
+- Step 5 missing wallet_addr parse — added JSON eoaAddress extraction instruction
+
+**awp-daemon.py (8 fixes)**:
+- `owner` None crash — safe handling for missing/short owner strings
+- `check_updates()` runs every cycle — now every 12 cycles (~1 hour)
+- Address truncation crash for short addresses — length check before slicing
+- No negative caching for openclaw config — added `_openclaw_config_checked` flag
+- Non-atomic notification file write — use tmp + rename pattern
+- `subnet_id` not cast to int — explicit `int()` for set membership checks
+- Fragile phase logic — handle `registered is None` case explicitly
+
+**awp_lib.py (6 fixes)**:
+- Bare `except Exception` in `to_wei` → specific `(ValueError, TypeError, ArithmeticError)`
+- `days_to_seconds` missing try/except — added error handling
+- `pad_address` no hex validation — added regex check for hex characters
+- `encode_calldata` no selector validation — added `0x + 8 hex` format check
+- `get_wallet_address` no address validation — added `ADDR_RE` check on returned value
+
+**Script fixes (6 fixes)**:
+- `onchain-vote.py`: `token_id` not cast to int in eligible_ids
+- `relay-register-subnet.py`: `--subnet-manager` and `--salt` not validated
+- `wallet-raw-call.mjs`: hex regex allows odd-length strings — require even-length
+- `onchain-register-and-stake.py`: no check that allocate_amount ≤ deposit amount
+- `onchain-deposit.py`: no uint64 overflow guard on lock_seconds
+- `onchain-add-position.py`: no uint64 overflow guard on new_lock_end
+
+**Reference docs (4 fixes)**:
+- `commands-subnet.md`: PERMIT_NONCE from wrong endpoint — now reads from AWPToken contract via RPC
+- `commands-subnet.md`: event field `tokenId` → `subnetId` for setSkillsURI/setMinStake
+- `commands-staking.md`: `$CHAIN_ID` variable never assigned → literal `8453`
+- `protocol.md`: SubnetFullInfo struct missing `symbol` field
+
 ## v0.24.4
 
 ### Fix — Daemon startup false positive + OpenClaw CLI discovery

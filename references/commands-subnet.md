@@ -146,8 +146,16 @@ For fully gasless registration via `POST /relay/register-subnet`, the user signs
 
 **1. ERC-2612 Permit signature** (authorizes AWPRegistry to spend AWP):
 ```bash
-# Get permit nonce (from API, no Foundry needed)
-PERMIT_NONCE=$(curl -s {API_BASE}/api/nonce/$WALLET_ADDR | python3 -c "import sys,json; print(json.load(sys.stdin).get('nonce',0))")
+# Get permit nonce from AWPToken contract via RPC (NOT from /api/nonce — that returns the registry nonce)
+# nonces(address) selector = 0x7ecebe00
+PERMIT_NONCE=$(python3 -c "
+import json, urllib.request
+addr = '$WALLET_ADDR'.lower().replace('0x','').zfill(64)
+payload = json.dumps({'jsonrpc':'2.0','method':'eth_call','params':[{'to':'$AWP_TOKEN','data':'0x7ecebe00'+addr},'latest'],'id':1}).encode()
+req = urllib.request.Request('$RPC_URL', data=payload, headers={'Content-Type':'application/json'})
+r = json.loads(urllib.request.urlopen(req).read())
+print(int(r['result'],16))
+")
 DEADLINE=$(date -d '+1 hour' +%s)
 
 awp-wallet sign-typed-data --token {T} --data '{
@@ -170,7 +178,7 @@ awp-wallet sign-typed-data --token {T} --data '{
   "domain": {
     "name": "AWP Token",
     "version": "1",
-    "chainId": '$CHAIN_ID',
+    "chainId": 8453,
     "verifyingContract": "'$AWP_TOKEN'"
   },
   "message": {
@@ -212,7 +220,7 @@ awp-wallet sign-typed-data --token {T} --data '{
   "domain": {
     "name": "AWPRegistry",
     "version": "1",
-    "chainId": '$CHAIN_ID',
+    "chainId": 8453,
     "verifyingContract": "'$AWP_REGISTRY'"
   },
   "message": {
@@ -312,10 +320,10 @@ python3 scripts/onchain-subnet-lifecycle.py --token {T} --subnet {subnetId} --ac
 ### Contract Call
 
 ```solidity
-function setSkillsURI(uint256 tokenId, string skillsURI)   // on SubnetNFT
+function setSkillsURI(uint256 subnetId, string skillsURI)   // on SubnetNFT
 // NFT owner only
-// Emits SkillsURIUpdated(tokenId, skillsURI)
-// tokenId = subnetId (SubnetNFT tokenId corresponds to subnet ID)
+// Emits SkillsURIUpdated(subnetId, skillsURI)
+// subnetId = SubnetNFT tokenId (they correspond 1:1)
 ```
 
 ### Complete Command Template
@@ -331,10 +339,10 @@ python3 scripts/onchain-subnet-update.py --token {T} --subnet {subnetId} --skill
 ### Contract Call
 
 ```solidity
-function setMinStake(uint256 tokenId, uint128 minStake)   // on SubnetNFT
+function setMinStake(uint256 subnetId, uint128 minStake)   // on SubnetNFT
 // NFT owner only
 // minStake in wei (0 = no minimum)
-// Emits MinStakeUpdated(tokenId, minStake)
+// Emits MinStakeUpdated(subnetId, minStake)
 ```
 
 ### Complete Command Template
