@@ -57,7 +57,7 @@ Throughout this document, all `curl` commands use the full URL directly. Do not 
 **Step 1 — Welcome screen** (first session only, skip if already shown):
 
 ```
-👀 **Hello World From Agent World!**
+👀 **Hello World from the World of Agents!**
 
 ╭──────────────╮
 │              │
