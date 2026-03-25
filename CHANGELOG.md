@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.24.1
+
+### Feature — Daemon: welcome push + new subnet notifications
+- **Welcome message**: daemon sends banner + active subnet list via `notify()` (OpenClaw push + file); falls back to stdout only when push is unavailable
+- **New subnet detection**: each monitoring cycle compares current subnets against known set; new subnets trigger a notification with name, symbol, owner, min stake, skills status
+- Monitoring loop now continues checking subnets and updates even when wallet is not yet available
+
 ## v0.24.0
 
 ### Feature — Auto-start daemon on skill load

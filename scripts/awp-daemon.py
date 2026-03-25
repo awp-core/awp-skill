@@ -3,11 +3,12 @@
 AWP Daemon — background monitoring service for AWP skill.
 
 Runs continuously:
-  1. Check that awp-wallet is installed (does NOT auto-install)
-  2. Check that wallet is initialized (does NOT auto-init)
-  3. Show registration status + available subnets
-  4. Check for version updates (informational only, no auto-update)
-  5. Monitor registration state changes
+  1. Send welcome message (banner + active subnets) via notify or stdout
+  2. Check that awp-wallet is installed (does NOT auto-install)
+  3. Check that wallet is initialized (does NOT auto-init)
+  4. Show registration status + available subnets
+  5. Check for version updates (informational only, no auto-update)
+  6. Monitor: registration state changes, new subnet detection
 
 Security notes:
   - Never auto-downloads or auto-executes remote scripts
@@ -84,8 +85,16 @@ def _get_openclaw_config() -> Tuple[str, str]:
 
     return "", ""
 
+def _can_push() -> bool:
+    """检查是否能通过 OpenClaw 推送消息"""
+    if not shutil.which("openclaw"):
+        return False
+    channel, target = _get_openclaw_config()
+    return bool(channel and target)
+
+
 def notify(title: str, message: str, level: str = "info") -> None:
-    """发送通知：写入文件 + OpenClaw 消息（如果可用）"""
+    """发送通知：写入文件 + OpenClaw 消息（如果可用）+ 终端输出"""
     timestamp = datetime.now().isoformat()
 
     # 1. 写入 ~/.awp/notifications.json
@@ -176,6 +185,86 @@ def parse_version(v: str) -> Tuple[int, ...]:
         return tuple(int(x) for x in v.split("."))
     except (ValueError, AttributeError):
         return (0,)
+
+# ── Subnet Tracking ─────────────────────────────
+
+def fetch_active_subnets() -> list[dict[str, Any]]:
+    """获取活跃子网列表"""
+    subnets = api_get("/subnets?status=Active&limit=50")
+    if subnets and isinstance(subnets, list):
+        return subnets
+    return []
+
+
+def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
+    """格式化子网列表为文本"""
+    if not subnets:
+        return "  No active subnets found"
+    lines = []
+    for s in subnets:
+        sid = s.get("subnet_id", "?")
+        name = s.get("name", "Unknown")
+        min_stake = s.get("min_stake", 0)
+        skills = "+" if s.get("skills_uri") else "-"
+        lines.append(f"  #{sid}  {name:<30s} min:{min_stake} AWP  skills:{skills}")
+    total = len(subnets)
+    free = sum(1 for s in subnets if s.get("min_stake", 0) == 0)
+    with_skills = sum(1 for s in subnets if s.get("skills_uri"))
+    lines.append(f"  {total} subnets. {free} free. {with_skills} with skills.")
+    return "\n".join(lines)
+
+
+# ── Welcome Message ─────────────────────────────
+
+WELCOME_BANNER = """\
+╭──────────────╮
+│              │
+│   >     <    │
+│      ‿       │
+│              │
+╰──────────────╯
+
+AWP — Agent Working Protocol
+
+one protocol. infinite jobs. nonstop earnings.
+
+"start working"    → register + join (free)
+"check my balance" → staking overview
+"list subnets"     → browse active subnets
+"awp help"         → all commands"""
+
+
+def send_welcome(subnets: list[dict[str, Any]]) -> None:
+    """发送欢迎消息（含 banner + 活跃子网）。优先通过 notify 推送，无法推送时打印到 stdout。"""
+    subnet_text = format_subnet_list(subnets)
+    full_message = f"{WELCOME_BANNER}\n\n── active subnets ──\n{subnet_text}"
+
+    if _can_push():
+        notify("Welcome", full_message)
+    else:
+        # 无法推送时打印到 stdout
+        print()
+        for line in full_message.split("\n"):
+            print(line)
+        print()
+        # 仍然写入通知文件（下次 agent 加载时可读取）
+        notify("Welcome", full_message)
+
+
+# ── New Subnet Detection ────────────────────────
+
+def detect_new_subnets(
+    current: list[dict[str, Any]],
+    known_ids: set[int],
+) -> list[dict[str, Any]]:
+    """对比当前子网和已知 ID，返回新增子网列表"""
+    new_subnets = []
+    for s in current:
+        sid = s.get("subnet_id")
+        if sid is not None and sid not in known_ids:
+            new_subnets.append(s)
+    return new_subnets
+
 
 # ── 1. Wallet Installation ───────────────────────
 
@@ -390,31 +479,28 @@ def main() -> None:
             except ValueError:
                 pass
 
-    print()
-    print("╭──────────────╮")
-    print("│              │")
-    print("│   >     <    │")
-    print("│      ‿       │")
-    print("│              │")
-    print("╰──────────────╯")
-    print()
-    print("AWP Daemon starting...")
-    print()
+    # Phase 1: 获取子网 + 发送欢迎消息
+    log("Phase 1: Welcome...")
+    initial_subnets = fetch_active_subnets()
+    send_welcome(initial_subnets)
+    known_subnet_ids: set[int] = {
+        s.get("subnet_id") for s in initial_subnets if s.get("subnet_id") is not None
+    }
 
-    # Phase 1: 检查依赖（不自动安装，缺失时通知后继续）
-    log("Phase 1: Checking awp-wallet dependency...")
+    # Phase 2: 检查依赖（不自动安装，缺失时通知后继续）
+    log("Phase 2: Checking awp-wallet dependency...")
     wallet_ready = ensure_wallet_installed()
 
-    # Phase 2: 检查钱包（不自动初始化，缺失时通知后继续）
+    # Phase 3: 检查钱包（不自动初始化，缺失时通知后继续）
     wallet_addr: Optional[str] = None
     if wallet_ready:
-        log("Phase 2: Checking wallet...")
+        log("Phase 3: Checking wallet...")
         wallet_addr = ensure_wallet_initialized()
 
-    # Phase 3: 显示状态（仅在钱包可用时）
+    # Phase 4: 显示状态（仅在钱包可用时）
     last_registered: Optional[bool] = None
     if wallet_addr:
-        log("Phase 3: Checking status...")
+        log("Phase 4: Checking status...")
         last_registered = check_and_notify(wallet_addr)
     else:
         if not wallet_ready:
@@ -422,11 +508,11 @@ def main() -> None:
         else:
             notify("Wallet Not Initialized", "Run 'awp-wallet init' to create an agent work wallet.", "warning")
 
-    # Phase 4: 检查更新（仅通知，不自动更新）
-    log("Phase 4: Checking for updates (informational only)...")
+    # Phase 5: 检查更新（仅通知，不自动更新）
+    log("Phase 5: Checking for updates (informational only)...")
     check_updates()
 
-    # Phase 5: 持续监听
+    # Phase 6: 持续监听
     log("")
     log(f"Daemon running. Checking every {interval}s.")
     log("Press Ctrl+C to stop.")
@@ -446,24 +532,50 @@ def main() -> None:
                     if wallet_addr:
                         log("Wallet now available!")
                         last_registered = check_and_notify(wallet_addr)
-                    continue
+                    # 即使钱包不可用，也继续检查子网和更新
+                    pass
 
-                # 注册状态检查
-                is_registered = False
-                check = api_get(f"/address/{wallet_addr}/check")
-                if check:
-                    is_registered = check.get("isRegistered", False)
+                # 注册状态检查（仅在钱包可用时）
+                if wallet_addr:
+                    is_registered = False
+                    check = api_get(f"/address/{wallet_addr}/check")
+                    if check:
+                        is_registered = check.get("isRegistered", False)
 
-                if is_registered != last_registered and last_registered is not None:
-                    if is_registered:
-                        log("Registration detected! You are now registered on AWP.")
-                        notify("Registered", f"Address {wallet_addr} is now registered on AWP")
-                        check_and_notify(wallet_addr)
-                    else:
-                        log("Registration lost — address is no longer registered.")
-                        notify("Deregistered", f"Address {wallet_addr} is no longer registered on AWP")
+                    if is_registered != last_registered and last_registered is not None:
+                        if is_registered:
+                            log("Registration detected! You are now registered on AWP.")
+                            notify("Registered", f"Address {wallet_addr} is now registered on AWP")
+                            check_and_notify(wallet_addr)
+                        else:
+                            log("Registration lost — address is no longer registered.")
+                            notify("Deregistered", f"Address {wallet_addr} is no longer registered on AWP")
 
-                last_registered = is_registered
+                    last_registered = is_registered
+
+                # 新子网检测
+                current_subnets = fetch_active_subnets()
+                new_subnets = detect_new_subnets(current_subnets, known_subnet_ids)
+                if new_subnets:
+                    for s in new_subnets:
+                        sid = s.get("subnet_id", "?")
+                        name = s.get("name", "Unknown")
+                        symbol = s.get("symbol", "")
+                        owner = s.get("owner", "")[:10] + "..."
+                        min_stake = s.get("min_stake", 0)
+                        skills = s.get("skills_uri", "")
+                        msg = f"#{sid} \"{name}\" ({symbol}) by {owner}"
+                        if min_stake == 0:
+                            msg += " | FREE (no staking required)"
+                        else:
+                            msg += f" | min stake: {min_stake} AWP"
+                        if skills:
+                            msg += " | has skills"
+                        notify("New Subnet", msg)
+                    # 更新已知子网集合
+                    known_subnet_ids.update(
+                        s.get("subnet_id") for s in new_subnets if s.get("subnet_id") is not None
+                    )
 
                 # 更新检查
                 check_updates()
