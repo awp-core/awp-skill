@@ -16,7 +16,6 @@
 import { parseArgs } from "node:util"
 import { resolve, dirname } from "node:path"
 import { realpathSync, existsSync } from "node:fs"
-import { execFileSync } from "node:child_process"
 
 // ── 解析命令行参数 ──────────────────────────────────
 const { values: args } = parseArgs({
@@ -51,13 +50,19 @@ function findAwpWalletDir() {
   if (process.env.AWP_WALLET_DIR && existsSync(process.env.AWP_WALLET_DIR)) {
     return process.env.AWP_WALLET_DIR
   }
-  // 2. 通过 which 找到 awp-wallet 可执行文件的真实路径
-  try {
-    const bin = execFileSync("which", ["awp-wallet"], { encoding: "utf8" }).trim()
-    const real = realpathSync(bin)
-    // real = .../awp-wallet/scripts/wallet-cli.js → 上两级 = awp-wallet/
-    return dirname(dirname(real))
-  } catch {
+  // 2. 在 PATH 中查找 awp-wallet 可执行文件（纯 Node.js，无需 child_process）
+  const pathDirs = (process.env.PATH || "").split(":")
+  for (const dir of pathDirs) {
+    const candidate = resolve(dir, "awp-wallet")
+    if (existsSync(candidate)) {
+      try {
+        const real = realpathSync(candidate)
+        // real = .../awp-wallet/scripts/wallet-cli.js → 上两级 = awp-wallet/
+        return dirname(dirname(real))
+      } catch { /* 跳过无法解析的符号链接 */ }
+    }
+  }
+  {
     // 3. 默认路径
     const defaultDir = resolve(process.env.HOME, "awp-wallet")
     if (existsSync(resolve(defaultDir, "scripts/lib/keystore.js"))) return defaultDir
