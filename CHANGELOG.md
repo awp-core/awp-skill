@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.25.1
+
+### Security — Contract allowlist, transaction confirmation, daemon lifecycle
+
+- `wallet-raw-call.mjs`: added contract allowlist — fetches `/registry` on each call and rejects any target address not in the registry (prevents arbitrary contract execution)
+- All on-chain transactions now require explicit user confirmation before execution (action summary + "Proceed?" prompt)
+- Third-party subnet skill installs (non `awp-core` sources) now require user confirmation
+- `awp-daemon.py`: writes PID to `~/.awp/daemon.pid`, cleans up on exit — supports explicit stop via `kill`
+- Added "Security Controls" section to SKILL.md documenting all safeguards
+- Only exception to confirmation: gasless registration via relay (free, reversible)
+
 ## v0.25.0
 
 ### Improve — Unified English text, richer subnet display

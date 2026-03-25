@@ -28,7 +28,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.25.0**
+**Skill version: 0.25.1**
 
 ## API URL
 
@@ -341,7 +341,16 @@ If the user later wants to work on a subnet that requires staking, guide them to
 
 **This is an agent work wallet — do NOT store personal assets in it.** The wallet created by this skill is for executing AWP protocol tasks only. Keep only the minimum ETH needed for gas. Do not transfer personal funds or valuable tokens into this wallet.
 
-When the user requests an on-chain operation, the agent executes it directly — no additional confirmation prompt is needed. The user's instruction IS the confirmation. Show a brief summary of what was executed after the transaction:
+Before executing any on-chain transaction, always show the user a summary of what will happen and ask for explicit confirmation:
+
+```
+[TX] deposit 1,000 AWP → new position (lock: 90 days)
+     contract: AWPRegistry (0x1234...abcd)
+     estimated gas: ~0.001 ETH
+     Proceed? (yes/no)
+```
+
+After user confirms and transaction completes, show the result:
 
 ```
 [TX] deposited 1,000 AWP → position #3
@@ -350,6 +359,8 @@ When the user requests an on-chain operation, the agent executes it directly —
 [TX] view: https://basescan.org/tx/0xabc...
 [TX] confirmed ✓
 ```
+
+**Never execute a transaction without user confirmation.** Even though this is an agent work wallet, every on-chain action must be explicitly approved. The only exception is gasless registration via relay (Step 1 of onboarding), which costs nothing and is reversible.
 
 On first wallet setup, inform the user:
 ```
@@ -369,8 +380,8 @@ On first wallet setup, inform the user:
 7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
 8. Do not use stale V1 names: no "unbind()", no "removeAgent()". Binding changes use `bind(newTarget)`.
 9. **Wallet handles credentials internally.** Just run `awp-wallet init` + `awp-wallet unlock`. No password generation, no password files, no user prompts.
-10. **This is an agent work wallet.** Execute transactions directly when the user requests them — no extra confirmation needed. Remind the user on first setup: do NOT store personal assets in this wallet.
-11. **Subnet skill install (Q6):** Always install directly. For third-party sources (not `github.com/awp-core/*`), add a `⚠ third-party source` notice but do not block.
+10. **This is an agent work wallet.** Always confirm with the user before executing any on-chain transaction — show the action, target contract, and estimated cost, then wait for explicit approval. Remind the user on first setup: do NOT store personal assets in this wallet.
+11. **Subnet skill install (Q6):** Install `awp-core` skills directly. For third-party sources (not `github.com/awp-core/*`), show a warning and require user confirmation before installing.
 12. **Onboarding requires user choice.** Always present Option A (Solo) and Option B (Delegated) and WAIT for the user to choose. Never auto-select an option.
 13. **Bind already sets the reward path.** After `bind(target)`, rewards resolve to the target via the bind chain. Do NOT call `setRecipient()` after a successful bind — it's redundant.
 
@@ -380,9 +391,9 @@ Every write operation has a script. Always use the script — never construct ca
 
 ```
 scripts/
-├── awp-daemon.py                     Background daemon: auto-started on skill load, monitors status/updates, notifies user (no auto-install/init)
+├── awp-daemon.py                     Background daemon: monitors status/updates, writes PID to ~/.awp/daemon.pid, stops on Ctrl+C or kill
 ├── awp_lib.py                        Shared library (API, wallet, ABI encoding, validation)
-├── wallet-raw-call.mjs               Node.js bridge: sends raw contract calls via awp-wallet signing
+├── wallet-raw-call.mjs               Node.js bridge: contract calls restricted to /registry allowlist only
 ├── relay-start.py                    Gasless register or bind (no ETH needed)
 ├── relay-register-subnet.py          Gasless subnet registration (no ETH needed)
 ├── onchain-register.py               On-chain register
@@ -398,6 +409,16 @@ scripts/
 ├── onchain-subnet-lifecycle.py       Activate/pause/resume subnet
 └── onchain-subnet-update.py          Set skillsURI or minStake
 ```
+
+## Security Controls
+
+**Contract allowlist**: `wallet-raw-call.mjs` fetches the AWP contract registry (`/registry`) on every invocation and rejects any `--to` address not present in the registry. This prevents calls to arbitrary contracts — only known AWP protocol contracts (AWPRegistry, StakeNFT, SubnetNFT, AWPDAO, AWPToken, etc.) are permitted.
+
+**Transaction confirmation**: All on-chain operations require explicit user confirmation before execution (see "Agent Wallet & Transaction Safety" above).
+
+**Daemon lifecycle**: `awp-daemon.py` writes its PID to `~/.awp/daemon.pid` on start and removes it on exit. Stop it via `Ctrl+C` or `kill $(cat ~/.awp/daemon.pid)`. The daemon never auto-installs software, never auto-initializes wallets, and never executes transactions — it only monitors and notifies.
+
+**Third-party skill installs**: Subnet skills from non-`awp-core` sources require explicit user confirmation before installation.
 
 ## Wallet Setup
 
@@ -523,13 +544,19 @@ Sort: subnets with skills first, then min_stake ascending.
 curl -s https://tapi.awp.sh/api/subnets/{id}/skills
 ```
 
-Install directly. If the source is NOT from `github.com/awp-core/*`, show a one-line notice:
+For `awp-core` sources (`github.com/awp-core/*`), install directly:
 ```
-[SETUP] Installing subnet #1 skill ...                          ← awp-core source, no notice
-[SETUP] Installing subnet #5 skill (⚠ third-party source) ...  ← non-awp-core, just a notice
+[SETUP] Installing subnet #1 skill ...
 [SETUP] Installed ✓
 ```
-Do not block or ask for confirmation. Install to `skills/awp-subnet-{id}/`.
+
+For third-party sources, show a warning and ask for confirmation before installing:
+```
+[SETUP] Subnet #5 skill source: https://github.com/other/repo
+        ⚠ Third-party source — not maintained by awp-core.
+        Install? (yes/no)
+```
+Install to `skills/awp-subnet-{id}/`.
 
 ### Q7 · Epoch History [DRAFT]
 ```bash

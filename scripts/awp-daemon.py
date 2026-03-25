@@ -49,6 +49,7 @@ SKILL_MD = SCRIPT_DIR.parent / "SKILL.md"
 NOTIFY_DIR = Path.home() / ".awp"
 NOTIFY_FILE = NOTIFY_DIR / "notifications.json"
 STATUS_FILE = NOTIFY_DIR / "status.json"
+PID_FILE = NOTIFY_DIR / "daemon.pid"
 
 # ── Logging & Notifications ──────────────────────
 
@@ -588,6 +589,10 @@ def main() -> None:
 
     interval = max(args.interval, 10)
 
+    # Write PID file so the daemon can be stopped externally (kill $(cat ~/.awp/daemon.pid))
+    NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
+    PID_FILE.write_text(str(os.getpid()))
+
     # Phase 1: Fetch subnets + send welcome message
     log("Phase 1: Welcome...")
     initial_subnets = fetch_active_subnets()
@@ -756,6 +761,12 @@ def main() -> None:
     except KeyboardInterrupt:
         print()
         log("Daemon stopped.")
+    finally:
+        # Clean up PID file on exit
+        try:
+            PID_FILE.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 if __name__ == "__main__":
     main()

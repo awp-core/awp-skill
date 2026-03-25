@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 /**
- * wallet-raw-call.mjs — Send raw contract calls using awp-wallet internal signing
+ * wallet-raw-call.mjs — Send contract calls to AWP protocol contracts only
+ *
+ * Security: This script restricts --to addresses to known AWP protocol contracts
+ * fetched from the /registry endpoint. Calls to arbitrary addresses are rejected.
  *
  * The awp-wallet CLI send command only supports token transfers (--to, --amount, --asset)
- * and does not support raw calldata. This script directly uses awp-wallet's internal
- * modules (keystore, session, viem) to sign and send transactions with arbitrary calldata.
+ * and does not support raw calldata. This script uses awp-wallet's internal modules
+ * (keystore, session, viem) to sign and send transactions with calldata.
  *
  * Usage:
  *   node wallet-raw-call.mjs --token <session> --to <contract> --data <hex> [--value <wei>]
@@ -41,6 +44,40 @@ if (!/^0x[0-9a-fA-F]{40}$/.test(args.to)) {
 }
 if (!/^0x(?:[0-9a-fA-F]{2}){4,}$/.test(args.data)) {
   console.error(JSON.stringify({ error: `Invalid --data hex: ${args.data}` }))
+  process.exit(1)
+}
+
+// ── Contract allowlist — only AWP protocol contracts are permitted ────────
+const AWP_API_URL = process.env.AWP_API_URL || "https://tapi.awp.sh/api"
+
+async function fetchAllowedContracts() {
+  const resp = await fetch(`${AWP_API_URL}/registry`)
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch /registry: HTTP ${resp.status}`)
+  }
+  const registry = await resp.json()
+  // Collect all address values from the registry (awpRegistry, stakeNFT, subnetNFT, dao, awpToken, etc.)
+  const allowed = new Set()
+  for (const [, value] of Object.entries(registry)) {
+    if (typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value)) {
+      allowed.add(value.toLowerCase())
+    }
+  }
+  return allowed
+}
+
+let allowedContracts
+try {
+  allowedContracts = await fetchAllowedContracts()
+} catch (e) {
+  console.error(JSON.stringify({ error: `Cannot verify contract allowlist: ${e.message}` }))
+  process.exit(1)
+}
+
+if (!allowedContracts.has(args.to.toLowerCase())) {
+  console.error(JSON.stringify({
+    error: `Rejected: ${args.to} is not a known AWP protocol contract. Only calls to contracts listed in /registry are allowed.`
+  }))
   process.exit(1)
 }
 

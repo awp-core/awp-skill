@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.25.1 | Security: contract allowlist in wallet-raw-call.mjs, transaction confirmation, daemon PID lifecycle |
 | 0.25.0 | Unified English text, richer subnet display, cleaner notifications |
 | 0.24.9 | Receipt-style welcome push (box-drawing borders), remove duplicate title from code block |
 | 0.24.8 | Remove child_process from wallet-raw-call.mjs — pure Node.js PATH search, eliminates security scanner warning |
