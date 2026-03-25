@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.24.2
+
+### Improve — Daemon guided notifications with actionable next steps
+- **Wallet not ready**: notification tells user to say "install awp-wallet from ..." to the agent
+- **Wallet not initialized**: notification tells user to say "initialize my wallet" to the agent
+- **Wallet just became ready** (detected in monitor loop): pushes "Wallet Ready" with next step — tell agent "start working on AWP"
+- **Registration detected**: pushes "Registered — Ready to Work" with next steps — list subnets, install skill, or start working
+- **Deregistered**: notification includes re-registration guidance
+- All notifications include short wallet address for context
+
 ## v0.24.1
 
 ### Feature — Daemon: welcome push + new subnet notifications

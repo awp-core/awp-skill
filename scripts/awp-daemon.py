@@ -497,16 +497,43 @@ def main() -> None:
         log("Phase 3: Checking wallet...")
         wallet_addr = ensure_wallet_initialized()
 
-    # Phase 4: 显示状态（仅在钱包可用时）
+    # Phase 4: 显示状态 + 推送引导通知
     last_registered: Optional[bool] = None
     if wallet_addr:
         log("Phase 4: Checking status...")
         last_registered = check_and_notify(wallet_addr)
+        # 钱包就绪但未注册 → 引导注册
+        if not last_registered:
+            notify("Wallet Ready — Next Step",
+                   f"Wallet is ready: {wallet_addr[:8]}...{wallet_addr[-4:]}\n"
+                   "You are not registered yet. Registration is FREE (gasless).\n"
+                   'Tell your agent: "start working on AWP"',
+                   "info")
+        # 钱包就绪且已注册 → 引导选择子网开始工作
+        else:
+            notify("Registered — Ready to Work",
+                   f"Wallet {wallet_addr[:8]}...{wallet_addr[-4:]} is registered on AWP.\n"
+                   'Next steps:\n'
+                   '  - Tell your agent: "list subnets" to browse available subnets\n'
+                   '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
+                   '  - Or just say: "start working" to auto-pick a free subnet',
+                   "info")
     else:
         if not wallet_ready:
-            notify("Dependency Missing", "awp-wallet is not installed. Install it to enable AWP operations.", "warning")
+            notify("Wallet Not Ready",
+                   "awp-wallet is not installed. Cannot proceed without it.\n"
+                   "Tell your agent:\n"
+                   '  "install awp-wallet from https://github.com/awp-core/awp-wallet"\n'
+                   "The agent will clone the repo and run install.sh for you.",
+                   "warning")
         else:
-            notify("Wallet Not Initialized", "Run 'awp-wallet init' to create an agent work wallet.", "warning")
+            notify("Wallet Not Initialized",
+                   "awp-wallet is installed but no wallet exists yet.\n"
+                   "Tell your agent:\n"
+                   '  "initialize my wallet"\n'
+                   "The agent will run awp-wallet init to create an agent work wallet.\n"
+                   "Note: Do NOT store personal assets in this wallet.",
+                   "warning")
 
     # Phase 5: 检查更新（仅通知，不自动更新）
     log("Phase 5: Checking for updates (informational only)...")
@@ -532,8 +559,13 @@ def main() -> None:
                     if wallet_addr:
                         log("Wallet now available!")
                         last_registered = check_and_notify(wallet_addr)
-                    # 即使钱包不可用，也继续检查子网和更新
-                    pass
+                        # 钱包刚就绪 → 推送下一步引导
+                        if not last_registered:
+                            notify("Wallet Ready — Next Step",
+                                   f"Wallet is now ready: {wallet_addr[:8]}...{wallet_addr[-4:]}\n"
+                                   "You are not registered yet. Registration is FREE (gasless).\n"
+                                   'Tell your agent: "start working on AWP"',
+                                   "info")
 
                 # 注册状态检查（仅在钱包可用时）
                 if wallet_addr:
@@ -545,11 +577,20 @@ def main() -> None:
                     if is_registered != last_registered and last_registered is not None:
                         if is_registered:
                             log("Registration detected! You are now registered on AWP.")
-                            notify("Registered", f"Address {wallet_addr} is now registered on AWP")
+                            notify("Registered — Ready to Work",
+                                   f"Wallet {wallet_addr[:8]}...{wallet_addr[-4:]} is now registered on AWP!\n"
+                                   'Next steps:\n'
+                                   '  - Tell your agent: "list subnets" to browse available subnets\n'
+                                   '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
+                                   '  - Or just say: "start working" to auto-pick a free subnet',
+                                   "info")
                             check_and_notify(wallet_addr)
                         else:
                             log("Registration lost — address is no longer registered.")
-                            notify("Deregistered", f"Address {wallet_addr} is no longer registered on AWP")
+                            notify("Deregistered",
+                                   f"Address {wallet_addr[:8]}...{wallet_addr[-4:]} is no longer registered on AWP.\n"
+                                   'To re-register (free), tell your agent: "start working on AWP"',
+                                   "warning")
 
                     last_registered = is_registered
 
