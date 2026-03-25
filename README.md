@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.24.4 | Fix daemon startup false positive (pgrep self-match), OpenClaw CLI discovery for non-PATH installs |
 | 0.24.3 | Notification infra: daemon.log, status.json, `awp notifications` + `awp log` commands |
 | 0.24.2 | Daemon: guided notifications with actionable next steps (wallet install/init/register/work) |
 | 0.24.1 | Daemon: welcome push (banner + subnets via notify), new subnet detection notifications |

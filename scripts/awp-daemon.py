@@ -86,9 +86,28 @@ def _get_openclaw_config() -> Tuple[str, str]:
 
     return "", ""
 
+def _find_openclaw() -> Optional[str]:
+    """查找 openclaw 可执行文件，补充常见安装路径。"""
+    found = shutil.which("openclaw")
+    if found:
+        return found
+    # 补充 npm 全局安装路径（不在默认 PATH 中的常见位置）
+    extra_dirs = [
+        Path.home() / ".npm-global" / "bin",
+        Path.home() / ".local" / "bin",
+        Path.home() / ".yarn" / "bin",
+        Path("/usr/local/bin"),
+    ]
+    for d in extra_dirs:
+        candidate = d / "openclaw"
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return None
+
+
 def _can_push() -> bool:
     """检查是否能通过 OpenClaw 推送消息"""
-    if not shutil.which("openclaw"):
+    if not _find_openclaw():
         return False
     channel, target = _get_openclaw_config()
     return bool(channel and target)
@@ -111,7 +130,7 @@ def notify(title: str, message: str, level: str = "info") -> None:
         notifications.append({
             "timestamp": timestamp,
             "level": level,
-            "title": title,
+            "title": f"🪼 {title}",
             "message": message,
         })
 
@@ -122,7 +141,7 @@ def notify(title: str, message: str, level: str = "info") -> None:
         warn(f"Failed to write notification: {e}")
 
     # 2. OpenClaw 消息发送（如果 openclaw CLI 可用）
-    openclaw_bin = shutil.which("openclaw")
+    openclaw_bin = _find_openclaw()
     if openclaw_bin:
         channel, target = _get_openclaw_config()
         if channel and target:
@@ -131,7 +150,7 @@ def notify(title: str, message: str, level: str = "info") -> None:
                     [openclaw_bin, "message", "send",
                      "--channel", channel,
                      "--target", target,
-                     "--message", f"[AWP] {title}: {message}"],
+                     "--message", f"**🪼 {title}**\n```\n{message}\n```"],
                     capture_output=True, timeout=10
                 )
             except Exception:

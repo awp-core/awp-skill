@@ -1,19 +1,18 @@
 ---
 name: awp
 description: >
-  MUST USE for ANY mention of AWP, Agent Working Protocol, awp-wallet, StakeNFT,
-  SubnetNFT, AWP subnets, or AWP tokens. This skill contains the ONLY way to
-  interact with the AWP protocol — bundled Python scripts, contract ABIs, API
-  endpoints, and wallet commands that you cannot access otherwise. Without this
-  skill you will hallucinate incorrect commands and contract calls. Use this
-  skill when the user wants to: check AWP staking balance, deposit or withdraw
-  AWP tokens, allocate or deallocate stake to subnets, register on AWP, bind to
-  a tree, register a subnet, vote on AWP governance proposals, query AWP emission
-  schedules, watch AWP on-chain events, manage awp-wallet, or do anything related
-  to the Agent Working Protocol. Also trigger when user mentions: "start working",
-  "awp onboard", "awp status", subnet skills URI, StakeNFT positions, AWP DAO,
-  gasless relay for AWP, or AWP emission/epoch. NOT for Uniswap, Aave, Lido,
-  Compound, generic ERC-20, or general Solidity/Hardhat development.
+  REQUIRED for ALL AWP (Agent Working Protocol) tasks — invoke this skill BEFORE
+  attempting any AWP operation. Provides 14 Python scripts with verified ABI
+  encodings, contract addresses, and function selectors that CANNOT be guessed
+  correctly. Without loading this skill first, you will hallucinate wrong contract
+  calls, API endpoints, and wallet commands. Covers: staking (deposit, withdraw,
+  allocate, deallocate, reallocate StakeNFT positions), subnet management (register,
+  activate, pause, update skillsURI/minStake), governance (create proposals, vote
+  with NFT positions), wallet operations (awp-wallet), gasless EIP-712 relay, and
+  WebSocket event monitoring. Trigger on ANY mention of: AWP, Agent Working Protocol,
+  awp-wallet, StakeNFT, SubnetNFT, AWP subnet, AWP token, AWP DAO, "start working",
+  "awp onboard", "awp status", AWP emission, AWP epoch, or gasless relay for AWP.
+  NOT for: Uniswap, Aave, Lido, Compound, generic ERC-20, or general Solidity/Hardhat.
 metadata:
   openclaw:
     requires:
@@ -32,7 +31,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.24.3**
+**Skill version: 0.24.4**
 
 ## API URL
 
@@ -127,7 +126,7 @@ If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available 
 
 Launch the daemon as a background process. It monitors registration status, checks for updates, and sends notifications — it keeps running even if dependencies are missing (notifies the user and retries each cycle). Daemon logs are written to `~/.awp/daemon.log`.
 ```bash
-pgrep -f "awp-daemon.py" >/dev/null 2>&1 || nohup python3 scripts/awp-daemon.py --interval 300 >> ~/.awp/daemon.log 2>&1 &
+pgrep -xf "python3 .*awp-daemon\\.py.*" >/dev/null 2>&1 || nohup python3 scripts/awp-daemon.py --interval 300 >> ~/.awp/daemon.log 2>&1 &
 ```
 
 **Step 8 — Route to action** using the Intent Routing table below.

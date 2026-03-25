@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.24.4
+
+### Fix — Daemon startup false positive + OpenClaw CLI discovery
+- **pgrep 误判**: `pgrep -f "awp-daemon.py"` 会匹配自身（启动命令的 subshell），导致 daemon 永远不会被启动。改为 `pgrep -xf "python3 .*awp-daemon\\.py.*"` 精确匹配 python3 进程
+- **OpenClaw CLI 查找**: daemon 之前只用 `shutil.which()` 搜索 PATH，遗漏了 `~/.npm-global/bin/openclaw` 等常见 npm 全局安装路径。新增 `_find_openclaw()` 函数，自动补充 `~/.npm-global/bin`、`~/.local/bin`、`~/.yarn/bin` 等目录
+- **描述优化验证**: 通过外部项目测试确认 skill description 触发率正常（5/5 AWP 查询正确触发，1/1 非 AWP 查询正确不触发）
+
 ## v0.24.3
 
 ### Improve — Notification infrastructure
