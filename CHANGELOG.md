@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.24.0
+
+### Feature — Auto-start daemon on skill load
+- **SKILL.md**: Add Step 7 — launch `awp-daemon.py` as background process on skill load (with `pgrep` guard to prevent duplicates)
+- **awp-daemon.py**: No longer exits on missing dependencies — notifies user and retries each cycle
+  - Missing awp-wallet → sends notification, keeps running, re-checks each interval
+  - Missing wallet init → sends notification, keeps running, re-checks each interval
+  - When dependency becomes available mid-run, daemon auto-detects and starts monitoring
+- Fix ASCII face in daemon banner (same fix as SKILL.md)
+
 ## v0.23.2
 
 ### Fix — Install review findings

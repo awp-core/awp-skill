@@ -393,36 +393,40 @@ def main() -> None:
     print()
     print("╭──────────────╮")
     print("│              │")
-    print("│  >       <   │")
-    print("│      ~       │")
+    print("│   >     <    │")
+    print("│      ‿       │")
     print("│              │")
     print("╰──────────────╯")
     print()
     print("AWP Daemon starting...")
     print()
 
-    # Phase 1: 检查依赖（不自动安装）
+    # Phase 1: 检查依赖（不自动安装，缺失时通知后继续）
     log("Phase 1: Checking awp-wallet dependency...")
-    if not ensure_wallet_installed():
-        err("Cannot continue without awp-wallet. Install it and restart.")
-        sys.exit(1)
+    wallet_ready = ensure_wallet_installed()
 
-    # Phase 2: 检查钱包（不自动初始化）
-    log("Phase 2: Checking wallet...")
-    wallet_addr = ensure_wallet_initialized()
-    if not wallet_addr:
-        err("Cannot continue without wallet. Run 'awp-wallet init' and restart.")
-        sys.exit(1)
+    # Phase 2: 检查钱包（不自动初始化，缺失时通知后继续）
+    wallet_addr: Optional[str] = None
+    if wallet_ready:
+        log("Phase 2: Checking wallet...")
+        wallet_addr = ensure_wallet_initialized()
 
-    # Phase 3: 显示状态
-    log("Phase 3: Checking status...")
-    last_registered = check_and_notify(wallet_addr)
+    # Phase 3: 显示状态（仅在钱包可用时）
+    last_registered: Optional[bool] = None
+    if wallet_addr:
+        log("Phase 3: Checking status...")
+        last_registered = check_and_notify(wallet_addr)
+    else:
+        if not wallet_ready:
+            notify("Dependency Missing", "awp-wallet is not installed. Install it to enable AWP operations.", "warning")
+        else:
+            notify("Wallet Not Initialized", "Run 'awp-wallet init' to create an agent work wallet.", "warning")
 
     # Phase 4: 检查更新（仅通知，不自动更新）
     log("Phase 4: Checking for updates (informational only)...")
     check_updates()
 
-    # Phase 5
+    # Phase 5: 持续监听
     log("")
     log(f"Daemon running. Checking every {interval}s.")
     log("Press Ctrl+C to stop.")
@@ -433,6 +437,17 @@ def main() -> None:
             time.sleep(interval)
 
             try:
+                # 如果之前钱包不可用，每次循环重新检查
+                if not wallet_addr:
+                    if not wallet_ready:
+                        wallet_ready = ensure_wallet_installed()
+                    if wallet_ready:
+                        wallet_addr = ensure_wallet_initialized()
+                    if wallet_addr:
+                        log("Wallet now available!")
+                        last_registered = check_and_notify(wallet_addr)
+                    continue
+
                 # 注册状态检查
                 is_registered = False
                 check = api_get(f"/address/{wallet_addr}/check")

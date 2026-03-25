@@ -32,7 +32,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.23.2**
+**Skill version: 0.24.0**
 
 ## API URL
 
@@ -65,8 +65,8 @@ Throughout this document, all `curl` commands use the full URL directly. Do not 
 
 ╭──────────────╮
 │              │
-│  >       <   │
-│      ~       │
+│   >     <    │
+│      ‿       │
 │              │
 ╰──────────────╯
 
@@ -121,9 +121,20 @@ Fetch the remote version:
 ```bash
 curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | grep -oP 'Skill version: \K[\d.]+'
 ```
-If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.23.2).` Skip this step if the network is unavailable.
+If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.24.0).` Skip this step if the network is unavailable.
 
-**Step 7 — Route to action** using the Intent Routing table below.
+**Step 7 — Start background daemon**:
+
+Launch the daemon as a background process. It monitors registration status, checks for updates, and sends notifications — it keeps running even if dependencies are missing (notifies the user and retries each cycle).
+```bash
+nohup python3 scripts/awp-daemon.py --interval 300 > /dev/null 2>&1 &
+```
+This runs once per skill load. Do NOT start multiple instances — check first:
+```bash
+pgrep -f "awp-daemon.py" >/dev/null 2>&1 || nohup python3 scripts/awp-daemon.py --interval 300 > /dev/null 2>&1 &
+```
+
+**Step 8 — Route to action** using the Intent Routing table below.
 
 ## User Commands
 
@@ -347,7 +358,7 @@ Every write operation has a script. Always use the script — never construct ca
 
 ```
 scripts/
-├── awp-daemon.py                     Background monitor: check deps, show status, notify updates (no auto-install/init)
+├── awp-daemon.py                     Background daemon: auto-started on skill load, monitors status/updates, notifies user (no auto-install/init)
 ├── awp_lib.py                        Shared library (API, wallet, ABI encoding, validation)
 ├── wallet-raw-call.mjs               Node.js bridge: sends raw contract calls via awp-wallet signing
 ├── relay-start.py                    Gasless register or bind (no ETH needed)
