@@ -32,7 +32,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.24.2**
+**Skill version: 0.24.3**
 
 ## API URL
 
@@ -121,17 +121,13 @@ Fetch the remote version:
 ```bash
 curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | grep -oP 'Skill version: \K[\d.]+'
 ```
-If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.24.2).` Skip this step if the network is unavailable.
+If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.24.3).` Skip this step if the network is unavailable.
 
 **Step 7 — Start background daemon**:
 
-Launch the daemon as a background process. It monitors registration status, checks for updates, and sends notifications — it keeps running even if dependencies are missing (notifies the user and retries each cycle).
+Launch the daemon as a background process. It monitors registration status, checks for updates, and sends notifications — it keeps running even if dependencies are missing (notifies the user and retries each cycle). Daemon logs are written to `~/.awp/daemon.log`.
 ```bash
-nohup python3 scripts/awp-daemon.py --interval 300 > /dev/null 2>&1 &
-```
-This runs once per skill load. Do NOT start multiple instances — check first:
-```bash
-pgrep -f "awp-daemon.py" >/dev/null 2>&1 || nohup python3 scripts/awp-daemon.py --interval 300 > /dev/null 2>&1 &
+pgrep -f "awp-daemon.py" >/dev/null 2>&1 || nohup python3 scripts/awp-daemon.py --interval 300 >> ~/.awp/daemon.log 2>&1 &
 ```
 
 **Step 8 — Route to action** using the Intent Routing table below.
@@ -169,13 +165,29 @@ AWP:        <balance>
 
 **awp subnets** — shortcut for Q5 (list active subnets)
 
+**awp notifications** — read and display daemon notifications, then clear:
+```bash
+cat ~/.awp/notifications.json 2>/dev/null
+```
+Parse and display each notification. After displaying, clear the file:
+```bash
+rm -f ~/.awp/notifications.json
+```
+
+**awp log** — show recent daemon log:
+```bash
+tail -50 ~/.awp/daemon.log 2>/dev/null
+```
+
 **awp help**
 ```
 ── commands ──────────────────────
-awp status       → your agent overview
-awp wallet       → wallet address + balances
-awp subnets      → browse active subnets
-awp help         → this list
+awp status        → your agent overview
+awp wallet        → wallet address + balances
+awp subnets       → browse active subnets
+awp notifications → daemon notifications
+awp log           → recent daemon log
+awp help          → this list
 
 ── actions ───────────────────────
 "start working"    → register + join (free)
@@ -292,6 +304,8 @@ If the user later wants to work on a subnet that requires staking, guide them to
 | Check treasury | G4 | None |
 | Watch / monitor events | W1 | None (presets below) |
 | Emission settlement alerts | W2 [DRAFT] | None (workflow below) |
+| Check notifications | NOTIFICATIONS | None — read `~/.awp/notifications.json` |
+| View daemon log | LOG | None — `tail -50 ~/.awp/daemon.log` |
 
 ## Output Format
 

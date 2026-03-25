@@ -48,6 +48,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 SKILL_MD = SCRIPT_DIR.parent / "SKILL.md"
 NOTIFY_DIR = Path.home() / ".awp"
 NOTIFY_FILE = NOTIFY_DIR / "notifications.json"
+STATUS_FILE = NOTIFY_DIR / "status.json"
 
 # ── Logging & Notifications ──────────────────────
 
@@ -185,6 +186,46 @@ def parse_version(v: str) -> Tuple[int, ...]:
         return tuple(int(x) for x in v.split("."))
     except (ValueError, AttributeError):
         return (0,)
+
+# ── Status File ─────────────────────────────────
+
+def write_status(
+    wallet_installed: bool,
+    wallet_addr: Optional[str],
+    registered: Optional[bool],
+    subnets_count: int,
+    last_check: str,
+) -> None:
+    """写入 ~/.awp/status.json，反映 daemon 最新状态。agent 可随时读取。"""
+    # 确定当前阶段和下一步指引
+    if not wallet_installed:
+        phase = "wallet_not_installed"
+        next_step = 'Tell your agent: "install awp-wallet from https://github.com/awp-core/awp-wallet"'
+    elif not wallet_addr:
+        phase = "wallet_not_initialized"
+        next_step = 'Tell your agent: "initialize my wallet"'
+    elif not registered:
+        phase = "not_registered"
+        next_step = 'Tell your agent: "start working on AWP" (free, gasless)'
+    else:
+        phase = "ready"
+        next_step = 'Tell your agent: "list subnets" or "start working"'
+
+    status = {
+        "phase": phase,
+        "wallet_installed": wallet_installed,
+        "wallet_address": wallet_addr,
+        "registered": registered,
+        "active_subnets": subnets_count,
+        "next_step": next_step,
+        "last_check": last_check,
+    }
+    try:
+        NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
+        STATUS_FILE.write_text(json.dumps(status, indent=2))
+    except Exception:
+        pass
+
 
 # ── Subnet Tracking ─────────────────────────────
 
@@ -535,6 +576,10 @@ def main() -> None:
                    "Note: Do NOT store personal assets in this wallet.",
                    "warning")
 
+    # 写入初始状态文件
+    write_status(wallet_ready, wallet_addr, last_registered,
+                 len(initial_subnets), datetime.now().isoformat())
+
     # Phase 5: 检查更新（仅通知，不自动更新）
     log("Phase 5: Checking for updates (informational only)...")
     check_updates()
@@ -617,6 +662,10 @@ def main() -> None:
                     known_subnet_ids.update(
                         s.get("subnet_id") for s in new_subnets if s.get("subnet_id") is not None
                     )
+
+                # 更新状态文件
+                write_status(wallet_ready, wallet_addr, last_registered,
+                             len(current_subnets), datetime.now().isoformat())
 
                 # 更新检查
                 check_updates()

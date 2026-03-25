@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.24.3
+
+### Improve — Notification infrastructure
+- **Daemon log file**: output redirected to `~/.awp/daemon.log` instead of `/dev/null` — all daemon activity now persisted
+- **Status file**: daemon writes `~/.awp/status.json` each cycle with current phase, wallet state, registration, subnet count, and next-step guidance — agent can read this anytime
+- **New user commands**: `awp notifications` (read + display + clear daemon notifications), `awp log` (tail daemon log)
+- **Intent routing**: added NOTIFICATIONS and LOG routes
+- **Help menu**: updated with new commands
+
 ## v0.24.2
 
 ### Improve — Daemon guided notifications with actionable next steps

@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.24.3 | Notification infra: daemon.log, status.json, `awp notifications` + `awp log` commands |
 | 0.24.2 | Daemon: guided notifications with actionable next steps (wallet install/init/register/work) |
 | 0.24.1 | Daemon: welcome push (banner + subnets via notify), new subnet detection notifications |
 | 0.24.0 | Auto-start daemon on skill load; daemon no longer exits on missing deps (notifies + retries) |
