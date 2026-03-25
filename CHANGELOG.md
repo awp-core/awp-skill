@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.24.8
+
+### Fix — Remove child_process from wallet-raw-call.mjs
+
+- `execFileSync("which")` 替换为纯 Node.js PATH 遍历（`existsSync` + `realpathSync`），彻底移除 `child_process` 依赖，消除安全扫描警告
+
 ## v0.24.7
 
 ### Fix — Welcome title update
