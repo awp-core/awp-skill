@@ -273,6 +273,8 @@ def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
 # ── Welcome Message ─────────────────────────────
 
 WELCOME_BANNER = """\
+👀 Hello World from the World of Agents!
+
 ╭──────────────╮
 │              │
 │   >     <    │
@@ -280,7 +282,7 @@ WELCOME_BANNER = """\
 │              │
 ╰──────────────╯
 
-AWP — Agent Working Protocol
+agent · work · protocol
 
 one protocol. infinite jobs. nonstop earnings.
 
@@ -296,7 +298,7 @@ def send_welcome(subnets: list[dict[str, Any]]) -> None:
     full_message = f"{WELCOME_BANNER}\n\n── active subnets ──\n{subnet_text}"
 
     if _can_push():
-        notify("Welcome", full_message)
+        notify("Hello World from the World of Agents!", full_message)
     else:
         # 无法推送时打印到 stdout
         print()
@@ -304,7 +306,7 @@ def send_welcome(subnets: list[dict[str, Any]]) -> None:
             print(line)
         print()
         # 仍然写入通知文件（下次 agent 加载时可读取）
-        notify("Welcome", full_message)
+        notify("Hello World from the World of Agents!", full_message)
 
 
 # ── New Subnet Detection ────────────────────────
