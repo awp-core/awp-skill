@@ -253,49 +253,73 @@ def fetch_active_subnets() -> list[dict[str, Any]]:
 
 
 def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
-    """格式化子网列表为文本"""
+    """格式化子网列表为小票风格"""
+    W = RECEIPT_WIDTH  # 内容宽度（与 banner 一致）
+    lines: list[str] = []
+    lines.append("┌" + "─" * W + "┐")
+    lines.append("│" + "ACTIVE SUBNETS".center(W) + "│")
+    lines.append("├" + "─" * W + "┤")
     if not subnets:
-        return "  No active subnets found"
-    lines = []
-    for s in subnets:
-        sid = s.get("subnet_id", "?")
-        name = s.get("name", "Unknown")
-        min_stake = s.get("min_stake", 0)
-        skills = "+" if s.get("skills_uri") else "-"
-        lines.append(f"  #{sid}  {name:<30s} min:{min_stake} AWP  skills:{skills}")
-    total = len(subnets)
-    free = sum(1 for s in subnets if s.get("min_stake", 0) == 0)
-    with_skills = sum(1 for s in subnets if s.get("skills_uri"))
-    lines.append(f"  {total} subnets. {free} free. {with_skills} with skills.")
+        lines.append("│" + "  (none found)".ljust(W) + "│")
+    else:
+        for s in subnets:
+            sid = s.get("subnet_id", "?")
+            name = s.get("name", "Unknown")
+            min_stake = s.get("min_stake", 0)
+            sk = "✓" if s.get("skills_uri") else "·"
+            left = f"  #{sid} {name}"
+            right = f"{min_stake} AWP {sk}  "
+            pad = W - len(left) - len(right)
+            if pad < 1:
+                left = left[:W - len(right) - 1]
+                pad = 1
+            lines.append("│" + left + " " * pad + right + "│")
+        lines.append("├" + "─" * W + "┤")
+        total = len(subnets)
+        free = sum(1 for s in subnets if s.get("min_stake", 0) == 0)
+        with_skills = sum(1 for s in subnets if s.get("skills_uri"))
+        summary = f"  {total} subnets · {free} free · {with_skills} with skills"
+        lines.append("│" + summary.ljust(W) + "│")
+    lines.append("└" + "─" * W + "┘")
     return "\n".join(lines)
 
 
 # ── Welcome Message ─────────────────────────────
 
+RECEIPT_WIDTH = 42  # 小票内容宽度（不含边框）
+
 WELCOME_BANNER = """\
-👀 Hello World from the World of Agents!
-
-╭──────────────╮
-│              │
-│   >     <    │
-│      ‿       │
-│              │
-╰──────────────╯
-
-agent · work · protocol
-
-one protocol. infinite jobs. nonstop earnings.
-
-"start working"    → register + join (free)
-"check my balance" → staking overview
-"list subnets"     → browse active subnets
-"awp help"         → all commands"""
+┌──────────────────────────────────────────┐
+│                                          │
+│           ╭──────────────╮               │
+│           │              │               │
+│           │   >     <    │               │
+│           │      ‿       │               │
+│           │              │               │
+│           ╰──────────────╯               │
+│                                          │
+│        agent · work · protocol           │
+│                                          │
+│    one protocol. infinite jobs.          │
+│    nonstop earnings.                     │
+│                                          │
+├──────────────────────────────────────────┤
+│  QUICK START                             │
+│                                          │
+│  "start working"    register + join      │
+│  "check my balance" staking overview     │
+│  "list subnets"     browse active        │
+│  "awp help"         all commands         │
+│                                          │
+│  no AWP tokens needed to start.          │
+│  register free → pick a subnet → earn.   │
+└──────────────────────────────────────────┘"""
 
 
 def send_welcome(subnets: list[dict[str, Any]]) -> None:
     """发送欢迎消息（含 banner + 活跃子网）。优先通过 notify 推送，无法推送时打印到 stdout。"""
     subnet_text = format_subnet_list(subnets)
-    full_message = f"{WELCOME_BANNER}\n\n── active subnets ──\n{subnet_text}"
+    full_message = f"{WELCOME_BANNER}\n\n{subnet_text}"
 
     if _can_push():
         notify("Hello World from the World of Agents!", full_message)
