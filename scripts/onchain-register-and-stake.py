@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""一键 registerAndStake: 在单笔交易中完成 register + deposit + allocate
-处理 approve（到 AWP_REGISTRY）+ registerAndStake 两步操作。
+"""One-click registerAndStake: complete register + deposit + allocate in a single transaction
+Handles approve (to AWP_REGISTRY) + registerAndStake in two steps.
 """
 from awp_lib import *
 
 
 def main() -> None:
     parser = base_parser("One-click registerAndStake: register + deposit + allocate")
-    parser.add_argument("--amount", required=True, help="存款 AWP 数量（人类可读）")
-    parser.add_argument("--lock-days", required=True, help="锁定天数")
-    parser.add_argument("--agent", required=True, help="代理地址")
-    parser.add_argument("--subnet", required=True, help="子网 ID")
-    parser.add_argument("--allocate-amount", required=True, help="分配 AWP 数量（人类可读）")
+    parser.add_argument("--amount", required=True, help="Deposit AWP amount (human readable)")
+    parser.add_argument("--lock-days", required=True, help="Lock duration in days")
+    parser.add_argument("--agent", required=True, help="Agent address")
+    parser.add_argument("--subnet", required=True, help="Subnet ID")
+    parser.add_argument("--allocate-amount", required=True, help="Allocate AWP amount (human readable)")
     args = parser.parse_args()
 
     token: str = args.token
@@ -21,37 +21,37 @@ def main() -> None:
     subnet: str = args.subnet
     allocate_amount: str = args.allocate_amount
 
-    # 验证数值输入
+    # Validate numeric inputs
     validate_positive_number(amount, "amount")
     validate_positive_number(lock_days, "lock-days")
     validate_positive_number(allocate_amount, "allocate-amount")
     validate_address(agent, "agent")
     subnet_id: int = validate_positive_int(subnet, "subnet")
 
-    # 预检：获取钱包地址
+    # Pre-check: fetch wallet address
     wallet_addr = get_wallet_address()
 
-    # 获取合约注册表
+    # Fetch contract registry
     registry = get_registry()
     awp_token = require_contract(registry, "awpToken")
     awp_registry = require_contract(registry, "awpRegistry")
 
-    # 单位转换
+    # Unit conversion
     amount_wei = to_wei(amount)
     lock_seconds = days_to_seconds(lock_days)
     allocate_wei = to_wei(allocate_amount)
 
-    # 分配金额不能超过存款金额
+    # Allocate amount must not exceed deposit amount
     if allocate_wei > amount_wei:
         die(f"allocate-amount ({allocate_amount} AWP) exceeds deposit amount ({amount} AWP)")
 
-    # 步骤 1：授权 AWP 给 AWP_REGISTRY（注意：目标是 AWP_REGISTRY，不是 StakeNFT）
+    # Step 1: Approve AWP to AWP_REGISTRY (note: target is AWP_REGISTRY, NOT StakeNFT)
     step("approve", spender=awp_registry,
          note="Approve target is AWP_REGISTRY, NOT StakeNFT",
          amount=f"{amount} AWP")
     wallet_approve(token, awp_token, awp_registry, amount)
 
-    # 步骤 2：registerAndStake(uint256 depositAmount, uint64 lockDuration,
+    # Step 2: registerAndStake(uint256 depositAmount, uint64 lockDuration,
     #          address agent, uint256 subnetId, uint256 allocateAmount)
     # selector = 0x34426564
     calldata = encode_calldata(

@@ -8,7 +8,7 @@
 ## Setup (reference only — bundled scripts handle this automatically)
 
 ```bash
-# 以下为参考说明，实际操作使用 scripts/*.py 自动完成
+# Reference only — actual operations are handled automatically by scripts/*.py
 REGISTRY=$(curl -s {API_BASE}/api/registry)
 AWP_REGISTRY=$(echo $REGISTRY | jq -r '.awpRegistry')
 AWP_TOKEN=$(echo $REGISTRY | jq -r '.awpToken')

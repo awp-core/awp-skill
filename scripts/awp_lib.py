@@ -1,4 +1,4 @@
-"""AWP 脚本共享库 — API 调用、钱包命令、ABI 编码、输入验证"""
+"""AWP shared script library — API calls, wallet commands, ABI encoding, input validation"""
 from __future__ import annotations
 
 import argparse
@@ -15,26 +15,26 @@ from pathlib import Path
 
 _UINT256_MAX = 2**256 - 1
 
-# ── 配置 ────────────────────────────────────────
+# ── Configuration ────────────────────────────────────────
 
 API_BASE = os.environ.get("AWP_API_URL", "https://tapi.awp.sh/api")
 RPC_URL = os.environ.get("EVM_RPC_URL", "https://mainnet.base.org")
 
 
-# ── 输出 ────────────────────────────────────────
+# ── Output ────────────────────────────────────────
 
 def info(msg: str) -> None:
-    """输出 JSON 信息到 stderr"""
+    """Print JSON info message to stderr"""
     print(json.dumps({"info": msg}), file=sys.stderr)
 
 
 def step(name: str, **kwargs: object) -> None:
-    """输出执行步骤到 stderr"""
+    """Print execution step to stderr"""
     print(json.dumps({"step": name, **kwargs}), file=sys.stderr)
 
 
 def die(msg: str) -> None:
-    """输出错误到 stderr 并退出"""
+    """Print error to stderr and exit"""
     print(json.dumps({"error": msg}), file=sys.stderr)
     sys.exit(1)
 
@@ -42,7 +42,7 @@ def die(msg: str) -> None:
 # ── HTTP ────────────────────────────────────────
 
 def api_get(path: str) -> dict | list | None:
-    """GET {API_BASE}/{path}，返回解析后的 JSON"""
+    """GET {API_BASE}/{path}, return parsed JSON"""
     url = f"{API_BASE}/{path.lstrip('/')}"
     try:
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -54,7 +54,7 @@ def api_get(path: str) -> dict | list | None:
 
 
 def api_post(url: str, body: dict) -> tuple[int, dict | str]:
-    """POST JSON，返回 (http_code, parsed_body)"""
+    """POST JSON, return (http_code, parsed_body)"""
     data = json.dumps(body).encode()
     req = urllib.request.Request(
         url, data=data, method="POST",
@@ -75,7 +75,7 @@ def api_post(url: str, body: dict) -> tuple[int, dict | str]:
 
 
 def rpc_call(to: str, data: str) -> str:
-    """eth_call via JSON-RPC，返回 hex result"""
+    """eth_call via JSON-RPC, return hex result"""
     payload = {
         "jsonrpc": "2.0", "method": "eth_call",
         "params": [{"to": to, "data": data}, "latest"], "id": 1,
@@ -88,7 +88,7 @@ def rpc_call(to: str, data: str) -> str:
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             result = json.loads(resp.read().decode())
-            # 检查 RPC 级别错误（revert 等）
+            # Check for RPC-level errors (revert, etc.)
             if "error" in result:
                 err = result["error"]
                 msg = err.get("message", err) if isinstance(err, dict) else err
@@ -100,16 +100,16 @@ def rpc_call(to: str, data: str) -> str:
 
 
 def hex_to_int(val: str) -> int:
-    """将 hex 字符串转为 int，失败则 die"""
+    """Convert hex string to int, die on failure"""
     if not val or val in ("null", "0x"):
         die("RPC returned empty/null value")
     return int(val, 16)
 
 
-# ── 钱包命令 ─────────────────────────────────────
+# ── Wallet commands ─────────────────────────────────────
 
 def wallet_cmd(args: list[str]) -> str:
-    """执行 awp-wallet 命令，返回 stdout"""
+    """Execute awp-wallet command, return stdout"""
     try:
         result = subprocess.run(
             ["awp-wallet"] + args,
@@ -124,7 +124,7 @@ def wallet_cmd(args: list[str]) -> str:
 
 
 def get_wallet_address() -> str:
-    """获取钱包地址（不需要 token），验证返回的地址格式"""
+    """Get wallet address (no token required), validate returned address format"""
     out = wallet_cmd(["receive"])
     try:
         addr = json.loads(out).get("eoaAddress")
@@ -139,10 +139,10 @@ def get_wallet_address() -> str:
 
 
 def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
-    """发送原始合约调用（calldata），返回结果 JSON。
+    """Send raw contract call (calldata), return result JSON.
 
-    awp-wallet send 只支持代币转账，不支持 calldata。
-    此函数通过 wallet-raw-call.mjs 桥接脚本调用 awp-wallet 内部签名模块。
+    awp-wallet send only supports token transfers, not calldata.
+    This function bridges to the awp-wallet internal signing module via wallet-raw-call.mjs.
     """
     bridge = str(Path(__file__).parent / "wallet-raw-call.mjs")
     args = ["node", bridge, "--token", token, "--to", to, "--data", data, "--value", value]
@@ -157,13 +157,13 @@ def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
 
 
 def wallet_approve(token: str, asset: str, spender: str, amount: str) -> str:
-    """授权代币，返回结果 JSON"""
+    """Approve token spend, return result JSON"""
     return wallet_cmd(["approve", "--token", token, "--asset", asset,
                         "--spender", spender, "--amount", amount])
 
 
 def wallet_sign_typed_data(token: str, data: dict) -> str:
-    """EIP-712 签名，返回 signature hex"""
+    """EIP-712 sign, return signature hex"""
     out = wallet_cmd(["sign-typed-data", "--token", token, "--data", json.dumps(data)])
     try:
         sig = json.loads(out).get("signature", "")
@@ -176,7 +176,7 @@ def wallet_sign_typed_data(token: str, data: dict) -> str:
 
 
 def wallet_balance(token: str, asset: str | None = None) -> str:
-    """查询余额"""
+    """Query balance"""
     args = ["balance", "--token", token]
     if asset:
         args += ["--asset", asset]
@@ -184,14 +184,14 @@ def wallet_balance(token: str, asset: str | None = None) -> str:
 
 
 def wallet_status(token: str) -> str:
-    """查询钱包状态（地址、session 有效性）"""
+    """Query wallet status (address, session validity)"""
     return wallet_cmd(["status", "--token", token])
 
 
-# ── 合约注册表 ───────────────────────────────────
+# ── Contract registry ───────────────────────────────────
 
 def get_registry() -> dict:
-    """获取 /registry 并返回完整字典"""
+    """Fetch /registry and return the full dictionary"""
     reg = api_get("registry")
     if not isinstance(reg, dict):
         die("Invalid /registry response")
@@ -199,17 +199,17 @@ def get_registry() -> dict:
 
 
 def require_contract(registry: dict, key: str) -> str:
-    """从 registry 中获取合约地址，为空则 die"""
+    """Get contract address from registry, die if missing"""
     addr = registry.get(key)
     if not addr or addr == "null":
         die(f"Failed to get {key} from /registry")
     return addr
 
 
-# ── ABI 编码 ─────────────────────────────────────
+# ── ABI encoding ─────────────────────────────────────
 
 def pad_address(addr: str) -> str:
-    """将 0x 地址补齐为 64 字符（左补零），验证 hex 格式"""
+    """Pad 0x address to 64 characters (zero-padded on left), validate hex format"""
     raw = addr.lower()
     if raw.startswith("0x"):
         raw = raw[2:]
@@ -221,14 +221,14 @@ def pad_address(addr: str) -> str:
 
 
 def pad_uint256(val: int) -> str:
-    """将整数编码为 64 字符 hex（必须在 uint256 范围内）"""
+    """Encode integer as 64-character hex (must be within uint256 range)"""
     if val < 0 or val > _UINT256_MAX:
         die(f"pad_uint256: value out of uint256 range: {val}")
     return format(val, "064x")
 
 
 def to_wei(human_amount: str) -> int:
-    """人类可读 AWP 数量转 wei（使用 Decimal 避免浮点精度丢失）"""
+    """Convert human-readable AWP amount to wei (uses Decimal to avoid floating-point precision loss)"""
     try:
         result = int(Decimal(human_amount) * Decimal(10**18))
     except (ValueError, TypeError, ArithmeticError) as e:
@@ -240,7 +240,7 @@ def to_wei(human_amount: str) -> int:
 
 
 def days_to_seconds(days: str) -> int:
-    """天数转秒数（使用 Decimal 避免浮点截断）"""
+    """Convert days to seconds (uses Decimal to avoid floating-point truncation)"""
     try:
         result = int(Decimal(days) * Decimal(86400))
     except (ValueError, TypeError, ArithmeticError) as e:
@@ -252,26 +252,26 @@ def days_to_seconds(days: str) -> int:
 
 
 def encode_calldata(selector: str, *params: str) -> str:
-    """拼接 selector + 参数，验证 selector 格式（0x + 8 hex）"""
+    """Concatenate selector + params, validate selector format (0x + 8 hex)"""
     if not re.match(r"^0x[0-9a-fA-F]{8}$", selector):
         die(f"encode_calldata: invalid selector format: {selector} (expected 0x + 8 hex chars)")
     return selector + "".join(params)
 
 
-# ── 输入验证 ─────────────────────────────────────
+# ── Input validation ─────────────────────────────────────
 
 ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 
 
 def validate_address(addr: str, name: str = "address") -> str:
-    """验证以太坊地址格式"""
+    """Validate Ethereum address format"""
     if not ADDR_RE.match(addr):
         die(f"Invalid --{name}: must be 0x + 40 hex chars")
     return addr
 
 
 def validate_positive_number(val: str, name: str = "amount") -> str:
-    """验证正数（允许小数）"""
+    """Validate positive number (decimals allowed)"""
     if not re.match(r"^[0-9]+\.?[0-9]*$", val):
         die(f"Invalid --{name}: must be a positive number")
     if Decimal(val) <= 0:
@@ -280,7 +280,7 @@ def validate_positive_number(val: str, name: str = "amount") -> str:
 
 
 def validate_positive_int(val: str, name: str = "id") -> int:
-    """验证正整数（uint256 范围内）"""
+    """Validate positive integer (within uint256 range)"""
     if not re.match(r"^[0-9]+$", val):
         die(f"Invalid --{name}: must be a positive integer > 0")
     n = int(val)
@@ -289,10 +289,10 @@ def validate_positive_int(val: str, name: str = "id") -> int:
     return n
 
 
-# ── EIP-712 构建 ─────────────────────────────────
+# ── EIP-712 construction ─────────────────────────────────
 
 def get_eip712_domain(registry: dict) -> dict:
-    """从 registry 获取 EIP-712 domain 信息"""
+    """Get EIP-712 domain info from registry"""
     domain = registry.get("eip712Domain", {})
     name = domain.get("name")
     version = domain.get("version")
@@ -324,7 +324,7 @@ def get_eip712_domain(registry: dict) -> dict:
 
 def build_eip712(domain: dict, primary_type: str, type_fields: list[dict],
                  message: dict) -> dict:
-    """构建完整 EIP-712 typed data"""
+    """Build complete EIP-712 typed data"""
     return {
         "types": {
             "EIP712Domain": [
@@ -341,10 +341,10 @@ def build_eip712(domain: dict, primary_type: str, type_fields: list[dict],
     }
 
 
-# ── 通用参数解析 ─────────────────────────────────
+# ── Common argument parsing ─────────────────────────────────
 
 def base_parser(description: str) -> argparse.ArgumentParser:
-    """创建带 --token 的基础参数解析器"""
+    """Create base argument parser with --token"""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--token", required=True, help="awp-wallet session token")
     return parser
