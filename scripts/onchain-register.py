@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""链上 register() — 显式注册（V2）
-V2 中 register() 等同于 setRecipient(msg.sender)。
-每个地址隐式为 root；调用 register() 只是显式将 recipient 设为自己。
+"""On-chain register() — explicit registration (V2)
+In V2, register() is equivalent to setRecipient(msg.sender).
+Each address is implicitly a root; calling register() simply sets recipient to itself explicitly.
 """
 from awp_lib import *
 
@@ -11,14 +11,14 @@ def main() -> None:
     args = parser.parse_args()
     token: str = args.token
 
-    # 预检：获取钱包地址
+    # Pre-check: get wallet address
     wallet_addr = get_wallet_address()
 
-    # 获取合约注册表
+    # Get contract registry
     registry = get_registry()
     awp_registry = require_contract(registry, "awpRegistry")
 
-    # 检查是否已注册
+    # Check if already registered
     check = api_get(f"address/{wallet_addr}/check")
     if isinstance(check, dict):
         # V2: .isRegistered; V1: .isRegisteredUser

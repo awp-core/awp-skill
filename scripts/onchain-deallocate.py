@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""链上 deallocate stake 从 agent+subnet（V2）
+"""On-chain deallocate stake from agent+subnet (V2)
 deallocate(address staker, address agent, uint256 subnetId, uint256 amount)
-立即生效，无冷却期。
+Takes effect immediately, no cooldown period.
 """
 from awp_lib import *
 
 
 def main() -> None:
     parser = base_parser("On-chain deallocate stake from agent+subnet (V2)")
-    parser.add_argument("--agent", required=True, help="代理地址")
-    parser.add_argument("--subnet", required=True, help="子网 ID")
-    parser.add_argument("--amount", required=True, help="AWP 数量（人类可读）")
+    parser.add_argument("--agent", required=True, help="Agent address")
+    parser.add_argument("--subnet", required=True, help="Subnet ID")
+    parser.add_argument("--amount", required=True, help="AWP amount (human readable)")
     args = parser.parse_args()
 
     token: str = args.token
@@ -18,15 +18,15 @@ def main() -> None:
     subnet: str = args.subnet
     amount: str = args.amount
 
-    # 验证输入
+    # Validate inputs
     validate_address(agent, "agent")
     validate_positive_number(amount, "amount")
     subnet_id: int = validate_positive_int(subnet, "subnet")
 
-    # 预检：获取钱包地址
+    # Pre-check: fetch wallet address
     wallet_addr = get_wallet_address()
 
-    # 获取合约注册表
+    # Fetch contract registry
     registry = get_registry()
     awp_registry = require_contract(registry, "awpRegistry")
 

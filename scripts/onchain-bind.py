@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""链上 bind(address target) — 绑定到账户树中的目标（V2）
-基于树的绑定，带反循环检查。
+"""On-chain bind(address target) — bind to a target in the account tree (V2)
+Tree-based binding with anti-cycle checks.
 """
 from awp_lib import *
 
 
 def main() -> None:
     parser = base_parser("On-chain bind to target address (V2)")
-    parser.add_argument("--target", required=True, help="绑定目标地址")
-    # 兼容旧参数名
+    parser.add_argument("--target", required=True, help="Bind target address")
+    # Backward-compatible alias for old parameter name
     parser.add_argument("--principal", dest="target_alt", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
@@ -16,14 +16,14 @@ def main() -> None:
     target: str = args.target_alt if args.target_alt else args.target
     validate_address(target, "target")
 
-    # 预检：获取钱包地址
+    # Pre-check: get wallet address
     wallet_addr = get_wallet_address()
 
-    # 获取合约注册表
+    # Get contract registry
     registry = get_registry()
     awp_registry = require_contract(registry, "awpRegistry")
 
-    # 检查是否已绑定
+    # Check if already bound
     check = api_get(f"address/{wallet_addr}/check")
     if isinstance(check, dict):
         # V2: .boundTo; V1: .isRegisteredAgent + .ownerAddress
@@ -41,7 +41,7 @@ def main() -> None:
             }))
             return
 
-    # bind(address) selector = 0x81bac14f + ABI 编码地址
+    # bind(address) selector = 0x81bac14f + ABI-encoded address
     calldata = encode_calldata("0x81bac14f", pad_address(target))
 
     step("bind", address=wallet_addr, target=target)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""完全 gasless 的子网注册 — 通过双重 EIP-712 签名（V2）"""
+"""Fully gasless subnet registration — via dual EIP-712 signatures (V2)"""
 
 from __future__ import annotations
 
@@ -28,34 +28,34 @@ from awp_lib import (
 
 
 def parse_args() -> tuple[str, str, str, str, int, str, str]:
-    """解析命令行参数，返回 (token, name, symbol, salt, min_stake, subnet_manager, skills_uri)"""
+    """Parse command-line arguments, returning (token, name, symbol, salt, min_stake, subnet_manager, skills_uri)"""
     parser = base_parser("AWP gasless subnet registration via dual EIP-712 signatures")
-    parser.add_argument("--name", required=True, help="子网名称")
-    parser.add_argument("--symbol", required=True, help="子网代币符号")
+    parser.add_argument("--name", required=True, help="subnet name")
+    parser.add_argument("--symbol", required=True, help="subnet token symbol")
     parser.add_argument(
         "--salt",
         default="0x0000000000000000000000000000000000000000000000000000000000000000",
-        help="bytes32 salt（默认全零）",
+        help="bytes32 salt (default all-zero)",
     )
-    parser.add_argument("--min-stake", default="0", help="最低质押量（wei）")
+    parser.add_argument("--min-stake", default="0", help="minimum stake amount (wei)")
     parser.add_argument(
         "--subnet-manager",
         default="0x0000000000000000000000000000000000000000",
-        help="子网管理者地址",
+        help="subnet manager address",
     )
-    parser.add_argument("--skills-uri", default="", help="技能 URI")
+    parser.add_argument("--skills-uri", default="", help="skills URI")
     args = parser.parse_args()
 
-    # 验证 min-stake 是非负整数
+    # Validate min-stake is a non-negative integer
     if not re.match(r"^[0-9]+$", args.min_stake):
         die("Invalid --min-stake: must be a non-negative integer (wei)")
     min_stake = int(args.min_stake)
 
-    # 验证 subnet-manager 地址格式
+    # Validate subnet-manager address format
     if not re.match(r"^0x[0-9a-fA-F]{40}$", args.subnet_manager):
         die("Invalid --subnet-manager: must be 0x + 40 hex chars")
 
-    # 验证 salt 格式（bytes32）
+    # Validate salt format (bytes32)
     if not re.match(r"^0x[0-9a-fA-F]{64}$", args.salt):
         die("Invalid --salt: must be 0x + 64 hex chars (bytes32)")
 
@@ -63,10 +63,10 @@ def parse_args() -> tuple[str, str, str, str, int, str, str]:
 
 
 def main() -> None:
-    """主流程"""
+    """Main flow"""
     token, name, symbol, salt, min_stake, subnet_manager, skills_uri = parse_args()
 
-    # Step 1: 获取 registry
+    # Step 1: Fetch registry
     step("fetch_registry")
     registry = get_registry()
     awp_registry = require_contract(registry, "awpRegistry")
@@ -74,11 +74,11 @@ def main() -> None:
     domain = get_eip712_domain(registry)
     chain_id = domain["chainId"]
 
-    # Step 2: 获取钱包地址
+    # Step 2: Get wallet address
     step("get_wallet_address")
     wallet_addr = get_wallet_address()
 
-    # Step 3: 获取 initialAlphaPrice — selector = 0x6d345eea
+    # Step 3: Get initialAlphaPrice — selector = 0x6d345eea
     step("get_initial_alpha_price")
     price_hex = rpc_call(awp_registry, "0x6d345eea")
     if not price_hex or price_hex in ("0x", "null"):
@@ -88,10 +88,10 @@ def main() -> None:
     # LP_COST = 100M * 10^18 * initialAlphaPrice / 10^18
     lp_cost = 100_000_000 * 10**18 * initial_alpha_price // 10**18
 
-    # Step 4: 获取 nonces
+    # Step 4: Get nonces
     step("get_nonces")
 
-    # Registry nonce — 先尝试 API，回退到 RPC
+    # Registry nonce — try API first, fall back to RPC
     nonce_resp = api_get(f"nonce/{wallet_addr}")
     registry_nonce: int | None = None
     if isinstance(nonce_resp, dict):
@@ -100,20 +100,20 @@ def main() -> None:
             registry_nonce = int(raw)
 
     if registry_nonce is None:
-        # 回退: 从合约读取 nonce
+        # Fallback: read nonce from contract
         addr_padded = pad_address(wallet_addr)
         registry_nonce_hex = rpc_call(awp_registry, f"0x7ecebe00{addr_padded}")
         registry_nonce = hex_to_int(registry_nonce_hex)
 
-    # AWPToken permit nonce（始终从 RPC 读取 — 没有 REST 端点）
+    # AWPToken permit nonce (always read from RPC — no REST endpoint)
     addr_padded = pad_address(wallet_addr)
     permit_nonce_hex = rpc_call(awp_token, f"0x7ecebe00{addr_padded}")
     permit_nonce = hex_to_int(permit_nonce_hex)
 
-    # Step 5: 截止时间（1 小时后）
+    # Step 5: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600
 
-    # Step 6: 签署 ERC-2612 Permit
+    # Step 6: Sign ERC-2612 Permit
     step("sign_permit")
     permit_domain = {
         "name": "AWP Token",
@@ -141,7 +141,7 @@ def main() -> None:
     )
     permit_signature = wallet_sign_typed_data(token, permit_data)
 
-    # Step 7: 签署 EIP-712 RegisterSubnet（V2 包含 skillsURI 字段）
+    # Step 7: Sign EIP-712 RegisterSubnet (V2 includes skillsURI field)
     step("sign_register_subnet")
     register_data = build_eip712(
         domain,
@@ -171,7 +171,7 @@ def main() -> None:
     )
     register_signature = wallet_sign_typed_data(token, register_data)
 
-    # Step 8: 提交到 relay
+    # Step 8: Submit to relay
     step("submit_relay")
     relay_body = {
         "user": wallet_addr,

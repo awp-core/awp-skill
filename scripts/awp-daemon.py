@@ -62,10 +62,10 @@ def err(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] ✗ {msg}", file=sys.stderr)
 
 def _get_openclaw_config() -> Tuple[str, str]:
-    """从 ~/.awp/openclaw.json 读取 OpenClaw channel 和 target。
+    """Read OpenClaw channel and target from ~/.awp/openclaw.json.
 
-    每次调用都读文件（支持热加载 — agent 可随时写入配置）。
-    该文件由 agent 在 skill load 时写入，格式：
+    Reads the file on every call (supports hot-reload — agent can write config at any time).
+    This file is written by the agent at skill load time, format:
     {"channel": "telegram", "target": "123456"}
     """
     user_config = NOTIFY_DIR / "openclaw.json"
@@ -81,11 +81,11 @@ def _get_openclaw_config() -> Tuple[str, str]:
     return "", ""
 
 def _find_openclaw() -> Optional[str]:
-    """查找 openclaw 可执行文件，补充常见安装路径。"""
+    """Locate the openclaw executable, checking common installation paths."""
     found = shutil.which("openclaw")
     if found:
         return found
-    # 补充 npm 全局安装路径（不在默认 PATH 中的常见位置）
+    # Additional npm global install paths (common locations not in default PATH)
     extra_dirs = [
         Path.home() / ".npm-global" / "bin",
         Path.home() / ".local" / "bin",
@@ -100,7 +100,7 @@ def _find_openclaw() -> Optional[str]:
 
 
 def _can_push() -> bool:
-    """检查是否能通过 OpenClaw 推送消息"""
+    """Check whether messages can be pushed via OpenClaw."""
     if not _find_openclaw():
         return False
     channel, target = _get_openclaw_config()
@@ -108,10 +108,10 @@ def _can_push() -> bool:
 
 
 def notify(title: str, message: str, level: str = "info") -> None:
-    """发送通知：写入文件 + OpenClaw 消息（如果可用）+ 终端输出"""
+    """Send a notification: write to file + OpenClaw message (if available) + terminal output."""
     timestamp = datetime.now().isoformat()
 
-    # 1. 写入 ~/.awp/notifications.json
+    # 1. Write to ~/.awp/notifications.json
     try:
         NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
         notifications = []
@@ -128,7 +128,7 @@ def notify(title: str, message: str, level: str = "info") -> None:
             "message": message,
         })
 
-        # 只保留最近 50 条，原子写入（先写临时文件再重命名）
+        # Keep only the latest 50 entries; atomic write (write to temp file then rename)
         notifications = notifications[-50:]
         tmp_file = NOTIFY_FILE.with_suffix(".tmp")
         tmp_file.write_text(json.dumps(notifications, indent=2))
@@ -136,7 +136,7 @@ def notify(title: str, message: str, level: str = "info") -> None:
     except Exception as e:
         warn(f"Failed to write notification: {e}")
 
-    # 2. OpenClaw 消息发送（如果 openclaw CLI 可用）
+    # 2. Send via OpenClaw (if openclaw CLI is available)
     openclaw_bin = _find_openclaw()
     if openclaw_bin:
         channel, target = _get_openclaw_config()
@@ -150,15 +150,15 @@ def notify(title: str, message: str, level: str = "info") -> None:
                     capture_output=True, timeout=10
                 )
             except Exception:
-                pass  # 发送失败时静默跳过
+                pass  # Silently skip on send failure
 
-    # 3. 终端输出
+    # 3. Terminal output
     log(f"[NOTIFY] {title}: {message}")
 
 # ── Helpers ──────────────────────────────────────
 
 def run(cmd: list[str]) -> Tuple[int, str]:
-    """运行命令（list 形式，无 shell 注入风险），返回 (returncode, stdout)"""
+    """Run a command (as a list, no shell injection risk) and return (returncode, stdout)."""
     try:
         result = subprocess.run(
             cmd, capture_output=True, text=True, timeout=30
@@ -170,7 +170,7 @@ def run(cmd: list[str]) -> Tuple[int, str]:
         return 1, str(e)
 
 def api_get(path: str) -> Optional[Any]:
-    """GET 请求 AWP API，返回 JSON 或 None"""
+    """GET request to the AWP API; returns parsed JSON or None."""
     url = f"{API_BASE}{path}"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "awp-daemon/1.0"})
@@ -180,7 +180,7 @@ def api_get(path: str) -> Optional[Any]:
         return None
 
 def fetch_text(url: str) -> str:
-    """获取远程文本内容"""
+    """Fetch remote text content."""
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "awp-daemon/1.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -189,14 +189,14 @@ def fetch_text(url: str) -> str:
         return ""
 
 def wei_to_awp(wei: str) -> str:
-    """wei 字符串转 AWP 可读格式"""
+    """Convert a wei string to a human-readable AWP amount."""
     try:
         return f"{int(wei) / 10**18:,.4f}"
     except (ValueError, TypeError):
         return wei
 
 def parse_version(v: str) -> Tuple[int, ...]:
-    """解析版本号为可比较的整数元组"""
+    """Parse a version string into a comparable tuple of integers."""
     try:
         return tuple(int(x) for x in v.split("."))
     except (ValueError, AttributeError):
@@ -211,8 +211,8 @@ def write_status(
     subnets_count: int,
     last_check: str,
 ) -> None:
-    """写入 ~/.awp/status.json，反映 daemon 最新状态。agent 可随时读取。"""
-    # 确定当前阶段和下一步指引
+    """Write the daemon's latest state to ~/.awp/status.json. Agent can read this at any time."""
+    # Determine current phase and next-step guidance
     if not wallet_installed:
         phase = "wallet_not_installed"
         next_step = 'Tell your agent: "install awp-wallet from https://github.com/awp-core/awp-wallet"'
@@ -245,7 +245,7 @@ def write_status(
 # ── Subnet Tracking ─────────────────────────────
 
 def fetch_active_subnets() -> list[dict[str, Any]]:
-    """获取活跃子网列表"""
+    """Fetch the list of active subnets."""
     subnets = api_get("/subnets?status=Active&limit=50")
     if subnets and isinstance(subnets, list):
         return subnets
@@ -253,8 +253,8 @@ def fetch_active_subnets() -> list[dict[str, Any]]:
 
 
 def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
-    """格式化子网列表为小票风格"""
-    W = RECEIPT_WIDTH  # 内容宽度（与 banner 一致）
+    """Format the subnet list in receipt style."""
+    W = RECEIPT_WIDTH  # Content width (matches the banner)
     lines: list[str] = []
     lines.append("┌" + "─" * W + "┐")
     lines.append("│" + "ACTIVE SUBNETS".center(W) + "│")
@@ -286,7 +286,7 @@ def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
 
 # ── Welcome Message ─────────────────────────────
 
-RECEIPT_WIDTH = 42  # 小票内容宽度（不含边框）
+RECEIPT_WIDTH = 42  # Receipt content width (excluding border)
 
 WELCOME_BANNER = """\
 ┌──────────────────────────────────────────┐
@@ -317,19 +317,19 @@ WELCOME_BANNER = """\
 
 
 def send_welcome(subnets: list[dict[str, Any]]) -> None:
-    """发送欢迎消息（含 banner + 活跃子网）。优先通过 notify 推送，无法推送时打印到 stdout。"""
+    """Send the welcome message (banner + active subnets). Pushes via notify if possible, otherwise prints to stdout."""
     subnet_text = format_subnet_list(subnets)
     full_message = f"{WELCOME_BANNER}\n\n{subnet_text}"
 
     if _can_push():
         notify("Hello World from the World of Agents!", full_message)
     else:
-        # 无法推送时打印到 stdout
+        # Cannot push — print to stdout instead
         print()
         for line in full_message.split("\n"):
             print(line)
         print()
-        # 仍然写入通知文件（下次 agent 加载时可读取）
+        # Still write to the notification file (agent can read it on next load)
         notify("Hello World from the World of Agents!", full_message)
 
 
@@ -339,7 +339,7 @@ def detect_new_subnets(
     current: list[dict[str, Any]],
     known_ids: set[int],
 ) -> list[dict[str, Any]]:
-    """对比当前子网和已知 ID，返回新增子网列表"""
+    """Compare current subnets against known IDs and return any newly discovered subnets."""
     new_subnets = []
     for s in current:
         sid = s.get("subnet_id")
@@ -351,15 +351,15 @@ def detect_new_subnets(
 # ── 1. Wallet Installation ───────────────────────
 
 def ensure_wallet_installed() -> bool:
-    """检查 awp-wallet 是否已安装（不自动下载或执行远程脚本）。
+    """Check whether awp-wallet is installed (does NOT auto-download or execute remote scripts).
 
-    如果未安装，打印安装说明并返回 False。
-    用户需要自行审查并执行安装命令。
+    If not installed, prints installation instructions and returns False.
+    The user must review and run the install commands themselves.
     """
     if shutil.which("awp-wallet"):
         return True
 
-    # 也检查 ~/.local/bin（install.sh 的默认安装位置）
+    # Also check ~/.local/bin (the default install location used by install.sh)
     wallet_local = Path.home() / ".local" / "bin" / "awp-wallet"
     if wallet_local.exists():
         os.environ["PATH"] = f"{wallet_local.parent}:{os.environ.get('PATH', '')}"
@@ -377,10 +377,10 @@ def ensure_wallet_installed() -> bool:
 # ── 2. Wallet Initialization ─────────────────────
 
 def ensure_wallet_initialized() -> Optional[str]:
-    """检查钱包是否已初始化，返回地址或 None。
+    """Check whether the wallet is initialized and return the address, or None.
 
-    不自动初始化钱包 — 钱包创建会生成密钥对，
-    必须由用户显式执行 `awp-wallet init`。
+    Does NOT auto-initialize — wallet creation generates a key pair and
+    must be explicitly run by the user via `awp-wallet init`.
     """
     code, out = run(["awp-wallet", "receive"])
     if code == 0 and out:
@@ -403,7 +403,7 @@ def ensure_wallet_initialized() -> Optional[str]:
 # ── 3. Check Registration & Show Status ──────────
 
 def check_and_notify(wallet_addr: str) -> bool:
-    """检查注册状态并显示信息，返回 is_registered"""
+    """Check registration status, display info, and return is_registered."""
     check = api_get(f"/address/{wallet_addr}/check")
 
     print()
@@ -446,7 +446,7 @@ def check_and_notify(wallet_addr: str) -> bool:
 
     log("──────────────────────────────────────")
 
-    # 子网列表
+    # Subnet list
     print()
     log("── available subnets ─────────────────")
 
@@ -481,7 +481,7 @@ def check_and_notify(wallet_addr: str) -> bool:
 # ── 4. Update Checker ────────────────────────────
 
 def get_local_version() -> str:
-    """从本地 SKILL.md 读取版本号"""
+    """Read the version number from the local SKILL.md."""
     try:
         text = SKILL_MD.read_text()
         match = re.search(r"Skill version:\s*([\d.]+)", text)
@@ -490,7 +490,7 @@ def get_local_version() -> str:
         return ""
 
 def get_remote_version(url: str) -> str:
-    """从远程 SKILL.md 读取版本号"""
+    """Read the version number from a remote SKILL.md."""
     text = fetch_text(url)
     if not text:
         return ""
@@ -498,7 +498,7 @@ def get_remote_version(url: str) -> str:
     return match.group(1) if match else ""
 
 def check_updates() -> None:
-    """检查 awp-skill 和 awp-wallet 更新（仅通知，不自动下载或执行）"""
+    """Check for awp-skill and awp-wallet updates (informational only — no auto-download or execution)."""
     log("Checking for updates...")
 
     # awp-skill
@@ -515,7 +515,7 @@ def check_updates() -> None:
         else:
             log(f"awp-skill {local_ver} — up to date ✓")
 
-    # awp-wallet — 版本比较，只通知不自动更新
+    # awp-wallet — compare versions, notify only, no auto-update
     if shutil.which("awp-wallet"):
         remote_wallet = ""
         try:
@@ -550,12 +550,12 @@ def main() -> None:
     import argparse
     parser = argparse.ArgumentParser(description="AWP Daemon")
     parser.add_argument("--interval", type=int, default=CHECK_INTERVAL,
-                        help=f"检查间隔秒数（最小 10，默认 {CHECK_INTERVAL}）")
+                        help=f"Check interval in seconds (minimum 10, default {CHECK_INTERVAL})")
     args = parser.parse_args()
 
     interval = max(args.interval, 10)
 
-    # Phase 1: 获取子网 + 发送欢迎消息
+    # Phase 1: Fetch subnets + send welcome message
     log("Phase 1: Welcome...")
     initial_subnets = fetch_active_subnets()
     send_welcome(initial_subnets)
@@ -563,22 +563,22 @@ def main() -> None:
         int(s["subnet_id"]) for s in initial_subnets if s.get("subnet_id") is not None
     }
 
-    # Phase 2: 检查依赖（不自动安装，缺失时通知后继续）
+    # Phase 2: Check dependencies (no auto-install; notify and continue if missing)
     log("Phase 2: Checking awp-wallet dependency...")
     wallet_ready = ensure_wallet_installed()
 
-    # Phase 3: 检查钱包（不自动初始化，缺失时通知后继续）
+    # Phase 3: Check wallet (no auto-init; notify and continue if missing)
     wallet_addr: Optional[str] = None
     if wallet_ready:
         log("Phase 3: Checking wallet...")
         wallet_addr = ensure_wallet_initialized()
 
-    # Phase 4: 显示状态 + 推送引导通知
+    # Phase 4: Display status + push onboarding notification
     last_registered: Optional[bool] = None
     if wallet_addr:
         log("Phase 4: Checking status...")
         last_registered = check_and_notify(wallet_addr)
-        # 钱包就绪但未注册 → 引导注册
+        # Wallet ready but not registered — prompt to register
         if not last_registered:
             short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
             notify("Wallet Ready — Next Step",
@@ -586,7 +586,7 @@ def main() -> None:
                    "You are not registered yet. Registration is FREE (gasless).\n"
                    'Tell your agent: "start working on AWP"',
                    "info")
-        # 钱包就绪且已注册 → 引导选择子网开始工作
+        # Wallet ready and registered — guide user to pick a subnet and start working
         else:
             short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
             notify("Registered — Ready to Work",
@@ -613,21 +613,21 @@ def main() -> None:
                    "Note: Do NOT store personal assets in this wallet.",
                    "warning")
 
-    # 写入初始状态文件
+    # Write initial status file
     write_status(wallet_ready, wallet_addr, last_registered,
                  len(initial_subnets), datetime.now().isoformat())
 
-    # Phase 5: 检查更新（仅通知，不自动更新）
+    # Phase 5: Check for updates (informational only, no auto-update)
     log("Phase 5: Checking for updates (informational only)...")
     check_updates()
 
-    # Phase 6: 持续监听
+    # Phase 6: Continuous monitoring loop
     log("")
     log(f"Daemon running. Checking every {interval}s.")
     log("Press Ctrl+C to stop.")
     print()
 
-    # 更新检查间隔：每 12 个周期（约 1 小时）检查一次，避免每周期都发网络请求
+    # Update check interval: every 12 cycles (~1 hour) to avoid network requests every cycle
     UPDATE_CHECK_EVERY = 12
     cycle_count = 0
 
@@ -637,7 +637,7 @@ def main() -> None:
             cycle_count += 1
 
             try:
-                # 如果之前钱包不可用，每次循环重新检查
+                # If wallet was previously unavailable, re-check each cycle
                 if not wallet_addr:
                     if not wallet_ready:
                         wallet_ready = ensure_wallet_installed()
@@ -646,7 +646,7 @@ def main() -> None:
                     if wallet_addr:
                         log("Wallet now available!")
                         last_registered = check_and_notify(wallet_addr)
-                        # 钱包刚就绪 → 推送下一步引导
+                        # Wallet just became ready — push next-step guidance
                         if not last_registered:
                             short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
                             notify("Wallet Ready — Next Step",
@@ -655,7 +655,7 @@ def main() -> None:
                                    'Tell your agent: "start working on AWP"',
                                    "info")
 
-                # 注册状态检查（仅在钱包可用时）
+                # Registration status check (only when wallet is available)
                 if wallet_addr:
                     is_registered = False
                     check = api_get(f"/address/{wallet_addr}/check")
@@ -684,7 +684,7 @@ def main() -> None:
 
                     last_registered = is_registered
 
-                # 新子网检测
+                # New subnet detection
                 current_subnets = fetch_active_subnets()
                 new_subnets = detect_new_subnets(current_subnets, known_subnet_ids)
                 if new_subnets:
@@ -704,16 +704,16 @@ def main() -> None:
                         if skills:
                             msg += " | has skills"
                         notify("New Subnet", msg)
-                    # 更新已知子网集合
+                    # Update known subnet set
                     known_subnet_ids.update(
                         int(s["subnet_id"]) for s in new_subnets if s.get("subnet_id") is not None
                     )
 
-                # 更新状态文件
+                # Update status file
                 write_status(wallet_ready, wallet_addr, last_registered,
                              len(current_subnets), datetime.now().isoformat())
 
-                # 更新检查（每 UPDATE_CHECK_EVERY 个周期检查一次）
+                # Update check (every UPDATE_CHECK_EVERY cycles)
                 if cycle_count % UPDATE_CHECK_EVERY == 0:
                     check_updates()
 

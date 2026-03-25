@@ -4,47 +4,47 @@
 
 ### Improve — Receipt-style welcome push
 
-- 推送欢迎消息改为小票排版（box-drawing 边框），子网列表同步改版
-- SKILL.md code block 内移除重复标题行（标题已在 code block 外）
+- Welcome message reformatted to receipt-style layout (box-drawing borders); subnet list updated to match
+- SKILL.md: removed duplicate heading row inside code block (heading already appears outside the code block)
 
 ## v0.24.8
 
 ### Fix — Remove child_process from wallet-raw-call.mjs
 
-- `execFileSync("which")` 替换为纯 Node.js PATH 遍历（`existsSync` + `realpathSync`），彻底移除 `child_process` 依赖，消除安全扫描警告
+- `execFileSync("which")` replaced with pure Node.js PATH traversal (`existsSync` + `realpathSync`), fully removing the `child_process` dependency and eliminating security scanner warnings
 
 ## v0.24.7
 
 ### Fix — Welcome title update
 
-- 欢迎语标题统一为 "Hello World from the World of Agents!"（SKILL.md + daemon 推送）
+- Welcome title standardized to "Hello World from the World of Agents!" (SKILL.md + daemon push)
 
 ## v0.24.6
 
 ### Fix — Onboarding auto-select + redundant setRecipient after bind
 
-- **注册时必须让用户选择**: Onboarding Step 2 不再标注 "(recommended)"，明确要求 agent 展示 Option A/B 并等待用户选择，不得自动选择
-- **bind 后不再冗余调用 setRecipient**: 明确说明 `bind(target)` 后 `resolveRecipient()` 沿绑定链解析收益地址，已自动指向 target——无需再调用 `setRecipient()`。在 S1 节、Onboarding Step 2、Rules 三处均添加此规则
+- **User must choose during registration**: Onboarding Step 2 no longer labels any option "(recommended)"; agent is explicitly required to present Option A/B and wait for the user's choice — auto-selection is not allowed
+- **No redundant setRecipient call after bind**: clarified that after `bind(target)`, `resolveRecipient()` resolves the earnings address by following the bind chain and already points to target — calling `setRecipient()` again is unnecessary. This rule has been added in three places: the S1 section, Onboarding Step 2, and Rules
 
 ## v0.24.5
 
 ### Fix — Code review (29 issues), notification redesign, description optimization
 
 **Notification system redesign**:
-- **Step 3 通知配置重写**: 彻底移除不存在的 `OPENCLAW_CHANNEL`/`OPENCLAW_TARGET` 环境变量依赖。采用 benchmark-worker 模式——agent 在 skill 加载时写入 `~/.awp/openclaw.json`（含 channel + target），daemon 每周期热加载此文件，通过 `openclaw message send` 推送
-- daemon 移除 `--channel`/`--target` CLI 参数，简化为仅 `--interval`
-- `_get_openclaw_config()` 简化为每次读文件（支持 agent 随时更新配置）
-- SKILL.md `optional_env` 中移除 `OPENCLAW_CHANNEL`/`OPENCLAW_TARGET`
-- 步骤重编号 1-8（Welcome → Install wallet → Configure notifications → …）
-- `sessionToken` → `token` 统一全文
+- **Step 3 notification config rewrite**: fully removed dependency on non-existent `OPENCLAW_CHANNEL`/`OPENCLAW_TARGET` environment variables. Adopted benchmark-worker pattern — agent writes `~/.awp/openclaw.json` (containing channel + target) on skill load; daemon hot-reloads this file each cycle and pushes via `openclaw message send`
+- daemon: removed `--channel`/`--target` CLI flags, simplified to `--interval` only
+- `_get_openclaw_config()` simplified to read the file each time (supports agent updating config at any time)
+- SKILL.md: removed `OPENCLAW_CHANNEL`/`OPENCLAW_TARGET` from `optional_env`
+- Steps renumbered 1-8 (Welcome → Install wallet → Configure notifications → …)
+- `sessionToken` → `token` unified throughout
 
 **Description optimization**:
-- 重写 skill description 提升触发准确率
-- eval 结果: 20/20（10/10 应触发 + 10/10 不应触发）
+- Rewrote skill description to improve trigger accuracy
+- Eval result: 20/20 (10/10 should-trigger + 10/10 should-not-trigger)
 
-**SKILL.md (其余修复)**:
+**SKILL.md (remaining fixes)**:
 - `$TOKEN` never assigned in onboarding — added capture from `awp-wallet unlock` output
-- Daemon pgrep command — `pgrep -f "python3.*awp-daemon"` 避免 self-match
+- Daemon pgrep command — `pgrep -f "python3.*awp-daemon"` to avoid self-match
 - `~/.awp` dir not guaranteed before daemon start — added `mkdir -p`
 - `grep -oP` not portable — replaced with `sed -n`
 - Step 5 missing wallet_addr parse — added JSON eoaAddress extraction instruction
@@ -82,9 +82,9 @@
 ## v0.24.4
 
 ### Fix — Daemon startup false positive + OpenClaw CLI discovery
-- **pgrep 误判**: `pgrep -f "awp-daemon.py"` 会匹配自身（启动命令的 subshell），导致 daemon 永远不会被启动。改为 `pgrep -xf "python3 .*awp-daemon\\.py.*"` 精确匹配 python3 进程
-- **OpenClaw CLI 查找**: daemon 之前只用 `shutil.which()` 搜索 PATH，遗漏了 `~/.npm-global/bin/openclaw` 等常见 npm 全局安装路径。新增 `_find_openclaw()` 函数，自动补充 `~/.npm-global/bin`、`~/.local/bin`、`~/.yarn/bin` 等目录
-- **描述优化验证**: 通过外部项目测试确认 skill description 触发率正常（5/5 AWP 查询正确触发，1/1 非 AWP 查询正确不触发）
+- **pgrep false positive**: `pgrep -f "awp-daemon.py"` matched itself (the launching subshell), causing the daemon to never be started. Changed to `pgrep -xf "python3 .*awp-daemon\\.py.*"` for precise python3 process matching
+- **OpenClaw CLI discovery**: daemon previously only searched PATH via `shutil.which()`, missing common npm global install locations such as `~/.npm-global/bin/openclaw`. Added `_find_openclaw()` function that automatically checks `~/.npm-global/bin`, `~/.local/bin`, `~/.yarn/bin`, and similar directories
+- **Description optimization verification**: confirmed via external project testing that skill description trigger rate is correct (5/5 AWP queries correctly triggered, 1/1 non-AWP query correctly not triggered)
 
 ## v0.24.3
 
@@ -194,7 +194,7 @@
 ## v0.22.5
 
 ### Fix — Install from local repo, not remote pipe
-- SKILL.md Step 2: `git clone` → `bash install.sh`（先拉到本地再执行，不用 `curl | bash` 远程管道）
+- SKILL.md Step 2: `git clone` → `bash install.sh` (clone locally first, then execute — avoids `curl | bash` remote pipe)
 - daemon: all install/update messages use `git clone` + local `install.sh` instead of `curl | bash`
 - Removed `WALLET_INSTALL_SCRIPT` (raw.githubusercontent.com URL) from daemon
 

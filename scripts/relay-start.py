@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AWP Gasless onboarding — 通过 relay 注册或绑定"""
+"""AWP Gasless onboarding — register or bind via relay"""
 
 from __future__ import annotations
 
@@ -24,13 +24,13 @@ from awp_lib import (
 
 
 def parse_args() -> tuple[str, str, str]:
-    """解析命令行参数，返回 (token, mode, target)"""
+    """Parse command-line arguments, returning (token, mode, target)"""
     parser = base_parser("AWP gasless onboarding — register or bind via relay")
     parser.add_argument(
         "--mode", required=True, choices=["principal", "agent"],
-        help="principal（注册/设置收款人为自己）或 agent（绑定到目标地址）",
+        help="principal (register / set self as recipient) or agent (bind to target address)",
     )
-    parser.add_argument("--target", default="", help="agent 模式下的目标地址")
+    parser.add_argument("--target", default="", help="target address in agent mode")
     args = parser.parse_args()
 
     if args.mode == "agent" and not args.target:
@@ -42,20 +42,20 @@ def parse_args() -> tuple[str, str, str]:
 
 
 def main() -> None:
-    """主流程"""
+    """Main flow"""
     token, mode, target = parse_args()
 
-    # Step 1: 获取 registry 和 EIP-712 domain
+    # Step 1: Fetch registry and EIP-712 domain
     step("fetch_registry")
     registry = get_registry()
     domain = get_eip712_domain(registry)
     info(f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}")
 
-    # Step 2: 获取钱包地址
+    # Step 2: Get wallet address
     step("get_wallet_address")
     wallet_addr = get_wallet_address()
 
-    # Step 3: 检查当前状态
+    # Step 3: Check current status
     step("check_status")
     check = api_get(f"address/{wallet_addr}/check")
     if isinstance(check, dict):
@@ -71,19 +71,19 @@ def main() -> None:
             print(json.dumps({"status": "already_bound", "address": wallet_addr, "boundTo": bound_to}))
             return
 
-    # Step 4: 获取 nonce
+    # Step 4: Get nonce
     step("get_nonce")
     nonce_resp = api_get(f"nonce/{wallet_addr}")
     if not isinstance(nonce_resp, dict) or "nonce" not in nonce_resp:
         die(f"Invalid nonce response: {nonce_resp}")
     nonce = nonce_resp["nonce"]
 
-    # Step 5: 截止时间（1 小时后）
+    # Step 5: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600
 
-    # Step 6: 构建 EIP-712 typed data
+    # Step 6: Build EIP-712 typed data
     if mode == "principal":
-        # Principal 模式: setRecipient(self) via /relay/set-recipient
+        # Principal mode: setRecipient(self) via /relay/set-recipient
         eip712_data = build_eip712(
             domain,
             "SetRecipient",
@@ -108,7 +108,7 @@ def main() -> None:
             "signature": None,
         }
     else:
-        # Agent 模式: bind(target) via /relay/bind
+        # Agent mode: bind(target) via /relay/bind
         eip712_data = build_eip712(
             domain,
             "Bind",
@@ -133,12 +133,12 @@ def main() -> None:
             "signature": None,
         }
 
-    # Step 7: 签名
+    # Step 7: Sign
     step("sign_eip712")
     signature = wallet_sign_typed_data(token, eip712_data)
     relay_body["signature"] = signature
 
-    # Step 8: 提交到 relay
+    # Step 8: Submit to relay
     step("submit_relay", endpoint=relay_endpoint)
     info(f"Submitting to {relay_endpoint}")
     http_code, body = api_post(relay_endpoint, relay_body)

@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
- * wallet-raw-call.mjs — 通过 awp-wallet 内部签名发送原始合约调用
+ * wallet-raw-call.mjs — Send raw contract calls using awp-wallet internal signing
  *
- * awp-wallet CLI 的 send 命令只支持代币转账（--to, --amount, --asset），
- * 不支持原始 calldata。此脚本直接使用 awp-wallet 的内部模块（keystore、session、viem）
- * 来签名并发送带有任意 calldata 的交易。
+ * The awp-wallet CLI send command only supports token transfers (--to, --amount, --asset)
+ * and does not support raw calldata. This script directly uses awp-wallet's internal
+ * modules (keystore, session, viem) to sign and send transactions with arbitrary calldata.
  *
- * 用法:
+ * Usage:
  *   node wallet-raw-call.mjs --token <session> --to <contract> --data <hex> [--value <wei>]
  *
- * 必须在 awp-wallet 目录下运行（或设置 AWP_WALLET_DIR 环境变量），
- * 以便正确解析 node_modules 和内部模块。
+ * Must be run from the awp-wallet directory (or set the AWP_WALLET_DIR environment variable)
+ * so that node_modules and internal modules are resolved correctly.
  */
 
 import { parseArgs } from "node:util"
 import { resolve, dirname } from "node:path"
 import { realpathSync, existsSync } from "node:fs"
 
-// ── 解析命令行参数 ──────────────────────────────────
+// ── Parse command-line arguments ──────────────────────────────────
 const { values: args } = parseArgs({
   options: {
     token:  { type: "string" },
@@ -34,7 +34,7 @@ if (!args.token || !args.to || !args.data) {
   process.exit(1)
 }
 
-// ── 格式校验 ──────────────────────────────────────────
+// ── Format validation ──────────────────────────────────────────
 if (!/^0x[0-9a-fA-F]{40}$/.test(args.to)) {
   console.error(JSON.stringify({ error: `Invalid --to address: ${args.to}` }))
   process.exit(1)
@@ -44,26 +44,26 @@ if (!/^0x(?:[0-9a-fA-F]{2}){4,}$/.test(args.data)) {
   process.exit(1)
 }
 
-// ── 定位 awp-wallet 安装目录 ──────────────────────────
+// ── Locate the awp-wallet installation directory ──────────────────────────
 function findAwpWalletDir() {
-  // 1. 环境变量
+  // 1. Environment variable
   if (process.env.AWP_WALLET_DIR && existsSync(process.env.AWP_WALLET_DIR)) {
     return process.env.AWP_WALLET_DIR
   }
-  // 2. 在 PATH 中查找 awp-wallet 可执行文件（纯 Node.js，无需 child_process）
+  // 2. Search for the awp-wallet executable in PATH (pure Node.js, no child_process needed)
   const pathDirs = (process.env.PATH || "").split(":")
   for (const dir of pathDirs) {
     const candidate = resolve(dir, "awp-wallet")
     if (existsSync(candidate)) {
       try {
         const real = realpathSync(candidate)
-        // real = .../awp-wallet/scripts/wallet-cli.js → 上两级 = awp-wallet/
+        // real = .../awp-wallet/scripts/wallet-cli.js → two levels up = awp-wallet/
         return dirname(dirname(real))
-      } catch { /* 跳过无法解析的符号链接 */ }
+      } catch { /* skip symlinks that cannot be resolved */ }
     }
   }
   {
-    // 3. 默认路径
+    // 3. Default path
     const defaultDir = resolve(process.env.HOME, "awp-wallet")
     if (existsSync(resolve(defaultDir, "scripts/lib/keystore.js"))) return defaultDir
     console.error(JSON.stringify({ error: "Cannot locate awp-wallet installation. Set AWP_WALLET_DIR." }))
@@ -73,14 +73,14 @@ function findAwpWalletDir() {
 
 const AWP_DIR = findAwpWalletDir()
 
-// ── 导入 awp-wallet 内部模块 ─────────────────────────
+// ── Import awp-wallet internal modules ─────────────────────────
 const { validateSession, requireScope } = await import(`${AWP_DIR}/scripts/lib/session.js`)
 const { loadSigner, getAddress } = await import(`${AWP_DIR}/scripts/lib/keystore.js`)
 const { resolveChainId, viemChain, publicClient, getRpcUrl } = await import(`${AWP_DIR}/scripts/lib/chains.js`)
 
 const { createWalletClient, http } = await import(`${AWP_DIR}/node_modules/viem/index.js`)
 
-// ── 验证 session ─────────────────────────────────────
+// ── Validate session ─────────────────────────────────────
 try {
   validateSession(args.token)
   requireScope(args.token, "transfer")
@@ -89,7 +89,7 @@ try {
   process.exit(1)
 }
 
-// ── 构建并发送交易 ───────────────────────────────────
+// ── Build and send transaction ───────────────────────────────────
 try {
   const chainId = resolveChainId(args.chain)
   const chainObj = viemChain(chainId)
@@ -110,7 +110,7 @@ try {
     data: args.data,
   }
 
-  // 支持发送 ETH（value > 0 的合约调用）
+  // Support sending ETH (contract calls with value > 0)
   if (args.value && args.value !== "0") {
     try {
       tx.value = BigInt(args.value)
@@ -122,7 +122,7 @@ try {
 
   const hash = await walletClient.sendTransaction(tx)
 
-  // 等待确认
+  // Wait for confirmation
   const client = publicClient(chainId)
   const receipt = await client.waitForTransactionReceipt({
     hash,
