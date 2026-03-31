@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.25.2
+
+### Improve — Description optimization (20/20 trigger eval)
+
+- Refined skill description to exclude other DeFi protocols on Base chain (fixes Uniswap V3 false trigger)
+- Trigger eval: 10/10 should-trigger, 10/10 should-not-trigger
+
 ## v0.25.1
 
 ### Security — Contract allowlist, transaction confirmation, daemon lifecycle

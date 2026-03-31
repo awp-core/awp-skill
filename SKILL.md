@@ -11,7 +11,8 @@ description: >
   whenever the user mentions AWP, Agent Working Protocol, awp-wallet, StakeNFT,
   SubnetNFT, AWP token/staking/subnet/DAO/emission/epoch, "awp onboard", "awp status",
   "start working" on AWP, or any AWP on-chain operation. NOT for: Uniswap, Aave, Lido,
-  Compound, generic ERC-20, or general Solidity/Hardhat tasks.
+  Compound, generic ERC-20, general Solidity/Hardhat tasks, or other DeFi protocols
+  (even if deployed on Base chain — this skill is exclusively for the AWP protocol).
 metadata:
   openclaw:
     requires:
@@ -28,7 +29,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.25.1**
+**Skill version: 0.25.2**
 
 ## API URL
 
