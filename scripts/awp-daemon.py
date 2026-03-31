@@ -401,9 +401,8 @@ def ensure_wallet_installed() -> bool:
             return True
 
     err("awp-wallet is required but not installed.")
-    err("Install it:")
-    err(f"  git clone {WALLET_REPO} {WALLET_INSTALL_DIR}")
-    err(f"  bash {WALLET_INSTALL_DIR}/install.sh")
+    err("Install the official AWP wallet:")
+    err(f"  {WALLET_REPO}")
     err("")
     err("Then restart the daemon.")
     return False
@@ -638,9 +637,8 @@ def main() -> None:
         if not wallet_ready:
             notify("Wallet Not Ready",
                    "awp-wallet is not installed. Cannot proceed without it.\n"
-                   "Tell your agent:\n"
-                   '  "install awp-wallet from https://github.com/awp-core/awp-wallet"\n'
-                   "The agent will clone the repo and run install.sh for you.",
+                   "Tell your agent to install the official AWP wallet:\n"
+                   '  "install awp-wallet from https://github.com/awp-core/awp-wallet"',
                    "warning")
         else:
             notify("Wallet Not Initialized",

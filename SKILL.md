@@ -29,7 +29,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.25.4**
+**Skill version: 0.25.5**
 
 ## API URL
 
@@ -88,11 +88,15 @@ register for free → pick a subnet → start earning.
 which awp-wallet >/dev/null 2>&1
 ```
 - If found: proceed silently.
-- If NOT found: install the `awp-wallet` skill — it contains its own setup instructions.
-  - Install from repo: `https://github.com/awp-core/awp-wallet`, then follow its SKILL.md, which will run `bash install.sh` and configure PATH.
+- If NOT found: install the official `awp-wallet` dependency from the AWP core repository:
+  ```
+  [SETUP] Installing awp-wallet (official AWP dependency)...
+          Source: https://github.com/awp-core/awp-wallet
+  ```
+  Install it as a skill (`skill install https://github.com/awp-core/awp-wallet`), then follow its SKILL.md instructions to complete setup. This is the official AWP wallet maintained by awp-core — not a third-party dependency.
   - Verify after install: `which awp-wallet`
 
-**Step 3 — Configure notifications**: Write `~/.awp/openclaw.json` so the daemon can push messages via `openclaw message send`:
+**Step 3 — Configure notifications** (recommended): If the `openclaw` CLI is available, write `~/.awp/openclaw.json` so the daemon can push messages:
 ```bash
 mkdir -p ~/.awp
 cat > ~/.awp/openclaw.json << EOF
@@ -102,7 +106,7 @@ cat > ~/.awp/openclaw.json << EOF
 }
 EOF
 ```
-Fill in the current session's channel and target. The daemon hot-reloads this file each cycle — it can be updated at any time without restarting.
+Fill in the current session's channel and target. Skip this step only if `openclaw` is not installed. The daemon hot-reloads this file each cycle — it can be updated or deleted at any time.
 
 **Step 4 — Check notifications**: If `~/.awp/notifications.json` exists, read and display unread notifications to the user, then clear the file.
 
@@ -122,15 +126,25 @@ curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | se
 ```
 If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: {local version from this file}).` Skip this step if the network is unavailable.
 
-**Step 7 — Start background daemon**:
+**Step 7 — Background daemon** (optional, requires user consent):
 
-Launch the daemon as a background process. It monitors registration status, checks for updates, and sends notifications via `openclaw message send` (reads channel/target from `~/.awp/openclaw.json` written in Step 3). Daemon logs are written to `~/.awp/daemon.log`.
+Ask the user before starting the daemon. Explain what it does:
+```
+[SETUP] The AWP daemon monitors registration status, checks for
+        updates, and can send notifications. It runs in the background
+        and writes status files to ~/.awp/.
+        Start the daemon? (yes/no)
+```
+
+If the user agrees, launch it:
 ```bash
 mkdir -p ~/.awp && pgrep -f "python3.*awp-daemon" >/dev/null 2>&1 || \
   nohup python3 scripts/awp-daemon.py --interval 300 \
     >> ~/.awp/daemon.log 2>&1 &
 ```
 > Note: Resolve the absolute path to `scripts/awp-daemon.py` relative to the skill directory.
+
+If the user declines, skip this step. All AWP operations work without the daemon — it only provides background monitoring and notifications. The user can start it later with `awp daemon start`.
 
 **Step 8 — Route to action** using the Intent Routing table below.
 
@@ -394,7 +408,7 @@ Every write operation has a script. Always use the script — never construct ca
 
 ```
 scripts/
-├── awp-daemon.py                     Background daemon: monitors status/updates, writes PID to ~/.awp/daemon.pid, stops on Ctrl+C or kill
+├── awp-daemon.py                     Background daemon (opt-in): monitors status/updates, writes PID to ~/.awp/daemon.pid, stops on Ctrl+C or kill
 ├── awp_lib.py                        Shared library (API, wallet, ABI encoding, validation)
 ├── wallet-raw-call.mjs               Node.js bridge: contract calls restricted to /registry allowlist only
 ├── relay-start.py                    Gasless register or bind (no ETH needed)
@@ -419,7 +433,14 @@ scripts/
 
 **Transaction confirmation**: All on-chain operations require explicit user confirmation before execution (see "Agent Wallet & Transaction Safety" above).
 
-**Daemon lifecycle**: `awp-daemon.py` writes its PID to `~/.awp/daemon.pid` on start and removes it on exit. Stop it via `Ctrl+C` or `kill $(cat ~/.awp/daemon.pid)`. The daemon never auto-installs software, never auto-initializes wallets, and never executes transactions — it only monitors and notifies.
+**Daemon lifecycle**: The daemon is opt-in — it only starts with explicit user consent (Step 7). It writes its PID to `~/.awp/daemon.pid` on start and removes it on exit. Stop it via `Ctrl+C` or `kill $(cat ~/.awp/daemon.pid)`. The daemon never auto-installs software, never auto-initializes wallets, and never executes transactions — it only monitors and notifies. All AWP operations work without the daemon running.
+
+**Local files**: The skill may write files under `~/.awp/` (only with user consent for the daemon, or as part of explicit user actions):
+- `openclaw.json` — notification config (optional, only if user enables notifications)
+- `daemon.pid` — daemon process ID (only if daemon is running)
+- `daemon.log` — daemon output log (only if daemon is running)
+- `notifications.json` — queued notifications (only if daemon is running)
+- `status.json` — daemon state snapshot (only if daemon is running)
 
 **Third-party skill installs**: Subnet skills from non-`awp-core` sources require explicit user confirmation before installation.
 

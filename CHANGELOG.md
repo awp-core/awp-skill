@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.25.5
+
+### Security — Daemon opt-in, no auto-install, explicit file disclosure
+
+- Daemon is now opt-in: agent must ask user consent before starting background process (Step 7)
+- Notification config (Step 3) is now optional — skipped if user declines or openclaw is unavailable
+- Removed all `install.sh` references from user-facing messages; awp-wallet install is now manual-review-only
+- Added explicit documentation of all `~/.awp/` files in Security Controls section
+- All AWP operations work without the daemon — it only provides background monitoring
+
 ## v0.25.4
 
 ### Fix — Code review fixes
