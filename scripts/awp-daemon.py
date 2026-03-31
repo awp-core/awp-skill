@@ -50,6 +50,7 @@ NOTIFY_DIR = Path.home() / ".awp"
 NOTIFY_FILE = NOTIFY_DIR / "notifications.json"
 STATUS_FILE = NOTIFY_DIR / "status.json"
 PID_FILE = NOTIFY_DIR / "daemon.pid"
+RECEIPT_WIDTH = 42  # Receipt content width (excluding border)
 
 # ── Logging & Notifications ──────────────────────
 
@@ -320,8 +321,6 @@ def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
 
 
 # ── Welcome Message ─────────────────────────────
-
-RECEIPT_WIDTH = 42  # Receipt content width (excluding border)
 
 WELCOME_BANNER = """\
 ┌──────────────────────────────────────────┐

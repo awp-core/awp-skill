@@ -29,7 +29,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.25.3**
+**Skill version: 0.25.4**
 
 ## API URL
 
@@ -120,7 +120,7 @@ Fetch the remote version:
 ```bash
 curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | sed -n 's/.*Skill version: \([0-9.]*\).*/\1/p'
 ```
-If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: 0.25.0).` Skip this step if the network is unavailable.
+If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: {local version from this file}).` Skip this step if the network is unavailable.
 
 **Step 7 — Start background daemon**:
 
@@ -269,7 +269,9 @@ Only show subnets with min_stake > 0 if the user explicitly asks, or if no free 
 
 **Step 4: Install subnet skill and start working**
 
-Install the skill directly:
+Check the subnet's `skills_uri` source. If it is from `github.com/awp-core/*`, install directly. If it is from a third-party source, show a warning and ask for confirmation before installing (see Q6 for the exact flow). If the user declines, return to the subnet list from Step 3.
+
+Install example (awp-core source):
 ```
 [4/4] installing Benchmark skill...
 [4/4] ready ✓
@@ -381,7 +383,7 @@ On first wallet setup, inform the user:
 7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
 8. Do not use stale V1 names: no "unbind()", no "removeAgent()". Binding changes use `bind(newTarget)`.
 9. **Wallet handles credentials internally.** Just run `awp-wallet init` + `awp-wallet unlock`. No password generation, no password files, no user prompts.
-10. **This is an agent work wallet.** Always confirm with the user before executing any on-chain transaction — show the action, target contract, and estimated cost, then wait for explicit approval. Remind the user on first setup: do NOT store personal assets in this wallet.
+10. **This is an agent work wallet.** Always confirm with the user before executing any on-chain transaction — show the action, target contract, and estimated cost, then wait for explicit approval. Exception: gasless registration via relay (free, no gas cost) does not require confirmation. Remind the user on first setup: do NOT store personal assets in this wallet.
 11. **Subnet skill install (Q6):** Install `awp-core` skills directly. For third-party sources (not `github.com/awp-core/*`), show a warning and require user confirmation before installing.
 12. **Onboarding requires user choice.** Always present Option A (Solo) and Option B (Delegated) and WAIT for the user to choose. Never auto-select an option.
 13. **Bind already sets the reward path.** After `bind(target)`, rewards resolve to the target via the bind chain. Do NOT call `setRecipient()` after a successful bind — it's redundant.
@@ -557,7 +559,7 @@ For third-party sources, show a warning and ask for confirmation before installi
         ⚠ Third-party source — not maintained by awp-core.
         Install? (yes/no)
 ```
-Install to `skills/awp-subnet-{id}/`.
+If the user confirms, install to `skills/awp-subnet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the subnet list.
 
 ### Q7 · Epoch History [DRAFT]
 ```bash

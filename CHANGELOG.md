@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.25.4
+
+### Fix — Code review fixes
+
+- `wallet-raw-call.mjs`: add 10s timeout on registry fetch; include txHash in receipt-timeout error output
+- `awp-daemon.py`: move `RECEIPT_WIDTH` constant before first use (prevents `NameError` in non-main call paths)
+- `SKILL.md`: fix hardcoded version `0.25.0` in Step 6 update message
+- `SKILL.md`: onboarding Step 4 now checks third-party source before installing (matches Rule 11 / Q6)
+- `SKILL.md`: Rule 10 now includes gasless relay exception (consistent with Safety section)
+- `SKILL.md`: Q6 now defines the "no" path for third-party install rejection
+
 ## v0.25.3
 
 ### Fix — Daemon crash on integer created_at field

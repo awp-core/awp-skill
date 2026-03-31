@@ -51,7 +51,9 @@ if (!/^0x(?:[0-9a-fA-F]{2}){4,}$/.test(args.data)) {
 const AWP_API_URL = process.env.AWP_API_URL || "https://tapi.awp.sh/api"
 
 async function fetchAllowedContracts() {
-  const resp = await fetch(`${AWP_API_URL}/registry`)
+  const resp = await fetch(`${AWP_API_URL}/registry`, {
+    signal: AbortSignal.timeout(10_000),
+  })
   if (!resp.ok) {
     throw new Error(`Failed to fetch /registry: HTTP ${resp.status}`)
   }
@@ -161,11 +163,24 @@ try {
 
   // Wait for confirmation
   const client = publicClient(chainId)
-  const receipt = await client.waitForTransactionReceipt({
-    hash,
-    timeout: 90_000,
-    confirmations: 1,
-  })
+  let receipt
+  try {
+    receipt = await client.waitForTransactionReceipt({
+      hash,
+      timeout: 90_000,
+      confirmations: 1,
+    })
+  } catch (receiptErr) {
+    // Transaction was submitted but receipt timed out — include txHash so caller can track it
+    console.error(JSON.stringify({
+      error: `Receipt timeout: ${receiptErr.message}`,
+      status: "pending",
+      txHash: hash,
+      chain: chainObj.name,
+      chainId,
+    }))
+    process.exit(1)
+  }
 
   console.log(JSON.stringify({
     status: receipt.status === "success" ? "confirmed" : "reverted",
