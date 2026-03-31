@@ -29,7 +29,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.25.6**
+**Skill version: 0.25.7**
 
 ## API URL
 

@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.25.7 | Security: remove AWP_WALLET_DIR env var, use PATH + default paths only |
 | 0.25.6 | Security: hardcode registry URL in wallet-raw-call.mjs, prevent env var allowlist bypass |
 | 0.25.5 | Security: daemon opt-in, manual awp-wallet install, explicit ~/.awp file documentation |
 | 0.25.4 | Code review fixes: registry fetch timeout, RECEIPT_WIDTH ordering, SKILL.md consistency |

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.25.7
+
+### Security — Remove AWP_WALLET_DIR env var from wallet-raw-call.mjs
+
+- Wallet directory discovery now uses PATH lookup + well-known default paths only
+- Removed `AWP_WALLET_DIR` environment variable override to eliminate env-var-to-network-send pattern flagged by security scanners
+
 ## v0.25.6
 
 ### Security — Hardcode registry URL in wallet-raw-call.mjs
