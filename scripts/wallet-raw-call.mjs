@@ -12,8 +12,8 @@
  * Usage:
  *   node wallet-raw-call.mjs --token <session> --to <contract> --data <hex> [--value <wei>]
  *
- * Must be run from the awp-wallet directory (or set the AWP_WALLET_DIR environment variable)
- * so that node_modules and internal modules are resolved correctly.
+ * The script auto-discovers the awp-wallet installation via well-known paths.
+ * No environment variables are used (security: avoids env-var-to-network-send patterns).
  */
 
 import { parseArgs } from "node:util"
