@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.25.6
+
+### Security — Hardcode registry URL in wallet-raw-call.mjs
+
+- Registry URL for contract allowlist is now hardcoded (`https://tapi.awp.sh/api/registry`), not read from `AWP_API_URL` env var — prevents allowlist bypass via environment variable injection
+
 ## v0.25.5
 
 ### Security — Daemon opt-in, no auto-install, explicit file disclosure

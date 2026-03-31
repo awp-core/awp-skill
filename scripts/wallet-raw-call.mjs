@@ -48,10 +48,11 @@ if (!/^0x(?:[0-9a-fA-F]{2}){4,}$/.test(args.data)) {
 }
 
 // ── Contract allowlist — only AWP protocol contracts are permitted ────────
-const AWP_API_URL = process.env.AWP_API_URL || "https://tapi.awp.sh/api"
+// Hardcoded registry URL — not overridable via env vars to prevent allowlist bypass
+const REGISTRY_URL = "https://tapi.awp.sh/api/registry"
 
 async function fetchAllowedContracts() {
-  const resp = await fetch(`${AWP_API_URL}/registry`, {
+  const resp = await fetch(REGISTRY_URL, {
     signal: AbortSignal.timeout(10_000),
   })
   if (!resp.ok) {
