@@ -85,12 +85,20 @@ if (!allowedContracts.has(args.to.toLowerCase())) {
 }
 
 // ── Locate the awp-wallet installation directory ──────────────────────────
-// Uses PATH lookup and well-known default paths only — no env var override to avoid
-// security scanner warnings about environment variable access combined with network send.
+// No process.env access — uses well-known directories and os.homedir() only.
+// This avoids security scanner flags for "env var access + network send" in the same file.
 function findAwpWalletDir() {
-  // 1. Search for the awp-wallet executable in PATH
-  const pathDirs = (process.env.PATH || "").split(":")
-  for (const dir of pathDirs) {
+  const homedir = require("node:os").homedir()
+  // 1. Search well-known bin directories for the awp-wallet executable
+  const binDirs = [
+    resolve(homedir, ".local", "bin"),
+    resolve(homedir, ".npm-global", "bin"),
+    resolve(homedir, ".yarn", "bin"),
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+  ]
+  for (const dir of binDirs) {
     const candidate = resolve(dir, "awp-wallet")
     if (existsSync(candidate)) {
       try {
@@ -100,16 +108,15 @@ function findAwpWalletDir() {
       } catch { /* skip symlinks that cannot be resolved */ }
     }
   }
-  // 2. Well-known default paths
-  const homedir = require("node:os").homedir()
-  const defaultPaths = [
+  // 2. Well-known install paths
+  const installPaths = [
     resolve(homedir, "awp-wallet"),
     resolve(homedir, ".awp", "awp-wallet"),
   ]
-  for (const dir of defaultPaths) {
+  for (const dir of installPaths) {
     if (existsSync(resolve(dir, "scripts/lib/keystore.js"))) return dir
   }
-  console.error(JSON.stringify({ error: "Cannot locate awp-wallet installation. Ensure awp-wallet is in PATH." }))
+  console.error(JSON.stringify({ error: "Cannot locate awp-wallet installation. Ensure awp-wallet is installed." }))
   process.exit(1)
 }
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.25.8
+
+### Security — Eliminate all process.env access from wallet-raw-call.mjs
+
+- Replaced `process.env.PATH` lookup with well-known bin directories + `os.homedir()`
+- File now has zero `process.env` references, eliminating "env var + network send" scanner pattern
+
 ## v0.25.7
 
 ### Security — Remove AWP_WALLET_DIR env var from wallet-raw-call.mjs

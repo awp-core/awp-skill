@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.25.8 | Security: eliminate all process.env from wallet-raw-call.mjs, use os.homedir() + well-known paths |
 | 0.25.7 | Security: remove AWP_WALLET_DIR env var, use PATH + default paths only |
 | 0.25.6 | Security: hardcode registry URL in wallet-raw-call.mjs, prevent env var allowlist bypass |
 | 0.25.5 | Security: daemon opt-in, manual awp-wallet install, explicit ~/.awp file documentation |
