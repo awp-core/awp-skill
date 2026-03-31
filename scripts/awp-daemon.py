@@ -272,8 +272,9 @@ def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
             owner_raw = s.get("owner", "") or ""
             owner = (owner_raw[:6] + "..." + owner_raw[-4:]) if len(owner_raw) > 14 else owner_raw
             skills_uri = s.get("skills_uri", "")
-            created = s.get("created_at", "")
-            if created and len(created) >= 10:
+            created_raw = s.get("created_at", "")
+            created = str(created_raw) if created_raw else ""
+            if len(created) >= 10:
                 created = created[:10]  # YYYY-MM-DD
 
             # Line 1: #id NAME (SYMBOL)

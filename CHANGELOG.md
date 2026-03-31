@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.25.3
+
+### Fix — Daemon crash on integer created_at field
+
+- `format_subnet_list()`: API may return `created_at` as integer (Unix timestamp); convert to string before slicing
+
 ## v0.25.2
 
 ### Improve — Description optimization (20/20 trigger eval)

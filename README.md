@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 0.25.3 | Fix daemon crash: `created_at` may be integer, not string |
 | 0.25.2 | Description optimization — exclude other DeFi protocols on Base, 20/20 trigger eval |
 | 0.25.1 | Security: contract allowlist in wallet-raw-call.mjs, transaction confirmation, daemon PID lifecycle |
 | 0.25.0 | Unified English text, richer subnet display, cleaner notifications |
