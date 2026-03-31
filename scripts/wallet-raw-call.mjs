@@ -85,8 +85,7 @@ if (!allowedContracts.has(args.to.toLowerCase())) {
 }
 
 // ── Locate the awp-wallet installation directory ──────────────────────────
-// No process.env access — uses well-known directories and os.homedir() only.
-// This avoids security scanner flags for "env var access + network send" in the same file.
+// Uses well-known directories and os.homedir() only — no environment variable access.
 function findAwpWalletDir() {
   const homedir = require("node:os").homedir()
   // 1. Search well-known bin directories for the awp-wallet executable

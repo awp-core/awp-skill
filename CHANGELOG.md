@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.25.9
+
+### Security — Remove env-var keyword from comments in wallet-raw-call.mjs
+
+- Removed literal `process.env` text from code comments that triggered static analysis scanner
+- Scanner performs raw text matching, not AST-level analysis — comments containing the keyword were flagged
+
 ## v0.25.8
 
 ### Security — Eliminate all process.env access from wallet-raw-call.mjs
