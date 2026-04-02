@@ -34,7 +34,7 @@ def encode_set_min_stake(subnet_id: int, min_stake: int) -> str:
 def main() -> None:
     # ── Parse arguments ──
     parser = base_parser("Update worknet settings: setSkillsURI or setMinStake")
-    parser.add_argument("--subnet", required=True, help="Subnet ID")
+    parser.add_argument("--subnet", required=True, help="Worknet ID")
     parser.add_argument("--skills-uri", default="", help="new skills URI")
     parser.add_argument("--min-stake", default="", help="new minimum stake amount (wei)")
     args = parser.parse_args()

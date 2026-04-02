@@ -715,7 +715,7 @@ Connect to `wss://tapi.awp.sh/ws/live`, subscribe to event presets:
 | Preset | Events (26 total) | Emoji |
 |--------|-------------------|-------|
 | staking | Deposited, Withdrawn, PositionIncreased, Allocated, Deallocated, Reallocated | `$` |
-| worknets | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, LPCreated, SkillsURIUpdated, MinStakeUpdated | `#` |
+| subnets | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, LPCreated, SkillsURIUpdated, MinStakeUpdated | `#` |
 | emission | EpochSettled, RecipientAWPDistributed, DAOMatchDistributed, GovernanceWeightUpdated, AllocationsSubmitted, OracleConfigUpdated | `~` |
 | users | Bound, RecipientUpdated, DelegateGranted, DelegateRevoked | `@` |
 

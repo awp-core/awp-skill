@@ -16,7 +16,7 @@ ACTION_CONFIG: dict[str, tuple[str, str]] = {
 def main() -> None:
     # ── Parse arguments ──
     parser = base_parser("Worknet lifecycle: activate / pause / resume")
-    parser.add_argument("--subnet", required=True, help="Subnet ID")
+    parser.add_argument("--subnet", required=True, help="Worknet ID")
     parser.add_argument("--action", required=True, choices=["activate", "pause", "resume"],
                         help="action type")
     args = parser.parse_args()
@@ -29,7 +29,7 @@ def main() -> None:
     registry = get_registry()
     awp_registry = require_contract(registry, "awpRegistry")
 
-    # ── Check current subnet status ──
+    # ── Check current worknet status ──
     subnet_info = api_get(f"subnets/{subnet_id}")
     if not isinstance(subnet_info, dict):
         die(f"Worknet #{subnet_id} not found")
