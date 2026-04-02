@@ -170,7 +170,7 @@ The skill provides a polished user experience with:
 - **ASCII art welcome screen** with quick start commands
 - **4-step guided onboarding** — wallet setup, registration, worknet discovery, skill install
 - **Option A / Option B** — Solo Mining (quick start) vs Delegated Mining (link wallet)
-- **User commands** — `awp status`, `awp wallet`, `awp worknets`, `awp help`
+- **User commands** — `awp status`, `awp wallet`, `awp subnets`, `awp help`
 - **Agent wallet model** — transactions execute directly (work wallet only, no personal assets)
 - **Balance notifications** — auto-show +/- delta after balance-changing operations
 - **Tagged output** — 11 prefixes: `[QUERY]`, `[STAKE]`, `[TX]`, `[NEXT]`, `[!]`, etc.

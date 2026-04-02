@@ -454,7 +454,7 @@ awp-skill/
 ### UX Features
 
 - ASCII art welcome screen with quick-start commands
-- `awp status` / `awp wallet` / `awp worknets` / `awp help` quick commands
+- `awp status` / `awp wallet` / `awp subnets` / `awp help` quick commands
 - Agent wallet model — transactions execute directly (work wallet, no personal assets)
 - Balance change notifications with +/- delta after writes
 - Tagged output: `[QUERY]`, `[STAKE]`, `[TX]`, `[NEXT]`, `[!]` prefixes

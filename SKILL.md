@@ -179,7 +179,7 @@ AWP:        <balance>
 ──────────────────────────────────
 ```
 
-**awp worknets** — shortcut for Q5 (list active worknets)
+**awp subnets** — shortcut for Q5 (list active worknets)
 
 **awp notifications** — read and display daemon notifications, then clear:
 ```bash
@@ -580,7 +580,7 @@ For third-party sources, show a warning and ask for confirmation before installi
         ⚠ Third-party source — not maintained by awp-core.
         Install? (yes/no)
 ```
-If the user confirms, install to `skills/awp-worknet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the worknet list.
+If the user confirms, install to `skills/awp-subnet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the worknet list.
 
 ### Q7 · Epoch History [DRAFT]
 ```bash

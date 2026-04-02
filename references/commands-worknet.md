@@ -262,8 +262,8 @@ curl -X POST {API_BASE}/api/relay/register-subnet \
 | 400 | `{"error": "missing signature"}` | Signature field empty |
 | 400 | `{"error": "invalid signature"}` | EIP-712 signature verification failed |
 | 400 | `{"error": "signature expired"}` | On-chain deadline check failed |
-| 400 | `{"error": "invalid worknet params (name 1-64 bytes, symbol 1-16 bytes)"}` | Name/symbol length violation |
-| 400 | `{"error": "worknet manager address required (auto-deploy not available)"}` | No default SubnetManager impl set |
+| 400 | `{"error": "invalid subnet params (name 1-64 bytes, symbol 1-16 bytes)"}` | Name/symbol length violation |
+| 400 | `{"error": "subnet manager address required (auto-deploy not available)"}` | No default SubnetManager impl set |
 | 400 | `{"error": "insufficient AWP balance"}` | User lacks AWP for worknet registration |
 | 400 | `{"error": "insufficient AWP allowance"}` | Permit signature did not authorize enough AWP |
 | 400 | `{"error": "contract is paused"}` | AWPRegistry is in emergency pause state |
