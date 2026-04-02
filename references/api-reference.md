@@ -81,7 +81,7 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 {
   "subnet_id": 1,
   "owner": "0x...",
-  "name": "My Subnet",
+  "name": "My Worknet",
   "symbol": "MSUB",
   "subnet_contract": "0x...",
   "skills_uri": "ipfs://QmSkills...",

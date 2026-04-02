@@ -122,7 +122,7 @@ awp-skill/
 │   ├── awp_lib.py                          # Shared library (API, wallet, ABI, validation)
 │   ├── wallet-raw-call.mjs                 # Node.js bridge: raw contract calls via awp-wallet
 │   ├── relay-start.py                      # Gasless onboarding (bind or set-recipient)
-│   ├── relay-register-subnet.py            # Gasless subnet registration (dual EIP-712)
+│   ├── relay-register-subnet.py            # Gasless worknet registration (dual EIP-712)
 │   ├── onchain-register.py                 # On-chain register (optional)
 │   ├── onchain-bind.py                     # On-chain bind
 │   ├── onchain-deposit.py                  # Deposit AWP (approve + deposit)
@@ -189,8 +189,8 @@ One address handles everything — staking, mining, and earning. No mandatory re
 ```
 1. "start working" or "awp onboard"
 2. Option A: Quick Start → auto-register
-3. Pick a subnet → skill auto-installs
-4. Start working immediately (min_stake=0 subnets)
+3. Pick a worknet → skill auto-installs
+4. Start working immediately (min_stake=0 worknets)
 ```
 
 ### Delegated Mining (tree-based binding)
@@ -200,7 +200,7 @@ Two addresses with separated roles. Root manages funds (cold wallet), Agent exec
 Root (cold wallet):                    Agent (hot wallet):
 1. setRecipient(addr) if needed        1. "start working" → Option B
 2. deposit AWP (S2)                    2. bind(rootAddress) → auto
-3. allocate to Agent + subnet (S3)     3. pick subnet → start working
+3. allocate to Agent + worknet (S3)    3. pick worknet → start working
 4. grantDelegate(agent) if needed
 ```
 

@@ -9,7 +9,7 @@ description: >
   deallocate, reallocate), worknets (register, activate, pause, update), governance
   (proposals, voting), awp-wallet, gasless relay, and WebSocket monitoring. Trigger
   whenever the user mentions AWP, Agent Working Protocol, awp-wallet, StakeNFT,
-  SubnetNFT, AWP token/staking/subnet/DAO/emission/epoch, "awp onboard", "awp status",
+  SubnetNFT, AWP token/staking/worknet/DAO/emission/epoch, "awp onboard", "awp status",
   "start working" on AWP, or any AWP on-chain operation. NOT for: Uniswap, Aave, Lido,
   Compound, generic ERC-20, general Solidity/Hardhat tasks, or other DeFi protocols
   (even if deployed on Base chain — this skill is exclusively for the AWP protocol).
@@ -74,13 +74,13 @@ one protocol. infinite jobs. nonstop earnings.
 ── quick start ──────────────────
 "start working"    → register + join (free, no AWP needed)
 "check my balance" → staking overview
-"list subnets"     → browse active subnets
+"list worknets"    → browse active worknets
 "watch events"     → real-time monitor
 "awp help"         → all commands
 ──────────────────────────────────
 
 no AWP tokens needed to start.
-register for free → pick a subnet → start earning.
+register for free → pick a worknet → start earning.
 ```
 
 **Step 2 — Install wallet dependency** (if missing):
@@ -200,7 +200,7 @@ tail -50 ~/.awp/daemon.log 2>/dev/null
 ── commands ──────────────────────
 awp status        → your agent overview
 awp wallet        → wallet address + balances
-awp subnets       → browse active subnets
+awp subnets       → browse active worknets
 awp notifications → daemon notifications
 awp log           → recent daemon log
 awp help          → this list
@@ -270,9 +270,9 @@ If there is exactly one free worknet with a skill: auto-select it without asking
 If there are multiple: show only the free ones first, let user pick.
 
 ```
-[3/4] discovering subnets...
+[3/4] discovering worknets...
 
-── free subnets (no staking needed) ──
+── free worknets (no staking needed) ──
 #1  Benchmark    ✓ skill ready    ← recommended
 ──────────────────────────────────
 
@@ -292,11 +292,11 @@ Install example (awp-core source):
 
 ── onboarding complete ───────────
 wallet:     <short_address>
-subnet:     #1 "Benchmark"
+worknet:    #1 "Benchmark"
 cost:       FREE (no staking required)
 ──────────────────────────────────
 
-Your agent is now working on subnet #1.
+Your agent is now working on worknet #1.
 No AWP tokens were needed.
 ```
 
@@ -338,7 +338,7 @@ If the user later wants to work on a worknet that requires staking, guide them t
 |-----|------|
 | `[QUERY]` | Read-only data fetches |
 | `[STAKE]` | Staking operations |
-| `[SUBNET]` | Worknet management |
+| `[WORKNET]` | Worknet management |
 | `[GOV]` | Governance |
 | `[WATCH]` | WebSocket events |
 | `[GAS]` | Gas routing decisions |
@@ -412,18 +412,18 @@ scripts/
 ├── awp_lib.py                        Shared library (API, wallet, ABI encoding, validation)
 ├── wallet-raw-call.mjs               Node.js bridge: contract calls restricted to /registry allowlist only
 ├── relay-start.py                    Gasless register or bind (no ETH needed)
-├── relay-register-subnet.py          Gasless subnet registration (no ETH needed)
+├── relay-register-subnet.py          Gasless worknet registration (no ETH needed)
 ├── onchain-register.py               On-chain register
 ├── onchain-bind.py                   On-chain bind to target
 ├── onchain-deposit.py                Deposit AWP (approve + deposit)
-├── onchain-allocate.py               Allocate stake to agent+subnet
+├── onchain-allocate.py               Allocate stake to agent+worknet
 ├── onchain-deallocate.py             Deallocate stake
-├── onchain-reallocate.py             Move stake between agents/subnets
+├── onchain-reallocate.py             Move stake between agents/worknets
 ├── onchain-withdraw.py               Withdraw from expired position
 ├── onchain-add-position.py           Add AWP to existing position
 ├── onchain-register-and-stake.py     One-click register+deposit+allocate
 ├── onchain-vote.py                   Cast DAO vote
-├── onchain-subnet-lifecycle.py       Activate/pause/resume subnet
+├── onchain-subnet-lifecycle.py       Activate/pause/resume worknet
 └── onchain-subnet-update.py          Set skillsURI or minStake
 ```
 
@@ -495,8 +495,8 @@ curl -s https://tapi.awp.sh/api/subnets/{id}
 ```
 Print:
 ```
-[QUERY] Subnet #<id>
-── subnet ────────────────────────
+[QUERY] Worknet #<id>
+── worknet ───────────────────────
 name:           <name>
 status:         <status>
 owner:          <short_address>
@@ -525,7 +525,7 @@ positions:
   #<id>  <amount> AWP  lock ends <date>
 
 allocations:
-  agent <short> → subnet #<id>  <amount> AWP
+  agent <short> → worknet #<id>  <amount> AWP
 ──────────────────────────────────
 ```
 
@@ -555,12 +555,12 @@ curl -s "https://tapi.awp.sh/api/subnets?status=Active&page=1&limit=20"
 ```
 Sort: worknets with skills first, then min_stake ascending.
 ```
-[QUERY] Active subnets
-── subnets ───────────────────────
+[QUERY] Active worknets
+── worknets ──────────────────────
 #<id>  <name>        min: 0 AWP      skills: ✓
 #<id>  <name>        min: 100 AWP    skills: —
 ──────────────────────────────────
-[NEXT] Install a subnet skill: say "install skill for subnet #<id>"
+[NEXT] Install a worknet skill: say "install skill for worknet #<id>"
 ```
 
 ### Q6 · Install Worknet Skill
@@ -570,17 +570,17 @@ curl -s https://tapi.awp.sh/api/subnets/{id}/skills
 
 For `awp-core` sources (`github.com/awp-core/*`), install directly:
 ```
-[SETUP] Installing subnet #1 skill ...
+[SETUP] Installing worknet #1 skill ...
 [SETUP] Installed ✓
 ```
 
 For third-party sources, show a warning and ask for confirmation before installing:
 ```
-[SETUP] Subnet #5 skill source: https://github.com/other/repo
+[SETUP] Worknet #5 skill source: https://github.com/other/repo
         ⚠ Third-party source — not maintained by awp-core.
         Install? (yes/no)
 ```
-If the user confirms, install to `skills/awp-subnet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the worknet list.
+If the user confirms, install to `skills/awp-worknet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the worknet list.
 
 ### Q7 · Epoch History [DRAFT]
 ```bash
@@ -661,7 +661,7 @@ python3 scripts/onchain-register-and-stake.py --token $TOKEN --amount 5000 --loc
 
 ### M1 · Register Worknet (gasless)
 ```bash
-python3 scripts/relay-register-subnet.py --token $TOKEN --name "MySubnet" --symbol "MSUB" --skills-uri "ipfs://QmHash"
+python3 scripts/relay-register-subnet.py --token $TOKEN --name "MyWorknet" --symbol "MWRK" --skills-uri "ipfs://QmHash"
 ```
 
 ### M2 · Activate / Pause / Resume

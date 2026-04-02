@@ -53,7 +53,7 @@ struct SubnetParams {
 function approve(address spender, uint256 amount) returns (bool)   // on AWPToken
 // spender = awpRegistry address
 
-// Step 2: Register subnet (after approve receipt)
+// Step 2: Register worknet (after approve receipt)
 function registerSubnet(SubnetParams params) returns (uint256 subnetId)   // on AWPRegistry
 // params.salt = bytes32(0) uses subnetId as CREATE2 salt
 // params.subnetManager = address(0) auto-deploys SubnetManager proxy
@@ -137,7 +137,7 @@ GET /vanity/salts/count
 
 ```bash
 # Gasless registration (recommended — no ETH needed, AWP only):
-python3 scripts/relay-register-subnet.py --token {T} --name "MySubnet" --symbol "MSUB" --skills-uri "ipfs://QmHash"
+python3 scripts/relay-register-subnet.py --token {T} --name "MyWorknet" --symbol "MWRK" --skills-uri "ipfs://QmHash"
 ```
 
 ### Gasless Worknet Registration — EIP-712 Template
@@ -225,8 +225,8 @@ awp-wallet sign-typed-data --token {T} --data '{
   },
   "message": {
     "user": "'$WALLET_ADDR'",
-    "name": "{subnetName}",
-    "symbol": "{subnetSymbol}",
+    "name": "{worknetName}",
+    "symbol": "{worknetSymbol}",
     "subnetManager": "0x0000000000000000000000000000000000000000",
     "salt": "'$SALT'",
     "minStake": {minStakeWei},
@@ -243,7 +243,7 @@ curl -X POST {API_BASE}/api/relay/register-subnet \
   -H "Content-Type: application/json" \
   -d '{
     "user": "'$WALLET_ADDR'",
-    "name": "{subnetName}", "symbol": "{subnetSymbol}",
+    "name": "{worknetName}", "symbol": "{worknetSymbol}",
     "subnetManager": "0x0000000000000000000000000000000000000000",
     "salt": "'$SALT'", "minStake": "{minStakeWei}",
     "skillsURI": "{skillsURI}",
@@ -290,8 +290,8 @@ Always check current status via `GET /subnets/{id}` before calling.
 {
   "subnet_id": 1,
   "owner": "0x...",
-  "name": "My Subnet",
-  "symbol": "MSUB",
+  "name": "My Worknet",
+  "symbol": "MWRK",
   "subnet_contract": "0x...",
   "skills_uri": "ipfs://QmSkills...",
   "alpha_token": "0x...",

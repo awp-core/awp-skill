@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""On-chain subnet lifecycle management — activate/pause/resume (V2)
-Checks current subnet status before calling to prevent invalid state transitions.
+"""On-chain worknet lifecycle management — activate/pause/resume (V2)
+Checks current worknet status before calling to prevent invalid state transitions.
 Only the SubnetNFT owner may operate. Requires ETH for gas.
 """
 from awp_lib import *
@@ -15,7 +15,7 @@ ACTION_CONFIG: dict[str, tuple[str, str]] = {
 
 def main() -> None:
     # ── Parse arguments ──
-    parser = base_parser("Subnet lifecycle: activate / pause / resume")
+    parser = base_parser("Worknet lifecycle: activate / pause / resume")
     parser.add_argument("--subnet", required=True, help="Subnet ID")
     parser.add_argument("--action", required=True, choices=["activate", "pause", "resume"],
                         help="action type")
@@ -32,16 +32,16 @@ def main() -> None:
     # ── Check current subnet status ──
     subnet_info = api_get(f"subnets/{subnet_id}")
     if not isinstance(subnet_info, dict):
-        die(f"Subnet #{subnet_id} not found")
+        die(f"Worknet #{subnet_id} not found")
 
     status = subnet_info.get("status")
     if not status or status == "null":
-        die(f"Subnet #{subnet_id} not found")
+        die(f"Worknet #{subnet_id} not found")
 
     # Validate state transition
     required_status, selector = ACTION_CONFIG[action]
     if status != required_status:
-        die(f"Cannot {action}: subnet is {status} (must be {required_status})")
+        die(f"Cannot {action}: worknet is {status} (must be {required_status})")
 
     # ── Send transaction ──
     subnet_padded = pad_uint256(subnet_id)

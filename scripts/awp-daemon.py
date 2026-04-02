@@ -3,12 +3,12 @@
 AWP Daemon — background monitoring service for AWP skill.
 
 Runs continuously:
-  1. Send welcome message (banner + active subnets) via notify or stdout
+  1. Send welcome message (banner + active worknets) via notify or stdout
   2. Check that awp-wallet is installed (does NOT auto-install)
   3. Check that wallet is initialized (does NOT auto-init)
-  4. Show registration status + available subnets
+  4. Show registration status + available worknets
   5. Check for version updates (informational only, no auto-update)
-  6. Monitor: registration state changes, new subnet detection
+  6. Monitor: registration state changes, new worknet detection
 
 Security notes:
   - Never auto-downloads or auto-executes remote scripts
@@ -226,7 +226,7 @@ def write_status(
         next_step = 'Tell your agent: "start working" (free, gasless)'
     else:
         phase = "ready"
-        next_step = 'Tell your agent: "list subnets" or "start working"'
+        next_step = 'Tell your agent: "list worknets" or "start working"'
 
     status = {
         "phase": phase,
@@ -244,7 +244,7 @@ def write_status(
         pass
 
 
-# ── Subnet Tracking ─────────────────────────────
+# ── Worknet Tracking ────────────────────────────
 
 def fetch_active_subnets() -> list[dict[str, Any]]:
     """Fetch the list of active subnets."""
@@ -255,11 +255,11 @@ def fetch_active_subnets() -> list[dict[str, Any]]:
 
 
 def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
-    """Format the subnet list in receipt style with detailed info per subnet."""
+    """Format the worknet list in receipt style with detailed info per worknet."""
     W = RECEIPT_WIDTH  # Content width (matches the banner)
     lines: list[str] = []
     lines.append("┌" + "─" * W + "┐")
-    lines.append("│" + "ACTIVE SUBNETS".center(W) + "│")
+    lines.append("│" + "ACTIVE WORKNETS".center(W) + "│")
     lines.append("├" + "─" * W + "┤")
     if not subnets:
         lines.append("│" + "  (none found)".ljust(W) + "│")
@@ -314,7 +314,7 @@ def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
         total = len(subnets)
         free = sum(1 for s in subnets if s.get("min_stake", 0) == 0)
         with_skills = sum(1 for s in subnets if s.get("skills_uri"))
-        summary = f"  {total} subnets · {free} free · {with_skills} with skills"
+        summary = f"  {total} worknets · {free} free · {with_skills} with skills"
         lines.append("│" + summary.ljust(W) + "│")
     lines.append("└" + "─" * W + "┘")
     return "\n".join(lines)
@@ -342,11 +342,11 @@ WELCOME_BANNER = """\
 │                                          │
 │  "start working"    register + join      │
 │  "check my balance" staking overview     │
-│  "list subnets"     browse active        │
+│  "list worknets"    browse active         │
 │  "awp help"         all commands         │
 │                                          │
 │  no AWP tokens needed to start.          │
-│  register free → pick a subnet → earn.   │
+│  register free → pick a worknet → earn.  │
 └──────────────────────────────────────────┘"""
 
 
@@ -367,7 +367,7 @@ def send_welcome(subnets: list[dict[str, Any]]) -> None:
         notify("Hello World from the World of Agents!", full_message)
 
 
-# ── New Subnet Detection ────────────────────────
+# ── New Worknet Detection ───────────────────────
 
 def detect_new_subnets(
     current: list[dict[str, Any]],
@@ -479,9 +479,9 @@ def check_and_notify(wallet_addr: str) -> bool:
 
     log("──────────────────────────────────────")
 
-    # Subnet list
+    # Worknet list
     print()
-    log("── available subnets ─────────────────")
+    log("── available worknets ────────────────")
 
     subnets = api_get("/subnets?status=Active&limit=10")
     if subnets and isinstance(subnets, list) and len(subnets) > 0:
@@ -496,9 +496,9 @@ def check_and_notify(wallet_addr: str) -> bool:
         free = sum(1 for s in subnets if s.get("min_stake", 0) == 0)
         with_skills = sum(1 for s in subnets if s.get("skills_uri"))
         log("")
-        log(f"{total} subnets. {free} free (no staking). {with_skills} with skills.")
+        log(f"{total} worknets. {free} free (no staking). {with_skills} with skills.")
     else:
-        log("  No active subnets found (or API unavailable)")
+        log("  No active worknets found (or API unavailable)")
 
     log("──────────────────────────────────────")
 
@@ -506,7 +506,7 @@ def check_and_notify(wallet_addr: str) -> bool:
     if not is_registered:
         log('→ Next: say "start working" to register for free')
     else:
-        log('→ Next: say "list subnets" to browse, or "install skill for subnet #1" to start')
+        log('→ Next: say "list worknets" to browse, or "install skill for worknet #1" to start')
     print()
 
     return is_registered
@@ -623,15 +623,15 @@ def main() -> None:
                    "You are not registered yet. Registration is FREE (gasless).\n"
                    'Tell your agent: "start working"',
                    "info")
-        # Wallet ready and registered — guide user to pick a subnet and start working
+        # Wallet ready and registered — guide user to pick a worknet and start working
         else:
             short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
             notify("Registered — Ready to Work",
                    f"Wallet {short_addr} is registered.\n"
                    'Next steps:\n'
-                   '  - Tell your agent: "list subnets" to browse available subnets\n'
-                   '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
-                   '  - Or just say: "start working" to auto-pick a free subnet',
+                   '  - Tell your agent: "list worknets" to browse available worknets\n'
+                   '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
+                   '  - Or just say: "start working" to auto-pick a free worknet',
                    "info")
     else:
         if not wallet_ready:
@@ -705,9 +705,9 @@ def main() -> None:
                             notify("Registered — Ready to Work",
                                    f"Wallet {short_addr} is now registered!\n"
                                    'Next steps:\n'
-                                   '  - Tell your agent: "list subnets" to browse available subnets\n'
-                                   '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
-                                   '  - Or just say: "start working" to auto-pick a free subnet',
+                                   '  - Tell your agent: "list worknets" to browse available worknets\n'
+                                   '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
+                                   '  - Or just say: "start working" to auto-pick a free worknet',
                                    "info")
                             check_and_notify(wallet_addr)
                         else:
@@ -720,7 +720,7 @@ def main() -> None:
 
                     last_registered = is_registered
 
-                # New subnet detection
+                # New worknet detection
                 current_subnets = fetch_active_subnets()
                 new_subnets = detect_new_subnets(current_subnets, known_subnet_ids)
                 if new_subnets:
@@ -739,8 +739,8 @@ def main() -> None:
                             msg += f" | min stake: {min_stake} AWP"
                         if skills:
                             msg += " | has skills"
-                        notify("New Subnet", msg)
-                    # Update known subnet set
+                        notify("New Worknet", msg)
+                    # Update known worknet set
                     known_subnet_ids.update(
                         int(s["subnet_id"]) for s in new_subnets if s.get("subnet_id") is not None
                     )

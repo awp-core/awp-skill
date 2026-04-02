@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""On-chain reallocate stake between agent+subnet pairs (V2)
+"""On-chain reallocate stake between agent+worknet pairs (V2)
 V2 signature: reallocate(address staker, address fromAgent, uint256 fromSubnetId,
                          address toAgent, uint256 toSubnetId, uint256 amount)
 The staker parameter is now explicit (first argument). Caller must be staker or delegate.
@@ -8,11 +8,11 @@ from awp_lib import *
 
 
 def main() -> None:
-    parser = base_parser("On-chain reallocate stake between agent+subnet pairs (V2)")
+    parser = base_parser("On-chain reallocate stake between agent+worknet pairs (V2)")
     parser.add_argument("--from-agent", required=True, help="Source agent address")
-    parser.add_argument("--from-subnet", required=True, help="Source subnet ID")
+    parser.add_argument("--from-subnet", required=True, help="Source worknet ID")
     parser.add_argument("--to-agent", required=True, help="Destination agent address")
-    parser.add_argument("--to-subnet", required=True, help="Destination subnet ID")
+    parser.add_argument("--to-subnet", required=True, help="Destination worknet ID")
     parser.add_argument("--amount", required=True, help="AWP amount (human readable)")
     args = parser.parse_args()
 

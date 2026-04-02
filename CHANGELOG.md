@@ -422,7 +422,7 @@ awp-skill/
 ├── scripts/                    14 executable bash scripts
 │   ├── awp_lib.py                Shared library (API, wallet, ABI, validation)
 │   ├── relay-start.py            Gasless register/bind
-│   ├── relay-register-subnet.py  Gasless subnet registration
+│   ├── relay-register-subnet.py  Gasless worknet registration
 │   ├── onchain-register.py       On-chain register
 │   ├── onchain-bind.py           On-chain bind
 │   ├── onchain-deposit.py        Deposit AWP
@@ -433,7 +433,7 @@ awp-skill/
 │   ├── onchain-add-position.py   Add to existing position
 │   ├── onchain-register-and-stake.py  One-click register+deposit+allocate
 │   ├── onchain-vote.py           Cast DAO vote
-│   ├── onchain-subnet-lifecycle.py  Activate/pause/resume subnet
+│   ├── onchain-subnet-lifecycle.py  Activate/pause/resume worknet
 │   └── onchain-subnet-update.py  Set skillsURI or minStake
 ├── assets/
 │   └── banner.png

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fully gasless subnet registration — via dual EIP-712 signatures (V2)"""
+"""Fully gasless worknet registration — via dual EIP-712 signatures (V2)"""
 
 from __future__ import annotations
 
@@ -29,9 +29,9 @@ from awp_lib import (
 
 def parse_args() -> tuple[str, str, str, str, int, str, str]:
     """Parse command-line arguments, returning (token, name, symbol, salt, min_stake, subnet_manager, skills_uri)"""
-    parser = base_parser("AWP gasless subnet registration via dual EIP-712 signatures")
-    parser.add_argument("--name", required=True, help="subnet name")
-    parser.add_argument("--symbol", required=True, help="subnet token symbol")
+    parser = base_parser("AWP gasless worknet registration via dual EIP-712 signatures")
+    parser.add_argument("--name", required=True, help="worknet name")
+    parser.add_argument("--symbol", required=True, help="worknet token symbol")
     parser.add_argument(
         "--salt",
         default="0x0000000000000000000000000000000000000000000000000000000000000000",

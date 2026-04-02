@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""On-chain allocate stake to agent+subnet (V2)
+"""On-chain allocate stake to agent+worknet (V2)
 V2 signature: allocate(address staker, address agent, uint256 subnetId, uint256 amount)
 The staker parameter is now explicit (first argument). Caller must be staker or delegate.
 """
@@ -7,9 +7,9 @@ from awp_lib import *
 
 
 def main() -> None:
-    parser = base_parser("On-chain allocate stake to agent+subnet (V2)")
+    parser = base_parser("On-chain allocate stake to agent+worknet (V2)")
     parser.add_argument("--agent", required=True, help="Agent address")
-    parser.add_argument("--subnet", required=True, help="Subnet ID")
+    parser.add_argument("--subnet", required=True, help="Worknet ID")
     parser.add_argument("--amount", required=True, help="AWP amount (human readable)")
     args = parser.parse_args()
 

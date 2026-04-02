@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""On-chain deallocate stake from agent+subnet (V2)
+"""On-chain deallocate stake from agent+worknet (V2)
 deallocate(address staker, address agent, uint256 subnetId, uint256 amount)
 Takes effect immediately, no cooldown period.
 """
@@ -7,9 +7,9 @@ from awp_lib import *
 
 
 def main() -> None:
-    parser = base_parser("On-chain deallocate stake from agent+subnet (V2)")
+    parser = base_parser("On-chain deallocate stake from agent+worknet (V2)")
     parser.add_argument("--agent", required=True, help="Agent address")
-    parser.add_argument("--subnet", required=True, help="Subnet ID")
+    parser.add_argument("--subnet", required=True, help="Worknet ID")
     parser.add_argument("--amount", required=True, help="AWP amount (human readable)")
     args = parser.parse_args()
 

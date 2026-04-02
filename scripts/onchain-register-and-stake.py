@@ -10,7 +10,7 @@ def main() -> None:
     parser.add_argument("--amount", required=True, help="Deposit AWP amount (human readable)")
     parser.add_argument("--lock-days", required=True, help="Lock duration in days")
     parser.add_argument("--agent", required=True, help="Agent address")
-    parser.add_argument("--subnet", required=True, help="Subnet ID")
+    parser.add_argument("--subnet", required=True, help="Worknet ID")
     parser.add_argument("--allocate-amount", required=True, help="Allocate AWP amount (human readable)")
     args = parser.parse_args()
 

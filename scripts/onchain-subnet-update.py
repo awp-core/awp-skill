@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""On-chain subnet settings update — setSkillsURI or setMinStake (V2)
+"""On-chain worknet settings update — setSkillsURI or setMinStake (V2)
 Important: these calls are sent to the SubnetNFT contract, NOT AWPRegistry!
 Only the NFT owner may operate. Requires ETH for gas.
 """
@@ -33,7 +33,7 @@ def encode_set_min_stake(subnet_id: int, min_stake: int) -> str:
 
 def main() -> None:
     # ── Parse arguments ──
-    parser = base_parser("Update subnet settings: setSkillsURI or setMinStake")
+    parser = base_parser("Update worknet settings: setSkillsURI or setMinStake")
     parser.add_argument("--subnet", required=True, help="Subnet ID")
     parser.add_argument("--skills-uri", default="", help="new skills URI")
     parser.add_argument("--min-stake", default="", help="new minimum stake amount (wei)")
