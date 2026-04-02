@@ -147,7 +147,7 @@
 
 **Script fixes (6 fixes)**:
 - `onchain-vote.py`: `token_id` not cast to int in eligible_ids
-- `relay-register-worknet.py`: `--subnet-manager` and `--salt` not validated
+- `relay-register-subnet.py`: `--subnet-manager` and `--salt` not validated
 - `wallet-raw-call.mjs`: hex regex allows odd-length strings — require even-length
 - `onchain-register-and-stake.py`: no check that allocate_amount ≤ deposit amount
 - `onchain-deposit.py`: no uint64 overflow guard on lock_seconds
