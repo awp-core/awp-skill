@@ -137,7 +137,7 @@ GET /tokens/awp
 GET /tokens/alpha/{subnetId}
 ```
 ```json
-{"subnetId": 1, "name": "My Subnet Alpha", "symbol": "MSALPHA", "alphaToken": "0x..."}
+{"subnetId": 1, "name": "My Worknet Alpha", "symbol": "MSALPHA", "alphaToken": "0x..."}
 ```
 
 ### Alpha Token Price

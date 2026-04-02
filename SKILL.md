@@ -645,7 +645,7 @@ python3 scripts/onchain-allocate.py --token $TOKEN --agent <addr> --subnet 1 --a
 python3 scripts/onchain-deallocate.py --token $TOKEN --agent <addr> --subnet 1 --amount 5000
 ```
 
-**Reallocate (move between agents/subnets):**
+**Reallocate (move between agents/worknets):**
 ```bash
 python3 scripts/onchain-reallocate.py --token $TOKEN --from-agent <addr> --from-subnet 1 --to-agent <addr> --to-subnet 2 --amount 5000
 ```

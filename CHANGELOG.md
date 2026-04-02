@@ -404,7 +404,7 @@ skill install https://github.com/awp-core/awp-skill
 - **20 actions** across 5 categories: Query, Staking, Worknet Management, Governance, and WebSocket Monitoring
 - **14 bundled shell scripts** that handle all on-chain operations — the agent never constructs calldata manually, eliminating an entire class of ABI-encoding and selector errors
 - **Gasless onboarding** — registration is free via EIP-712 relay; no ETH or AWP tokens needed to get started
-- **26 real-time event types** via WebSocket with 4 presets (staking, worknets, emission, users)
+- **26 real-time event types** via WebSocket with 4 presets (staking, subnets, emission, users)
 - **Guided onboarding flow** — 4-step wizard (wallet → register → discover worknets → install skill) with progress indicators
 - **Optimized for weaker models** — concrete URLs (no placeholders), one way to do each operation (no choices), and explicit rules preventing common mistakes
 
