@@ -6,7 +6,7 @@ description: >
   load this skill first before any AWP task because the protocol-specific details
   (ABI encodings, script parameters, wallet commands) cannot be inferred and will be
   wrong without it. Covers all AWP operations: staking (deposit, withdraw, allocate,
-  deallocate, reallocate), subnets (register, activate, pause, update), governance
+  deallocate, reallocate), worknets (register, activate, pause, update), governance
   (proposals, voting), awp-wallet, gasless relay, and WebSocket monitoring. Trigger
   whenever the user mentions AWP, Agent Working Protocol, awp-wallet, StakeNFT,
   SubnetNFT, AWP token/staking/subnet/DAO/emission/epoch, "awp onboard", "awp status",
@@ -51,7 +51,7 @@ Throughout this document, all `curl` commands use the full URL directly. Do not 
 
 **IMPORTANT: Always show the user what you're doing.** Every query result, every transaction, every event — print it clearly. Never run API calls silently.
 
-**CRITICAL: Registration is FREE and most subnets require ZERO staking.** Do NOT tell users they need AWP tokens or staking to get started. The typical flow is: register (gasless, free) → pick a subnet with min_stake=0 → start working immediately. Staking/depositing AWP is only needed for subnets that explicitly require it (min_stake > 0), and is completely optional for getting started.
+**CRITICAL: Registration is FREE and most worknets require ZERO staking.** Do NOT tell users they need AWP tokens or staking to get started. The typical flow is: register (gasless, free) → pick a worknet with min_stake=0 → start working immediately. Staking/depositing AWP is only needed for worknets that explicitly require it (min_stake > 0), and is completely optional for getting started.
 
 ## On Skill Load (do this FIRST)
 
@@ -179,7 +179,7 @@ AWP:        <balance>
 ──────────────────────────────────
 ```
 
-**awp subnets** — shortcut for Q5 (list active subnets)
+**awp worknets** — shortcut for Q5 (list active worknets)
 
 **awp notifications** — read and display daemon notifications, then clear:
 ```bash
@@ -260,13 +260,13 @@ python3 scripts/relay-start.py --token $TOKEN --mode agent --target <user_wallet
 
 Print: `[2/4] registered   ✓  (free, no AWP required)`
 
-**Step 3: Auto-select a free subnet**
+**Step 3: Auto-select a free worknet**
 ```bash
 curl -s "https://tapi.awp.sh/api/subnets?status=Active&limit=10"
 ```
-Filter for subnets with `min_stake = 0` AND `skills_uri` not empty. These subnets are FREE to join — no staking needed.
+Filter for worknets with `min_stake = 0` AND `skills_uri` not empty. These worknets are FREE to join — no staking needed.
 
-If there is exactly one free subnet with a skill: auto-select it without asking.
+If there is exactly one free worknet with a skill: auto-select it without asking.
 If there are multiple: show only the free ones first, let user pick.
 
 ```
@@ -279,11 +279,11 @@ If there are multiple: show only the free ones first, let user pick.
 Auto-selecting #1 Benchmark (free, skill ready)
 ```
 
-Only show subnets with min_stake > 0 if the user explicitly asks, or if no free subnets exist.
+Only show worknets with min_stake > 0 if the user explicitly asks, or if no free worknets exist.
 
-**Step 4: Install subnet skill and start working**
+**Step 4: Install worknet skill and start working**
 
-Check the subnet's `skills_uri` source. If it is from `github.com/awp-core/*`, install directly. If it is from a third-party source, show a warning and ask for confirmation before installing (see Q6 for the exact flow). If the user declines, return to the subnet list from Step 3.
+Check the worknet's `skills_uri` source. If it is from `github.com/awp-core/*`, install directly. If it is from a third-party source, show a warning and ask for confirmation before installing (see Q6 for the exact flow). If the user declines, return to the worknet list from Step 3.
 
 Install example (awp-core source):
 ```
@@ -300,27 +300,27 @@ Your agent is now working on subnet #1.
 No AWP tokens were needed.
 ```
 
-If the user later wants to work on a subnet that requires staking, guide them to S2 (deposit) and S3 (allocate) at that time — not during initial onboarding.
+If the user later wants to work on a worknet that requires staking, guide them to S2 (deposit) and S3 (allocate) at that time — not during initial onboarding.
 
 ## Intent Routing
 
 | User wants to... | Action | Reference file to load |
 |-------------------|--------|------------------------|
 | Start / onboard / setup | ONBOARD | **references/commands-staking.md** |
-| Query subnet info | Q1 | None |
+| Query worknet info | Q1 | None |
 | Check balance / positions | Q2 | None |
 | View emission / epoch info | Q3 [DRAFT] | None |
 | Look up agent info | Q4 | None |
-| Browse subnets | Q5 | None |
-| Find / install subnet skill | Q6 | None |
+| Browse worknets | Q5 | None |
+| Find / install worknet skill | Q6 | None |
 | View epoch history | Q7 [DRAFT] | None |
 | Set recipient / bind / start mining | S1 | **references/commands-staking.md** |
 | Deposit / stake AWP | S2 | **references/commands-staking.md** |
 | Allocate / deallocate / reallocate | S3 | **references/commands-staking.md** |
-| Register a new subnet | M1 | **references/commands-subnet.md** |
-| Activate / pause / resume subnet | M2 | **references/commands-subnet.md** |
-| Update skills URI | M3 | **references/commands-subnet.md** |
-| Set minimum stake | M4 | **references/commands-subnet.md** |
+| Register a new worknet | M1 | **references/commands-worknet.md** |
+| Activate / pause / resume worknet | M2 | **references/commands-worknet.md** |
+| Update skills URI | M3 | **references/commands-worknet.md** |
+| Set minimum stake | M4 | **references/commands-worknet.md** |
 | Create governance proposal | G1 | **references/commands-governance.md** |
 | Vote on proposal | G2 | **references/commands-governance.md** |
 | Query proposals | G3 | None |
@@ -338,7 +338,7 @@ If the user later wants to work on a subnet that requires staking, guide them to
 |-----|------|
 | `[QUERY]` | Read-only data fetches |
 | `[STAKE]` | Staking operations |
-| `[SUBNET]` | Subnet management |
+| `[SUBNET]` | Worknet management |
 | `[GOV]` | Governance |
 | `[WATCH]` | WebSocket events |
 | `[GAS]` | Gas routing decisions |
@@ -389,8 +389,8 @@ On first wallet setup, inform the user:
 ## Rules
 
 1. **Registration is FREE.** Never tell users they need AWP tokens, ETH, or staking to register. Registration uses the gasless relay and costs nothing.
-2. **Most subnets are FREE to join.** Subnets with `min_stake = 0` require no staking at all. Always prefer these during onboarding. Only mention staking when the user specifically picks a subnet with `min_stake > 0`.
-3. **Do NOT block onboarding on staking.** The flow is: register → pick free subnet → start working. Staking is a separate, optional, later step.
+2. **Most worknets are FREE to join.** Worknets with `min_stake = 0` require no staking at all. Always prefer these during onboarding. Only mention staking when the user specifically picks a worknet with `min_stake > 0`.
+3. **Do NOT block onboarding on staking.** The flow is: register → pick free worknet → start working. Staking is a separate, optional, later step.
 4. **Use bundled scripts for ALL write operations.** Never manually construct calldata, ABI encoding, or EIP-712 JSON.
 5. **Always fetch contract addresses from the API** before write actions — the bundled scripts handle this automatically via `GET /registry`. Never hardcode contract addresses.
 6. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei.
@@ -398,7 +398,7 @@ On first wallet setup, inform the user:
 8. Do not use stale V1 names: no "unbind()", no "removeAgent()". Binding changes use `bind(newTarget)`.
 9. **Wallet handles credentials internally.** Just run `awp-wallet init` + `awp-wallet unlock`. No password generation, no password files, no user prompts.
 10. **This is an agent work wallet.** Always confirm with the user before executing any on-chain transaction — show the action, target contract, and estimated cost, then wait for explicit approval. Exception: gasless registration via relay (free, no gas cost) does not require confirmation. Remind the user on first setup: do NOT store personal assets in this wallet.
-11. **Subnet skill install (Q6):** Install `awp-core` skills directly. For third-party sources (not `github.com/awp-core/*`), show a warning and require user confirmation before installing.
+11. **Worknet skill install (Q6):** Install `awp-core` skills directly. For third-party sources (not `github.com/awp-core/*`), show a warning and require user confirmation before installing.
 12. **Onboarding requires user choice.** Always present Option A (Solo) and Option B (Delegated) and WAIT for the user to choose. Never auto-select an option.
 13. **Bind already sets the reward path.** After `bind(target)`, rewards resolve to the target via the bind chain. Do NOT call `setRecipient()` after a successful bind — it's redundant.
 
@@ -442,7 +442,7 @@ scripts/
 - `notifications.json` — queued notifications (only if daemon is running)
 - `status.json` — daemon state snapshot (only if daemon is running)
 
-**Third-party skill installs**: Subnet skills from non-`awp-core` sources require explicit user confirmation before installation.
+**Third-party skill installs**: Worknet skills from non-`awp-core` sources require explicit user confirmation before installation.
 
 ## Wallet Setup
 
@@ -489,7 +489,7 @@ awp-wallet balance --token $TOKEN
 
 ## Query (read-only, no wallet needed)
 
-### Q1 · Query Subnet
+### Q1 · Query Worknet
 ```bash
 curl -s https://tapi.awp.sh/api/subnets/{id}
 ```
@@ -549,11 +549,11 @@ decay:          ~0.3156% per epoch
 curl -s https://tapi.awp.sh/api/subnets/{subnetId}/agents/{agent}
 ```
 
-### Q5 · List Subnets
+### Q5 · List Worknets
 ```bash
 curl -s "https://tapi.awp.sh/api/subnets?status=Active&page=1&limit=20"
 ```
-Sort: subnets with skills first, then min_stake ascending.
+Sort: worknets with skills first, then min_stake ascending.
 ```
 [QUERY] Active subnets
 ── subnets ───────────────────────
@@ -563,7 +563,7 @@ Sort: subnets with skills first, then min_stake ascending.
 [NEXT] Install a subnet skill: say "install skill for subnet #<id>"
 ```
 
-### Q6 · Install Subnet Skill
+### Q6 · Install Worknet Skill
 ```bash
 curl -s https://tapi.awp.sh/api/subnets/{id}/skills
 ```
@@ -580,7 +580,7 @@ For third-party sources, show a warning and ask for confirmation before installi
         ⚠ Third-party source — not maintained by awp-core.
         Install? (yes/no)
 ```
-If the user confirms, install to `skills/awp-subnet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the subnet list.
+If the user confirms, install to `skills/awp-worknet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the worknet list.
 
 ### Q7 · Epoch History [DRAFT]
 ```bash
@@ -612,9 +612,9 @@ If the wallet has ETH, use on-chain scripts instead:
 python3 scripts/onchain-bind.py --token $TOKEN --target <root_address>
 ```
 
-### S2 · Deposit AWP (optional — only for subnets that require staking)
+### S2 · Deposit AWP (optional — only for worknets that require staking)
 
-Most subnets have min_stake=0 and do not require any deposit. Only run these commands if the user wants to work on a subnet with min_stake > 0, or wants to earn voting power.
+Most worknets have min_stake=0 and do not require any deposit. Only run these commands if the user wants to work on a worknet with min_stake > 0, or wants to earn voting power.
 
 **New deposit:**
 ```bash
@@ -633,7 +633,7 @@ python3 scripts/onchain-withdraw.py --token $TOKEN --position 1
 
 ### S3 · Allocate / Deallocate / Reallocate (only after S2 deposit)
 
-Only needed if the user has deposited AWP and wants to direct it to a specific agent+subnet.
+Only needed if the user has deposited AWP and wants to direct it to a specific agent+worknet.
 
 **Allocate:**
 ```bash
@@ -657,9 +657,9 @@ python3 scripts/onchain-register-and-stake.py --token $TOKEN --amount 5000 --loc
 
 ---
 
-## Subnet Management (wallet + SubnetNFT ownership — load commands-subnet.md first)
+## Worknet Management (wallet + SubnetNFT ownership — load commands-worknet.md first)
 
-### M1 · Register Subnet (gasless)
+### M1 · Register Worknet (gasless)
 ```bash
 python3 scripts/relay-register-subnet.py --token $TOKEN --name "MySubnet" --symbol "MSUB" --skills-uri "ipfs://QmHash"
 ```
@@ -715,7 +715,7 @@ Connect to `wss://tapi.awp.sh/ws/live`, subscribe to event presets:
 | Preset | Events (26 total) | Emoji |
 |--------|-------------------|-------|
 | staking | Deposited, Withdrawn, PositionIncreased, Allocated, Deallocated, Reallocated | `$` |
-| subnets | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, LPCreated, SkillsURIUpdated, MinStakeUpdated | `#` |
+| worknets | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, LPCreated, SkillsURIUpdated, MinStakeUpdated | `#` |
 | emission | EpochSettled, RecipientAWPDistributed, DAOMatchDistributed, GovernanceWeightUpdated, AllocationsSubmitted, OracleConfigUpdated | `~` |
 | users | Bound, RecipientUpdated, DelegateGranted, DelegateRevoked | `@` |
 

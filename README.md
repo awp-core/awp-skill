@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/License-MIT-97CA00?style=flat" alt="MIT">
 </p>
 
-**Skill for interacting with the AWP (Agent Working Protocol) on EVM-compatible chains.** Query protocol state, bind and delegate, stake AWP tokens, manage subnets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
+**Skill for interacting with the AWP (Agent Working Protocol) on EVM-compatible chains.** Query protocol state, bind and delegate, stake AWP tokens, manage worknets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
 
 ### Works with
 
@@ -42,9 +42,9 @@
 
 ## Overview
 
-AWP is a decentralized **Agent Working** protocol on EVM-compatible chains (testnet on Base). Users bind to a tree-based hierarchy, stake AWP via position NFTs, allocate to agents on subnets, and earn emissions. Each subnet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
+AWP is a decentralized **Agent Working** protocol on EVM-compatible chains (testnet on Base). Users bind to a tree-based hierarchy, stake AWP via position NFTs, allocate to agents on worknets, and earn emissions. Each worknet auto-deploys a **SubnetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
-This repository is a single skill with **20 actions**, **14 bundled scripts**, and **26 real-time event types** — covering Query, Staking, Subnet Management, Governance, and WebSocket Monitoring.
+This repository is a single skill with **20 actions**, **14 bundled scripts**, and **26 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
 
 ## Quick Install
 
@@ -59,12 +59,12 @@ The skill installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) depe
 #### Query (read-only, no wallet needed)
 | ID | Action | Description |
 |----|--------|-------------|
-| Q1 | Query Subnet | Get subnet info by ID (name, status, owner, alpha token, skills URI, min stake) |
+| Q1 | Query Worknet | Get worknet info by ID (name, status, owner, alpha token, skills URI, min stake) |
 | Q2 | Query Balance | Full staking overview — positions, allocations, unallocated balance |
 | Q3 | Query Emission [DRAFT] | Current epoch, daily emission rate, decay projections (30/90/365 days) |
-| Q4 | Query Agent | Agent info by subnet — stake, binding, reward recipient |
-| Q5 | List Subnets | Browse active subnets with pagination, flag those with published skills |
-| Q6 | Install Subnet Skill | Fetch a subnet's SKILL.md and install it for the agent to use |
+| Q4 | Query Agent | Agent info by worknet — stake, binding, reward recipient |
+| Q5 | List Worknets | Browse active worknets with pagination, flag those with published skills |
+| Q6 | Install Worknet Skill | Fetch a worknet's SKILL.md and install it for the agent to use |
 | Q7 | Epoch History [DRAFT] | Historical epoch settlements with emission amounts |
 
 #### Staking (wallet required)
@@ -72,15 +72,15 @@ The skill installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) depe
 |----|--------|-------------|
 | S1 | Bind & Set Recipient | Tree-based binding or set reward recipient. Supports gasless via EIP-712 relay. |
 | S2 | Deposit AWP | Mint StakeNFT position with time-based lock. Add to position, withdraw on expiry. |
-| S3 | Allocate / Deallocate / Reallocate | Direct stake to agents on subnets. One-click registerAndStake available. |
+| S3 | Allocate / Deallocate / Reallocate | Direct stake to agents on worknets. One-click registerAndStake available. |
 
-#### Subnet Management (wallet + SubnetNFT ownership)
+#### Worknet Management (wallet + SubnetNFT ownership)
 | ID | Action | Description |
 |----|--------|-------------|
-| M1 | Register Subnet | Deploy new subnet with Alpha token + LP pool. Gasless option available. |
-| M2 | Subnet Lifecycle | Activate, pause, or resume a subnet (with state pre-check) |
-| M3 | Update Skills URI | Set the subnet's SKILL.md URL via SubnetNFT |
-| M4 | Set Min Stake | Set minimum stake requirement for agents on the subnet |
+| M1 | Register Worknet | Deploy new worknet with Alpha token + LP pool. Gasless option available. |
+| M2 | Worknet Lifecycle | Activate, pause, or resume a worknet (with state pre-check) |
+| M3 | Update Skills URI | Set the worknet's SKILL.md URL via SubnetNFT |
+| M4 | Set Min Stake | Set minimum stake requirement for agents on the worknet |
 
 #### Governance (wallet + StakeNFT positions)
 | ID | Action | Description |
@@ -114,7 +114,7 @@ awp-skill/
 ├── references/
 │   ├── api-reference.md                    # REST endpoint index + contract quick reference
 │   ├── commands-staking.md                 # S1-S3 command templates + EIP-712
-│   ├── commands-subnet.md                  # M1-M4 command templates + gasless
+│   ├── commands-worknet.md                  # M1-M4 command templates + gasless
 │   ├── commands-governance.md              # G1-G4 commands + supplementary endpoints
 │   └── protocol.md                         # Shared structs, 26 events, constants
 ├── scripts/
@@ -157,7 +157,7 @@ Three operations support fully gasless execution via EIP-712 signatures and rela
 |-----------|---------------|------------|
 | Bind (tree-based) | `POST /relay/bind` | 1 (EIP-712 Bind) |
 | Set Recipient | `POST /relay/set-recipient` | 1 (EIP-712 SetRecipient) |
-| Subnet Registration | `POST /relay/register-subnet` | 2 (ERC-2612 Permit + EIP-712 RegisterSubnet) |
+| Worknet Registration | `POST /relay/register-subnet` | 2 (ERC-2612 Permit + EIP-712 RegisterSubnet) |
 
 Rate limit: 100 requests per IP per 1 hour across all relay endpoints.
 
@@ -168,9 +168,9 @@ The skill automatically checks ETH balance and routes to gasless relay when the 
 The skill provides a polished user experience with:
 
 - **ASCII art welcome screen** with quick start commands
-- **4-step guided onboarding** — wallet setup, registration, subnet discovery, skill install
+- **4-step guided onboarding** — wallet setup, registration, worknet discovery, skill install
 - **Option A / Option B** — Solo Mining (quick start) vs Delegated Mining (link wallet)
-- **User commands** — `awp status`, `awp wallet`, `awp subnets`, `awp help`
+- **User commands** — `awp status`, `awp wallet`, `awp worknets`, `awp help`
 - **Agent wallet model** — transactions execute directly (work wallet only, no personal assets)
 - **Balance notifications** — auto-show +/- delta after balance-changing operations
 - **Tagged output** — 11 prefixes: `[QUERY]`, `[STAKE]`, `[TX]`, `[NEXT]`, `[!]`, etc.
@@ -214,7 +214,7 @@ Root (cold wallet):                    Agent (hot wallet):
 | Decay Factor | ~0.3156% per epoch |
 | Emission Split | 50% recipients / 50% DAO |
 | Token Decimals | 18 (all tokens) |
-| Max Active Subnets | 10,000 |
+| Max Active Worknets | 10,000 |
 | Voting Power | `amount * sqrt(min(remainingTime, 54 weeks) / 7 days)` |
 | Proposal Threshold | 1,000,000 AWP voting power |
 
@@ -231,15 +231,15 @@ Root (cold wallet):                    Agent (hot wallet):
 
 | Contract | Role |
 |----------|------|
-| **AWPRegistry** | Unified entry point — binding, delegation, allocation, subnet lifecycle |
+| **AWPRegistry** | Unified entry point — binding, delegation, allocation, worknet lifecycle |
 | **StakeNFT** | ERC721 position NFTs — deposit AWP with time-based lock |
 | **AWPEmission** | Emission engine — daily epoch settlement via oracle [DRAFT] |
 | **StakingVault** | Pure allocation logic — allocate, deallocate, reallocate |
-| **SubnetNFT** | Subnet identity — on-chain name, skillsURI, minStake |
-| **SubnetManager** | Auto-deployed per subnet — Merkle distribution + AWP strategies |
+| **SubnetNFT** | Worknet identity — on-chain name, skillsURI, minStake |
+| **SubnetManager** | Auto-deployed per worknet — Merkle distribution + AWP strategies |
 | **AWPDAO** | NFT-based governance — proposals, voting with position NFTs |
 | **AWPToken** | ERC20 + ERC1363 + Votes — 10B max supply |
-| **AlphaToken** | Per-subnet ERC20 via CREATE2 — 10B max per subnet |
+| **AlphaToken** | Per-worknet ERC20 via CREATE2 — 10B max per worknet |
 | **Treasury** | TimelockController — DAO governance execution |
 
 ## Development
@@ -264,7 +264,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 | 0.25.3 | Fix daemon crash: `created_at` may be integer, not string |
 | 0.25.2 | Description optimization — exclude other DeFi protocols on Base, 20/20 trigger eval |
 | 0.25.1 | Security: contract allowlist in wallet-raw-call.mjs, transaction confirmation, daemon PID lifecycle |
-| 0.25.0 | Unified English text, richer subnet display, cleaner notifications |
+| 0.25.0 | Unified English text, richer worknet display, cleaner notifications |
 | 0.24.9 | Receipt-style welcome push (box-drawing borders), remove duplicate title from code block |
 | 0.24.8 | Remove child_process from wallet-raw-call.mjs — pure Node.js PATH search, eliminates security scanner warning |
 | 0.24.7 | Welcome title: "Hello World from the World of Agents!" (SKILL.md + daemon push) |
@@ -273,7 +273,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 | 0.24.4 | Fix daemon startup false positive (pgrep self-match), OpenClaw CLI discovery for non-PATH installs |
 | 0.24.3 | Notification infra: daemon.log, status.json, `awp notifications` + `awp log` commands |
 | 0.24.2 | Daemon: guided notifications with actionable next steps (wallet install/init/register/work) |
-| 0.24.1 | Daemon: welcome push (banner + subnets via notify), new subnet detection notifications |
+| 0.24.1 | Daemon: welcome push (banner + worknets via notify), new worknet detection notifications |
 | 0.24.0 | Auto-start daemon on skill load; daemon no longer exits on missing deps (notifies + retries) |
 | 0.23.2 | Fix install review: add node binary, separate optional env vars, clarify agent-initiated wallet init |
 | 0.23.1 | Expanded skill description for better triggering accuracy |

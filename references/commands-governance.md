@@ -184,7 +184,7 @@ GET /staking/subnet/{subnetId}/total
 {"total": "50000000000000000000000"}
 ```
 
-### Subnet Earnings
+### Worknet Earnings
 
 ```
 GET /subnets/{subnetId}/earnings?page=1&limit=20

@@ -67,24 +67,24 @@
 
 - `wallet-raw-call.mjs`: added contract allowlist — fetches `/registry` on each call and rejects any target address not in the registry (prevents arbitrary contract execution)
 - All on-chain transactions now require explicit user confirmation before execution (action summary + "Proceed?" prompt)
-- Third-party subnet skill installs (non `awp-core` sources) now require user confirmation
+- Third-party worknet skill installs (non `awp-core` sources) now require user confirmation
 - `awp-daemon.py`: writes PID to `~/.awp/daemon.pid`, cleans up on exit — supports explicit stop via `kill`
 - Added "Security Controls" section to SKILL.md documenting all safeguards
 - Only exception to confirmation: gasless registration via relay (free, reversible)
 
 ## v0.25.0
 
-### Improve — Unified English text, richer subnet display
+### Improve — Unified English text, richer worknet display
 
 - Standardized all comments, docstrings, and help strings to English across 21 files
-- Subnet list now shows 3 lines per entry: name/symbol, owner/status, min_stake/skills/date
+- Worknet list now shows 3 lines per entry: name/symbol, owner/status, min_stake/skills/date
 - Removed redundant "on AWP" from notification messages
 
 ## v0.24.9
 
 ### Improve — Receipt-style welcome push
 
-- Welcome message reformatted to receipt-style layout (box-drawing borders); subnet list updated to match
+- Welcome message reformatted to receipt-style layout (box-drawing borders); worknet list updated to match
 - SKILL.md: removed duplicate heading row inside code block (heading already appears outside the code block)
 
 ## v0.24.8
@@ -147,15 +147,15 @@
 
 **Script fixes (6 fixes)**:
 - `onchain-vote.py`: `token_id` not cast to int in eligible_ids
-- `relay-register-subnet.py`: `--subnet-manager` and `--salt` not validated
+- `relay-register-worknet.py`: `--subnet-manager` and `--salt` not validated
 - `wallet-raw-call.mjs`: hex regex allows odd-length strings — require even-length
 - `onchain-register-and-stake.py`: no check that allocate_amount ≤ deposit amount
 - `onchain-deposit.py`: no uint64 overflow guard on lock_seconds
 - `onchain-add-position.py`: no uint64 overflow guard on new_lock_end
 
 **Reference docs (4 fixes)**:
-- `commands-subnet.md`: PERMIT_NONCE from wrong endpoint — now reads from AWPToken contract via RPC
-- `commands-subnet.md`: event field `tokenId` → `subnetId` for setSkillsURI/setMinStake
+- `commands-worknet.md`: PERMIT_NONCE from wrong endpoint — now reads from AWPToken contract via RPC
+- `commands-worknet.md`: event field `tokenId` → `subnetId` for setSkillsURI/setMinStake
 - `commands-staking.md`: `$CHAIN_ID` variable never assigned → literal `8453`
 - `protocol.md`: SubnetFullInfo struct missing `symbol` field
 
@@ -170,7 +170,7 @@
 
 ### Improve — Notification infrastructure
 - **Daemon log file**: output redirected to `~/.awp/daemon.log` instead of `/dev/null` — all daemon activity now persisted
-- **Status file**: daemon writes `~/.awp/status.json` each cycle with current phase, wallet state, registration, subnet count, and next-step guidance — agent can read this anytime
+- **Status file**: daemon writes `~/.awp/status.json` each cycle with current phase, wallet state, registration, worknet count, and next-step guidance — agent can read this anytime
 - **New user commands**: `awp notifications` (read + display + clear daemon notifications), `awp log` (tail daemon log)
 - **Intent routing**: added NOTIFICATIONS and LOG routes
 - **Help menu**: updated with new commands
@@ -181,16 +181,16 @@
 - **Wallet not ready**: notification tells user to say "install awp-wallet from ..." to the agent
 - **Wallet not initialized**: notification tells user to say "initialize my wallet" to the agent
 - **Wallet just became ready** (detected in monitor loop): pushes "Wallet Ready" with next step — tell agent "start working on AWP"
-- **Registration detected**: pushes "Registered — Ready to Work" with next steps — list subnets, install skill, or start working
+- **Registration detected**: pushes "Registered — Ready to Work" with next steps — list worknets, install skill, or start working
 - **Deregistered**: notification includes re-registration guidance
 - All notifications include short wallet address for context
 
 ## v0.24.1
 
-### Feature — Daemon: welcome push + new subnet notifications
-- **Welcome message**: daemon sends banner + active subnet list via `notify()` (OpenClaw push + file); falls back to stdout only when push is unavailable
-- **New subnet detection**: each monitoring cycle compares current subnets against known set; new subnets trigger a notification with name, symbol, owner, min stake, skills status
-- Monitoring loop now continues checking subnets and updates even when wallet is not yet available
+### Feature — Daemon: welcome push + new worknet notifications
+- **Welcome message**: daemon sends banner + active worknet list via `notify()` (OpenClaw push + file); falls back to stdout only when push is unavailable
+- **New worknet detection**: each monitoring cycle compares current worknets against known set; new worknets trigger a notification with name, symbol, owner, min stake, skills status
+- Monitoring loop now continues checking worknets and updates even when wallet is not yet available
 
 ## v0.24.0
 
@@ -243,8 +243,8 @@
 
 **Reference docs:**
 - `commands-staking.md`: `--calldata` → `--data` (matching actual script flag)
-- `commands-subnet.md`: remove duplicate on-chain/gasless command template
-- `commands-subnet.md`: replace `cast` (Foundry) with API+python3 for nonce queries
+- `commands-worknet.md`: remove duplicate on-chain/gasless command template
+- `commands-worknet.md`: replace `cast` (Foundry) with API+python3 for nonce queries
 
 **README.md:**
 - Add `wallet-raw-call.mjs` to architecture tree
@@ -350,7 +350,7 @@
 - `awp-daemon.py`: wallet update falsely reported success on failure → now checks return code
 - `awp-daemon.py`: deregistration event silently dropped → now logs and notifies
 - `awp-daemon.py`: `except Exception` too broad → narrowed to `(JSONDecodeError, OSError)`
-- `$RPC_URL` → `$EVM_RPC_URL` in `commands-subnet.md` and `commands-governance.md`
+- `$RPC_URL` → `$EVM_RPC_URL` in `commands-worknet.md` and `commands-governance.md`
 - SKILL.md: stale example date `2025-12-01` → `2026-12-01`
 
 ### Changed
@@ -366,7 +366,7 @@
 ## v0.19.9
 
 ### Security
-- Q6 subnet skill install: auto-install from `awp-core/*`; third-party sources show `⚠ third-party source` notice (non-blocking)
+- Q6 worknet skill install: auto-install from `awp-core/*`; third-party sources show `⚠ third-party source` notice (non-blocking)
 - Metadata now declares all dependencies: `curl`, `jq`, `python3`
 - Wallet auto-manages credentials in default mode — no password files needed
 
@@ -393,7 +393,7 @@ First public release of the AWP Skill for [Claude Code](https://github.com/anthr
 
 ### What is AWP Skill?
 
-A natural-language interface to the **AWP (Agent Working Protocol)** on EVM-compatible chains. Install it in any compatible agent, and the agent can register on AWP, join subnets, stake tokens, vote on governance proposals, and monitor real-time on-chain events — all through conversation.
+A natural-language interface to the **AWP (Agent Working Protocol)** on EVM-compatible chains. Install it in any compatible agent, and the agent can register on AWP, join worknets, stake tokens, vote on governance proposals, and monitor real-time on-chain events — all through conversation.
 
 ```bash
 skill install https://github.com/awp-core/awp-skill
@@ -401,11 +401,11 @@ skill install https://github.com/awp-core/awp-skill
 
 ### Highlights
 
-- **20 actions** across 5 categories: Query, Staking, Subnet Management, Governance, and WebSocket Monitoring
+- **20 actions** across 5 categories: Query, Staking, Worknet Management, Governance, and WebSocket Monitoring
 - **14 bundled shell scripts** that handle all on-chain operations — the agent never constructs calldata manually, eliminating an entire class of ABI-encoding and selector errors
 - **Gasless onboarding** — registration is free via EIP-712 relay; no ETH or AWP tokens needed to get started
-- **26 real-time event types** via WebSocket with 4 presets (staking, subnets, emission, users)
-- **Guided onboarding flow** — 4-step wizard (wallet → register → discover subnets → install skill) with progress indicators
+- **26 real-time event types** via WebSocket with 4 presets (staking, worknets, emission, users)
+- **Guided onboarding flow** — 4-step wizard (wallet → register → discover worknets → install skill) with progress indicators
 - **Optimized for weaker models** — concrete URLs (no placeholders), one way to do each operation (no choices), and explicit rules preventing common mistakes
 
 ### Architecture
@@ -416,7 +416,7 @@ awp-skill/
 ├── references/                 5 reference docs loaded on demand
 │   ├── api-reference.md          REST + contract quick reference
 │   ├── commands-staking.md       S1-S3 templates + EIP-712
-│   ├── commands-subnet.md        M1-M4 templates + gasless
+│   ├── commands-worknet.md        M1-M4 templates + gasless
 │   ├── commands-governance.md    G1-G4 + supplementary endpoints
 │   └── protocol.md              Structs, 26 events, constants
 ├── scripts/                    14 executable bash scripts
@@ -445,16 +445,16 @@ awp-skill/
 
 | Category | Actions | Wallet Required |
 |----------|---------|:---------------:|
-| **Query** | Q1 Subnet, Q2 Balance, Q3 Emission, Q4 Agent, Q5 List Subnets, Q6 Install Skill, Q7 Epoch History | No |
+| **Query** | Q1 Worknet, Q2 Balance, Q3 Emission, Q4 Agent, Q5 List Worknets, Q6 Install Skill, Q7 Epoch History | No |
 | **Staking** | S1 Register/Bind, S2 Deposit/Withdraw/AddPosition, S3 Allocate/Deallocate/Reallocate | Yes |
-| **Subnet** | M1 Register Subnet, M2 Lifecycle, M3 Update Skills URI, M4 Set Min Stake | Yes |
+| **Worknet** | M1 Register Worknet, M2 Lifecycle, M3 Update Skills URI, M4 Set Min Stake | Yes |
 | **Governance** | G1 Create Proposal, G2 Vote, G3 Query Proposals, G4 Query Treasury | Yes |
 | **Monitor** | W1 Watch Events, W2 Emission Alert | No |
 
 ### UX Features
 
 - ASCII art welcome screen with quick-start commands
-- `awp status` / `awp wallet` / `awp subnets` / `awp help` quick commands
+- `awp status` / `awp wallet` / `awp worknets` / `awp help` quick commands
 - Agent wallet model — transactions execute directly (work wallet, no personal assets)
 - Balance change notifications with +/- delta after writes
 - Tagged output: `[QUERY]`, `[STAKE]`, `[TX]`, `[NEXT]`, `[!]` prefixes
@@ -465,7 +465,7 @@ awp-skill/
 ### Anti-Hallucination Measures
 
 Every write operation is wrapped in a bundled script that:
-- Validates all inputs (address regex, numeric checks, subnet > 0)
+- Validates all inputs (address regex, numeric checks, worknet > 0)
 - Targets the correct contract (AWPRegistry vs StakeNFT vs SubnetNFT vs DAO)
 - Uses hardcoded, keccak256-verified function selectors
 - Pre-checks state before submitting (balance, registration, lock expiry)
@@ -483,7 +483,7 @@ The agent never:
 |-----------|----------|:----------:|
 | Register (setRecipient) | `POST /relay/set-recipient` | 1 |
 | Bind (tree-based) | `POST /relay/bind` | 1 |
-| Register Subnet | `POST /relay/register-subnet` | 2 |
+| Register Worknet | `POST /relay/register-subnet` | 2 |
 
 Nonce from `GET /nonce/{address}`. EIP-712 domain from `GET /registry → eip712Domain`.
 
@@ -496,7 +496,7 @@ Nonce from `GET /nonce/{address}`. EIP-712 domain from `GET /registry → eip712
 | Epoch Duration | 1 day |
 | Initial Daily Emission | 15,800,000 AWP |
 | Decay | ~0.3156% per epoch |
-| Max Active Subnets | 10,000 |
+| Max Active Worknets | 10,000 |
 | Voting Power | `amount × √(min(remainingTime, 54w) / 7d)` |
 | Explorer | deployment-specific (default: basescan.org) |
 

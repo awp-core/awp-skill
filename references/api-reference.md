@@ -2,7 +2,7 @@
 
 Quick index of read-only REST endpoints. For write operations, see the dedicated command files:
 - **commands-staking.md** — S1 Register/Bind, S2 Deposit, S3 Allocate
-- **commands-subnet.md** — M1 Register Subnet, M2 Lifecycle, M3-M4 Settings
+- **commands-worknet.md** — M1 Register Worknet, M2 Lifecycle, M3-M4 Settings
 - **commands-governance.md** — G1 Proposals, G2 Voting, G3/G4 Queries, Supplementary
 
 **API Base URL**: `{API_BASE}/api` (default `https://tapi.awp.sh/api`, override via `AWP_API_URL` env var)
@@ -13,10 +13,10 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 
 | Action | Endpoint | Notes |
 |--------|----------|-------|
-| Q1 Subnet | `GET /subnets/{subnetId}` | Full subnet object (includes `min_stake`, `immunity_ends_at`, `burned`); fallback: `getSubnetFull(id)` on AWPRegistry |
+| Q1 Worknet | `GET /subnets/{subnetId}` | Full worknet object (includes `min_stake`, `immunity_ends_at`, `burned`); fallback: `getSubnetFull(id)` on AWPRegistry |
 | Q2 Balance | `GET /staking/user/{addr}/balance` | Also: `/positions`, `/allocations` |
 | Q3 Emission | `GET /emission/current` [DRAFT] | Also: `/schedule`, `/epochs` [DRAFT] |
-| Q4 Agent | `GET /subnets/{subnetId}/agents/{agent}` | Single agent stake on a subnet |
+| Q4 Agent | `GET /subnets/{subnetId}/agents/{agent}` | Single agent stake on a worknet |
 | Q5 List | `GET /subnets?status={s}&page={p}&limit={n}` | Status: Pending, Active, Paused, Banned |
 | Q6 Skills | `GET /subnets/{subnetId}/skills` | Returns skillsURI |
 | Q7 Epochs | `GET /emission/epochs?page={p}&limit={n}` [DRAFT] | Epoch history with emissions |
@@ -54,7 +54,7 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 }
 ```
 
-> **Note:** `eip712Domain` provides the complete EIP-712 domain separator for all gasless relay signatures. Per-subnet addresses are returned by `GET /subnets/{subnetId}`, not by `/registry`.
+> **Note:** `eip712Domain` provides the complete EIP-712 domain separator for all gasless relay signatures. Per-worknet addresses are returned by `GET /subnets/{subnetId}`, not by `/registry`.
 
 ### `GET /nonce/{address}` Response
 
@@ -75,7 +75,7 @@ Quick index of read-only REST endpoints. For write operations, see the dedicated
 ```
 > `isRegistered` = `boundTo != 0x0 || recipient != 0x0`.
 
-### Subnet REST Response
+### Worknet REST Response
 
 ```json
 {

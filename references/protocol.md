@@ -23,7 +23,7 @@ Returned by `AWPRegistry.getSubnet(subnetId)`. AWPRegistry lifecycle state only 
 |-------|------|-------|
 | lpPool | bytes32 | PancakeSwap V4 PoolId |
 | status | SubnetStatus | Enum (0–3), see SubnetStatus above |
-| createdAt | uint64 | Unix timestamp when subnet was registered |
+| createdAt | uint64 | Unix timestamp when worknet was registered |
 | activatedAt | uint64 | Unix timestamp when activated (0 if never activated) |
 
 > **Important**: On-chain SubnetInfo does NOT include `name`, `symbol`, `skillsURI`, `subnetManager`, `alphaToken`, `minStake`, or `owner`. Use `getSubnetFull()` or the REST API for those fields.
@@ -34,11 +34,11 @@ Returned by `AWPRegistry.getSubnetFull(subnetId)`. Combined: AWPRegistry state +
 
 | Field | Type | Notes |
 |-------|------|-------|
-| subnetManager | address | Subnet manager contract (Alpha minter) |
+| subnetManager | address | Worknet manager contract (Alpha minter) |
 | alphaToken | address | Alpha token address |
 | lpPool | bytes32 | PancakeSwap V4 PoolId |
 | status | SubnetStatus | Enum (0–3) |
-| createdAt | uint64 | Unix timestamp when subnet was registered |
+| createdAt | uint64 | Unix timestamp when worknet was registered |
 | activatedAt | uint64 | Unix timestamp when activated (0 if never activated) |
 | name | string | Alpha token name |
 | symbol | string | Alpha token symbol |
@@ -111,7 +111,7 @@ All events arrive via WebSocket (`wss://<API_HOST>/ws/live`) with envelope:
 | Deallocated | AWPRegistry | `{user, agent, subnetId, amount, operator}` | Includes `operator` field |
 | Reallocated | AWPRegistry | `{user, fromAgent, fromSubnet, toAgent, toSubnet, amount, operator}` | Includes `operator` field; `user` = stake owner, `operator` = caller |
 
-### Subnet Events
+### Worknet Events
 
 | Event | Source | Data Fields | Pitfall |
 |-------|--------|-------------|---------|
@@ -160,7 +160,7 @@ Returns all 10 protocol contract addresses. Always fetch dynamically — never h
 }
 ```
 
-> Note: Per-subnet addresses (`subnet_contract`, `alpha_token`, `lp_pool`) are returned by `GET /subnets/{subnetId}`, not by `/registry`. The on-chain `AWPRegistry.getRegistry()` additionally returns `guardian` which is not in the REST response.
+> Note: Per-worknet addresses (`subnet_contract`, `alpha_token`, `lp_pool`) are returned by `GET /subnets/{subnetId}`, not by `/registry`. The on-chain `AWPRegistry.getRegistry()` additionally returns `guardian` which is not in the REST response.
 
 ### `GET /address/{address}/check`
 
@@ -193,11 +193,11 @@ Check registration status for any address.
 | Initial Daily Emission | 15,800,000 AWP |
 | Decay Factor | 0.996844 per epoch (~0.3156% daily decay) |
 | Emission Split | 50% recipients / 50% DAO |
-| Max Active Subnets | 10,000 |
+| Max Active Worknets | 10,000 |
 | Max Recipients | 10,000 |
 | Max Weight Seconds | 54 weeks (32,659,200 seconds) — voting power sqrt cap |
 | AWP Max Supply | 10,000,000,000 AWP (10^28 wei) |
-| Alpha Max Supply | 10,000,000,000 per subnet (10^28 wei) |
+| Alpha Max Supply | 10,000,000,000 per worknet (10^28 wei) |
 | Token Decimals | 18 (all tokens) |
 | Proposal Threshold | 1,000,000 AWP voting power |
 | Immunity Period | 30 days |

@@ -1,4 +1,4 @@
-# AWP Subnet Commands
+# AWP Worknet Commands
 
 **API Base URL**: `{API_BASE}/api` (default `https://tapi.awp.sh/api`, override via `AWP_API_URL` env var)
 
@@ -21,7 +21,7 @@ WALLET_ADDR=$(awp-wallet receive | jq -r '.eoaAddress')
 
 ---
 
-## M1 · Register Subnet
+## M1 · Register Worknet
 
 ### LP Cost Calculation
 
@@ -44,7 +44,7 @@ struct SubnetParams {
 }
 ```
 
-> **Note**: `subnetManager = address(0)` auto-deploys a SubnetManager proxy with Merkle distribution and AWP strategies (Reserve/AddLiquidity/BuybackBurn). The subnet registrant receives DEFAULT_ADMIN_ROLE on the deployed SubnetManager.
+> **Note**: `subnetManager = address(0)` auto-deploys a SubnetManager proxy with Merkle distribution and AWP strategies (Reserve/AddLiquidity/BuybackBurn). The worknet registrant receives DEFAULT_ADMIN_ROLE on the deployed SubnetManager.
 
 ### Contract Calls
 
@@ -140,7 +140,7 @@ GET /vanity/salts/count
 python3 scripts/relay-register-subnet.py --token {T} --name "MySubnet" --symbol "MSUB" --skills-uri "ipfs://QmHash"
 ```
 
-### Gasless Subnet Registration — EIP-712 Template
+### Gasless Worknet Registration — EIP-712 Template
 
 For fully gasless registration via `POST /relay/register-subnet`, the user signs two messages:
 
@@ -262,9 +262,9 @@ curl -X POST {API_BASE}/api/relay/register-subnet \
 | 400 | `{"error": "missing signature"}` | Signature field empty |
 | 400 | `{"error": "invalid signature"}` | EIP-712 signature verification failed |
 | 400 | `{"error": "signature expired"}` | On-chain deadline check failed |
-| 400 | `{"error": "invalid subnet params (name 1-64 bytes, symbol 1-16 bytes)"}` | Name/symbol length violation |
-| 400 | `{"error": "subnet manager address required (auto-deploy not available)"}` | No default SubnetManager impl set |
-| 400 | `{"error": "insufficient AWP balance"}` | User lacks AWP for subnet registration |
+| 400 | `{"error": "invalid worknet params (name 1-64 bytes, symbol 1-16 bytes)"}` | Name/symbol length violation |
+| 400 | `{"error": "worknet manager address required (auto-deploy not available)"}` | No default SubnetManager impl set |
+| 400 | `{"error": "insufficient AWP balance"}` | User lacks AWP for worknet registration |
 | 400 | `{"error": "insufficient AWP allowance"}` | Permit signature did not authorize enough AWP |
 | 400 | `{"error": "contract is paused"}` | AWPRegistry is in emergency pause state |
 | 400 | `{"error": "relay transaction failed"}` | Unrecognized on-chain revert |
@@ -272,7 +272,7 @@ curl -X POST {API_BASE}/api/relay/register-subnet \
 
 ---
 
-## M2 · Subnet Lifecycle
+## M2 · Worknet Lifecycle
 
 ### Contract Calls
 
@@ -284,7 +284,7 @@ function resumeSubnet(uint256 subnetId)     // Paused -> Active, NFT owner only
 
 Always check current status via `GET /subnets/{id}` before calling.
 
-### Subnet REST Response
+### Worknet REST Response
 
 ```json
 {
