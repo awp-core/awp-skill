@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.2
+
+### Bug Fixes — Relay format and documentation corrections
+
+- `relay-start.py`: replace compact `"signature"` field with split `v`/`r`/`s` (relay rejects full 65-byte sig string)
+- `relay-start.py`: add `chainId` to both `/relay/set-recipient` and `/relay/bind` request bodies
+- `relay-register-subnet.py`: add `chainId` to relay request body
+- `skill-reference.md`: LPManager address corrected (`0x00001961…` → `0x386A54…`)
+- `skill-reference.md`: `staking.getBalance` response field `available` → `unallocated`
+- `skill-reference.md`: `emission.getEpochDetail` — `chainId` is required, `epochId` is optional
+- `skill-reference.md`: `chains.list` response field `status` → `dex`
+
 ## v1.0.1
 
 ### Bug Fixes — API response format corrections
