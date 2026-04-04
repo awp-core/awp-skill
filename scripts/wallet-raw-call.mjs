@@ -52,7 +52,10 @@ if (!/^0x(?:[0-9a-fA-F]{2}){4,}$/.test(args.data)) {
 // Hardcoded registry URL — not overridable via env vars to prevent allowlist bypass
 const REGISTRY_URL = "https://api.awp.sh/v2"
 
-async function fetchAllowedContracts() {
+// Chain name → chainId mapping
+const CHAIN_IDS = { ethereum: 1, bsc: 56, base: 8453, arbitrum: 42161 }
+
+async function fetchAllowedContracts(chainName) {
   const resp = await fetch(REGISTRY_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -71,13 +74,17 @@ async function fetchAllowedContracts() {
   if (json.error) {
     throw new Error(`RPC error: ${json.error.message || JSON.stringify(json.error)}`)
   }
-  const registry = json.result
-  if (!registry || typeof registry !== "object") {
-    throw new Error("Registry response is null or not an object")
+  // API returns an array of per-chain registry objects
+  const registryList = json.result
+  if (!Array.isArray(registryList) || registryList.length === 0) {
+    throw new Error("Registry response is not a non-empty array")
   }
-  // Collect all address values from the registry (awpRegistry, stakeNFT, worknetNFT, dao, awpToken, etc.)
+  const chainId = CHAIN_IDS[chainName.toLowerCase()]
+  // Find the entry for the requested chain; fall back to the first entry if not found
+  const entry = (chainId != null && registryList.find(r => r.chainId === chainId)) || registryList[0]
+  // Collect all address values from the chain entry
   const allowed = new Set()
-  for (const [, value] of Object.entries(registry)) {
+  for (const value of Object.values(entry)) {
     if (typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value)) {
       allowed.add(value.toLowerCase())
     }
@@ -141,7 +148,7 @@ try {
 // ── Contract allowlist — only AWP protocol contracts are permitted ────────
 let allowedContracts
 try {
-  allowedContracts = await fetchAllowedContracts()
+  allowedContracts = await fetchAllowedContracts(args.chain)
 } catch (e) {
   console.error(JSON.stringify({ error: `Cannot verify contract allowlist: ${e.message}` }))
   process.exit(1)

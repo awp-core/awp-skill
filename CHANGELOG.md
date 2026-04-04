@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.1
+
+### Bug Fixes — API response format corrections
+
+- `awp_lib.py`: `get_registry()` now correctly handles array response from `registry.get` (API returns per-chain array, not a single dict); selects chain entry by `EVM_CHAIN` env var, defaults to Base (8453)
+- `awp_lib.py`: `get_eip712_domain("StakingVault")` now uses `stakingVaultEip712Domain` from registry instead of manually reconstructing it
+- `relay-register-subnet.py`: relay body field renamed `subnetManager` → `worknetManager` (relay was ignoring the field, defaulting to address(0))
+- `relay-register-subnet.py`: split compact 65-byte signatures into `permitV/R/S` + `registerV/R/S` as required by relay endpoint
+- `wallet-raw-call.mjs`: contract allowlist now correctly parses array registry response; filters by chain via `--chain` arg
+
 ## v1.0.0
 
 ### Multi-chain, JSON-RPC 2.0 API, Worknet Terminology, Bug Fixes

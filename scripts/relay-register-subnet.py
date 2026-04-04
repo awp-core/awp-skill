@@ -30,8 +30,8 @@ from awp_lib import (
 def parse_args() -> tuple[str, str, str, str, int, str, str]:
     """Parse command-line arguments, returning (token, name, symbol, salt, min_stake, subnet_manager, skills_uri)"""
     parser = base_parser("AWP gasless subnet registration via dual EIP-712 signatures")
-    parser.add_argument("--name", required=True, help="subnet name")
-    parser.add_argument("--symbol", required=True, help="subnet token symbol")
+    parser.add_argument("--name", required=True, help="worknet name")
+    parser.add_argument("--symbol", required=True, help="worknet token symbol")
     parser.add_argument(
         "--salt",
         default="0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -41,7 +41,7 @@ def parse_args() -> tuple[str, str, str, str, int, str, str]:
     parser.add_argument(
         "--subnet-manager",
         default="0x0000000000000000000000000000000000000000",
-        help="subnet manager address",
+        help="worknet manager address",
     )
     parser.add_argument("--skills-uri", default="", help="skills URI")
     args = parser.parse_args()
@@ -179,18 +179,36 @@ def main() -> None:
     register_signature = wallet_sign_typed_data(token, register_data)
 
     # Step 8: Submit to relay
+    # relay 接受拆分的 v/r/s 签名字段（65字节紧凑签名 = r[32] + s[32] + v[1]）
+    def split_sig(sig: str) -> tuple[int, str, str]:
+        """将 0x<r><s><v> 65字节签名拆分为 (v, r, s)"""
+        raw = sig[2:] if sig.startswith("0x") else sig
+        if len(raw) != 130:
+            die(f"Invalid signature length: expected 130 hex chars, got {len(raw)}")
+        r = "0x" + raw[0:64]
+        s = "0x" + raw[64:128]
+        v = int(raw[128:130], 16)
+        return v, r, s
+
+    permit_v, permit_r, permit_s = split_sig(permit_signature)
+    register_v, register_r, register_s = split_sig(register_signature)
+
     step("submit_relay")
     relay_body = {
         "user": wallet_addr,
         "name": name,
         "symbol": symbol,
-        "subnetManager": subnet_manager,
+        "worknetManager": subnet_manager,
         "salt": salt,
         "minStake": str(min_stake),
         "skillsURI": skills_uri,
         "deadline": deadline,
-        "permitSignature": permit_signature,
-        "registerSignature": register_signature,
+        "permitV": permit_v,
+        "permitR": permit_r,
+        "permitS": permit_s,
+        "registerV": register_v,
+        "registerR": register_r,
+        "registerS": register_s,
     }
 
     relay_url = f"{RELAY_BASE}/relay/register-subnet"

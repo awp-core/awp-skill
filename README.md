@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 1.0.1 | Fix registry.get array parsing, relay signature format (v/r/s), worknetManager field name |
 | 1.0.0 | Multi-chain (Base/ETH/Arbitrum/BSC), JSON-RPC 2.0 API, Worknet terminology, 6 script bug fixes, skill description optimization |
 | 0.25.8 | Security: eliminate all process.env from wallet-raw-call.mjs, use os.homedir() + well-known paths |
 | 0.25.7 | Security: remove AWP_WALLET_DIR env var, use PATH + default paths only |
