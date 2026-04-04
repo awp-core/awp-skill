@@ -3,7 +3,7 @@
  * wallet-raw-call.mjs — Send contract calls to AWP protocol contracts only
  *
  * Security: This script restricts --to addresses to known AWP protocol contracts
- * fetched from the /registry endpoint. Calls to arbitrary addresses are rejected.
+ * fetched via JSON-RPC 2.0 API. Calls to arbitrary addresses are rejected.
  *
  * The awp-wallet CLI send command only supports token transfers (--to, --amount, --asset)
  * and does not support raw calldata. This script uses awp-wallet's internal modules
@@ -19,6 +19,7 @@
 import { parseArgs } from "node:util"
 import { resolve, dirname } from "node:path"
 import { realpathSync, existsSync } from "node:fs"
+import { homedir as osHomedir } from "node:os"
 
 // ── Parse command-line arguments ──────────────────────────────────
 const { values: args } = parseArgs({
@@ -49,17 +50,32 @@ if (!/^0x(?:[0-9a-fA-F]{2}){4,}$/.test(args.data)) {
 
 // ── Contract allowlist — only AWP protocol contracts are permitted ────────
 // Hardcoded registry URL — not overridable via env vars to prevent allowlist bypass
-const REGISTRY_URL = "https://tapi.awp.sh/api/registry"
+const REGISTRY_URL = "https://api.awp.sh/v2"
 
 async function fetchAllowedContracts() {
   const resp = await fetch(REGISTRY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "registry.get",
+      params: {},
+      id: 1,
+    }),
     signal: AbortSignal.timeout(10_000),
   })
   if (!resp.ok) {
-    throw new Error(`Failed to fetch /registry: HTTP ${resp.status}`)
+    throw new Error(`Failed to fetch registry: HTTP ${resp.status}`)
   }
-  const registry = await resp.json()
-  // Collect all address values from the registry (awpRegistry, stakeNFT, subnetNFT, dao, awpToken, etc.)
+  const json = await resp.json()
+  if (json.error) {
+    throw new Error(`RPC error: ${json.error.message || JSON.stringify(json.error)}`)
+  }
+  const registry = json.result
+  if (!registry || typeof registry !== "object") {
+    throw new Error("Registry response is null or not an object")
+  }
+  // Collect all address values from the registry (awpRegistry, stakeNFT, worknetNFT, dao, awpToken, etc.)
   const allowed = new Set()
   for (const [, value] of Object.entries(registry)) {
     if (typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value)) {
@@ -69,25 +85,10 @@ async function fetchAllowedContracts() {
   return allowed
 }
 
-let allowedContracts
-try {
-  allowedContracts = await fetchAllowedContracts()
-} catch (e) {
-  console.error(JSON.stringify({ error: `Cannot verify contract allowlist: ${e.message}` }))
-  process.exit(1)
-}
-
-if (!allowedContracts.has(args.to.toLowerCase())) {
-  console.error(JSON.stringify({
-    error: `Rejected: ${args.to} is not a known AWP protocol contract. Only calls to contracts listed in /registry are allowed.`
-  }))
-  process.exit(1)
-}
-
 // ── Locate the awp-wallet installation directory ──────────────────────────
 // Uses well-known directories and os.homedir() only — no environment variable access.
 function findAwpWalletDir() {
-  const homedir = require("node:os").homedir()
+  const homedir = osHomedir()
   // 1. Search well-known bin directories for the awp-wallet executable
   const binDirs = [
     resolve(homedir, ".local", "bin"),
@@ -128,12 +129,28 @@ const { resolveChainId, viemChain, publicClient, getRpcUrl } = await import(`${A
 
 const { createWalletClient, http } = await import(`${AWP_DIR}/node_modules/viem/index.js`)
 
-// ── Validate session ─────────────────────────────────────
+// ── Validate session (cheap local check — do before network calls) ──────
 try {
   validateSession(args.token)
   requireScope(args.token, "transfer")
 } catch (e) {
   console.error(JSON.stringify({ error: `Session error: ${e.message}` }))
+  process.exit(1)
+}
+
+// ── Contract allowlist — only AWP protocol contracts are permitted ────────
+let allowedContracts
+try {
+  allowedContracts = await fetchAllowedContracts()
+} catch (e) {
+  console.error(JSON.stringify({ error: `Cannot verify contract allowlist: ${e.message}` }))
+  process.exit(1)
+}
+
+if (!allowedContracts.has(args.to.toLowerCase())) {
+  console.error(JSON.stringify({
+    error: `Rejected: ${args.to} is not a known AWP protocol contract. Only calls to contracts listed in /registry are allowed.`
+  }))
   process.exit(1)
 }
 
@@ -161,7 +178,12 @@ try {
   // Support sending ETH (contract calls with value > 0)
   if (args.value && args.value !== "0") {
     try {
-      tx.value = BigInt(args.value)
+      const v = BigInt(args.value)
+      if (v < 0n) {
+        console.error(JSON.stringify({ error: `Invalid --value (must be non-negative): ${args.value}` }))
+        process.exit(1)
+      }
+      tx.value = v
     } catch {
       console.error(JSON.stringify({ error: `Invalid --value (must be integer wei): ${args.value}` }))
       process.exit(1)

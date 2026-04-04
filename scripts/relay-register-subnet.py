@@ -8,8 +8,7 @@ import re
 import time
 
 from awp_lib import (
-    API_BASE,
-    api_get,
+    RELAY_BASE,
     api_post,
     base_parser,
     build_eip712,
@@ -21,6 +20,7 @@ from awp_lib import (
     info,
     pad_address,
     require_contract,
+    rpc,
     rpc_call,
     step,
     wallet_sign_typed_data,
@@ -91,8 +91,8 @@ def main() -> None:
     # Step 4: Get nonces
     step("get_nonces")
 
-    # Registry nonce — try API first, fall back to RPC
-    nonce_resp = api_get(f"nonce/{wallet_addr}")
+    # Registry nonce — try RPC first, fall back to on-chain RPC
+    nonce_resp = rpc("nonce.get", {"address": wallet_addr})
     registry_nonce: int | None = None
     if isinstance(nonce_resp, dict):
         raw = nonce_resp.get("nonce")
@@ -141,32 +141,39 @@ def main() -> None:
     )
     permit_signature = wallet_sign_typed_data(token, permit_data)
 
-    # Step 7: Sign EIP-712 RegisterSubnet (V2 includes skillsURI field)
-    step("sign_register_subnet")
+    # Step 7: Sign EIP-712 RegisterWorknet (nested WorknetParams struct)
+    step("sign_register_worknet")
     register_data = build_eip712(
         domain,
-        "RegisterSubnet",
+        "RegisterWorknet",
         [
             {"name": "user", "type": "address"},
-            {"name": "name", "type": "string"},
-            {"name": "symbol", "type": "string"},
-            {"name": "subnetManager", "type": "address"},
-            {"name": "salt", "type": "bytes32"},
-            {"name": "minStake", "type": "uint128"},
-            {"name": "skillsURI", "type": "string"},
+            {"name": "params", "type": "WorknetParams"},
             {"name": "nonce", "type": "uint256"},
             {"name": "deadline", "type": "uint256"},
         ],
         {
             "user": wallet_addr,
-            "name": name,
-            "symbol": symbol,
-            "subnetManager": subnet_manager,
-            "salt": salt,
-            "minStake": min_stake,
-            "skillsURI": skills_uri,
+            "params": {
+                "name": name,
+                "symbol": symbol,
+                "worknetManager": subnet_manager,
+                "salt": salt,
+                "minStake": min_stake,
+                "skillsURI": skills_uri,
+            },
             "nonce": registry_nonce,
             "deadline": deadline,
+        },
+        extra_types={
+            "WorknetParams": [
+                {"name": "name", "type": "string"},
+                {"name": "symbol", "type": "string"},
+                {"name": "worknetManager", "type": "address"},
+                {"name": "salt", "type": "bytes32"},
+                {"name": "minStake", "type": "uint128"},
+                {"name": "skillsURI", "type": "string"},
+            ],
         },
     )
     register_signature = wallet_sign_typed_data(token, register_data)
@@ -186,7 +193,7 @@ def main() -> None:
         "registerSignature": register_signature,
     }
 
-    relay_url = f"{API_BASE}/relay/register-subnet"
+    relay_url = f"{RELAY_BASE}/relay/register-subnet"
     info(f"Submitting to {relay_url}")
     http_code, body = api_post(relay_url, relay_body)
 

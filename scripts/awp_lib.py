@@ -17,7 +17,8 @@ _UINT256_MAX = 2**256 - 1
 
 # ── Configuration ────────────────────────────────────────
 
-API_BASE = os.environ.get("AWP_API_URL", "https://tapi.awp.sh/api")
+API_BASE = "https://api.awp.sh/v2"
+RELAY_BASE = "https://api.awp.sh/api"
 RPC_URL = os.environ.get("EVM_RPC_URL", "https://mainnet.base.org")
 
 
@@ -42,8 +43,8 @@ def die(msg: str) -> None:
 # ── HTTP ────────────────────────────────────────
 
 def api_get(path: str) -> dict | list | None:
-    """GET {API_BASE}/{path}, return parsed JSON"""
-    url = f"{API_BASE}/{path.lstrip('/')}"
+    """[已弃用] GET 旧版 REST API，仅保留向后兼容。新代码请使用 rpc()"""
+    url = f"{RELAY_BASE}/{path.lstrip('/')}"
     try:
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=15) as resp:
@@ -72,6 +73,27 @@ def api_post(url: str, body: dict) -> tuple[int, dict | str]:
     except (urllib.error.URLError, OSError) as e:
         die(f"POST failed: {url} — {e}")
         return 0, ""  # unreachable
+
+
+def rpc(method: str, params: dict | None = None) -> dict | list | None:
+    """Call JSON-RPC 2.0 method on AWP API（新版 v2 接口）"""
+    body = {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1}
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(
+        API_BASE, data=data, method="POST",
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            result = json.loads(resp.read().decode())
+            if "error" in result:
+                err = result["error"]
+                msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+                die(f"RPC error: {msg}")
+            return result.get("result")
+    except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
+        die(f"API request failed: {method} — {e}")
+        return None  # unreachable
 
 
 def rpc_call(to: str, data: str) -> str:
@@ -191,10 +213,10 @@ def wallet_status(token: str) -> str:
 # ── Contract registry ───────────────────────────────────
 
 def get_registry() -> dict:
-    """Fetch /registry and return the full dictionary"""
-    reg = api_get("registry")
+    """通过 JSON-RPC 获取合约注册表"""
+    reg = rpc("registry.get")
     if not isinstance(reg, dict):
-        die("Invalid /registry response")
+        die("Invalid registry.get response")
     return reg
 
 
@@ -291,12 +313,24 @@ def validate_positive_int(val: str, name: str = "id") -> int:
 
 # ── EIP-712 construction ─────────────────────────────────
 
-def get_eip712_domain(registry: dict) -> dict:
-    """Get EIP-712 domain info from registry"""
+def get_eip712_domain(registry: dict, contract_name: str = "AWPRegistry") -> dict:
+    """获取 EIP-712 domain 信息，支持 AWPRegistry 和 StakingVault"""
     domain = registry.get("eip712Domain", {})
+    chain_id = domain.get("chainId") or registry.get("chainId")
+
+    if contract_name == "StakingVault":
+        # StakingVault 使用自己的 domain
+        contract = registry.get("stakingVault", "0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b")
+        return {
+            "name": "StakingVault",
+            "version": "1",
+            "chainId": int(chain_id) if chain_id else 8453,
+            "verifyingContract": contract,
+        }
+
+    # AWPRegistry domain（默认）
     name = domain.get("name")
     version = domain.get("version")
-    chain_id = domain.get("chainId")
     contract = domain.get("verifyingContract")
 
     # fallback
@@ -306,13 +340,11 @@ def get_eip712_domain(registry: dict) -> dict:
         info("eip712Domain not in registry, using fallback")
     if not version:
         version = "1"
-    if not chain_id:
-        chain_id = registry.get("chainId")
     if not contract:
         contract = registry.get("awpRegistry")
 
     if not chain_id or not contract:
-        die("Cannot determine EIP-712 domain from /registry")
+        die("Cannot determine EIP-712 domain from registry")
 
     return {
         "name": name,
@@ -323,18 +355,21 @@ def get_eip712_domain(registry: dict) -> dict:
 
 
 def build_eip712(domain: dict, primary_type: str, type_fields: list[dict],
-                 message: dict) -> dict:
-    """Build complete EIP-712 typed data"""
+                 message: dict, extra_types: dict[str, list[dict]] | None = None) -> dict:
+    """Build complete EIP-712 typed data（支持嵌套 struct 类型）"""
+    types: dict[str, list[dict]] = {
+        "EIP712Domain": [
+            {"name": "name", "type": "string"},
+            {"name": "version", "type": "string"},
+            {"name": "chainId", "type": "uint256"},
+            {"name": "verifyingContract", "type": "address"},
+        ],
+        primary_type: type_fields,
+    }
+    if extra_types:
+        types.update(extra_types)
     return {
-        "types": {
-            "EIP712Domain": [
-                {"name": "name", "type": "string"},
-                {"name": "version", "type": "string"},
-                {"name": "chainId", "type": "uint256"},
-                {"name": "verifyingContract", "type": "address"},
-            ],
-            primary_type: type_fields,
-        },
+        "types": types,
         "primaryType": primary_type,
         "domain": domain,
         "message": message,

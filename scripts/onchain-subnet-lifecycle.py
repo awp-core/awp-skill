@@ -7,9 +7,10 @@ from awp_lib import *
 
 # Action -> (required prior state, contract selector)
 ACTION_CONFIG: dict[str, tuple[str, str]] = {
-    "activate": ("Pending", "0xcead1c96"),   # activateSubnet(uint256)
-    "pause":    ("Active",  "0x44e047ca"),   # pauseSubnet(uint256)
-    "resume":   ("Paused",  "0x5364944c"),   # resumeSubnet(uint256)
+    "activate": ("Pending", "0xcead1c96"),   # activateWorknet(uint256)
+    "pause":    ("Active",  "0x44e047ca"),   # pauseWorknet(uint256)
+    "resume":   ("Paused",  "0x5364944c"),   # resumeWorknet(uint256)
+    "cancel":   ("Pending", "0x9bc68d94"),   # cancelWorknet(uint256) — full AWP refund
 }
 
 
@@ -17,7 +18,7 @@ def main() -> None:
     # ── Parse arguments ──
     parser = base_parser("Subnet lifecycle: activate / pause / resume")
     parser.add_argument("--subnet", required=True, help="Subnet ID")
-    parser.add_argument("--action", required=True, choices=["activate", "pause", "resume"],
+    parser.add_argument("--action", required=True, choices=["activate", "pause", "resume", "cancel"],
                         help="action type")
     args = parser.parse_args()
 
@@ -30,7 +31,7 @@ def main() -> None:
     awp_registry = require_contract(registry, "awpRegistry")
 
     # ── Check current subnet status ──
-    subnet_info = api_get(f"subnets/{subnet_id}")
+    subnet_info = rpc("subnets.get", {"worknetId": str(subnet_id)})
     if not isinstance(subnet_info, dict):
         die(f"Subnet #{subnet_id} not found")
 

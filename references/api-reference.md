@@ -1,187 +1,465 @@
-# AWP Skill — API Reference (Index)
+# AWP Skill — API Reference
 
-Quick index of read-only REST endpoints. For write operations, see the dedicated command files:
+Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, see the dedicated command files:
 - **commands-staking.md** — S1 Register/Bind, S2 Deposit, S3 Allocate
-- **commands-subnet.md** — M1 Register Subnet, M2 Lifecycle, M3-M4 Settings
+- **commands-subnet.md** — M1 Register Worknet, M2 Lifecycle, M3-M4 Settings
 - **commands-governance.md** — G1 Proposals, G2 Voting, G3/G4 Queries, Supplementary
-
-**API Base URL**: `{API_BASE}/api` (default `https://tapi.awp.sh/api`, override via `AWP_API_URL` env var)
 
 ---
 
-## Read-Only Endpoints
+## API Transport
 
-| Action | Endpoint | Notes |
-|--------|----------|-------|
-| Q1 Subnet | `GET /subnets/{subnetId}` | Full subnet object (includes `min_stake`, `immunity_ends_at`, `burned`); fallback: `getSubnetFull(id)` on AWPRegistry |
-| Q2 Balance | `GET /staking/user/{addr}/balance` | Also: `/positions`, `/allocations` |
-| Q3 Emission | `GET /emission/current` [DRAFT] | Also: `/schedule`, `/epochs` [DRAFT] |
-| Q4 Agent | `GET /subnets/{subnetId}/agents/{agent}` | Single agent stake on a subnet |
-| Q5 List | `GET /subnets?status={s}&page={p}&limit={n}` | Status: Pending, Active, Paused, Banned |
-| Q6 Skills | `GET /subnets/{subnetId}/skills` | Returns skillsURI |
-| Q7 Epochs | `GET /emission/epochs?page={p}&limit={n}` [DRAFT] | Epoch history with emissions |
+| Transport | URL | Notes |
+|-----------|-----|-------|
+| JSON-RPC 2.0 | `POST https://api.awp.sh/v2` | All read queries |
+| Discovery | `GET https://api.awp.sh/v2` | Method listing |
+| WebSocket | `wss://api.awp.sh/ws/live` | Real-time events |
+| Batch | `POST https://api.awp.sh/v2` | Up to 20 requests per batch, executed concurrently |
+| Health Check | `GET https://api.awp.sh/api/health` | REST health endpoint |
 
-## Shared Endpoints
-
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /registry` | Contract addresses + `eip712Domain` + `chainId` — never hardcode |
-| `GET /nonce/{address}` | EIP-712 signature nonce for gasless relay |
-| `GET /address/{addr}/check` | `{isRegistered, boundTo, recipient}` |
-| `GET /health` | Service health |
-
-### `GET /registry` Response
+### Request/Response Format
 
 ```json
-{
-  "chainId": 8453,
-  "awpRegistry": "0x...",
-  "awpToken": "0x...",
-  "awpEmission": "0x...",
-  "stakingVault": "0x...",
-  "stakeNFT": "0x...",
-  "subnetNFT": "0x...",
-  "lpManager": "0x...",
-  "alphaTokenFactory": "0x...",
-  "dao": "0x...",
-  "treasury": "0x...",
-  "eip712Domain": {
-    "name": "AWPRegistry",
-    "version": "1",
-    "chainId": 8453,
-    "verifyingContract": "0x..."
-  }
-}
+// Request
+{"jsonrpc": "2.0", "method": "namespace.method", "params": {...}, "id": 1}
+
+// Batch Request
+[
+  {"jsonrpc": "2.0", "method": "health.check", "params": {}, "id": 1},
+  {"jsonrpc": "2.0", "method": "stats.global", "params": {}, "id": 2}
+]
+
+// Success
+{"jsonrpc": "2.0", "result": {...}, "id": 1}
+
+// Error
+{"jsonrpc": "2.0", "error": {"code": -32601, "message": "method not found"}, "id": 1}
 ```
 
-> **Note:** `eip712Domain` provides the complete EIP-712 domain separator for all gasless relay signatures. Per-subnet addresses are returned by `GET /subnets/{subnetId}`, not by `/registry`.
+### Error Codes
 
-### `GET /nonce/{address}` Response
+| Code | Meaning |
+|------|---------|
+| -32700 | Parse error |
+| -32600 | Invalid request |
+| -32601 | Method not found |
+| -32602 | Invalid params |
+| -32603 | Internal error |
+| -32001 | Resource not found |
 
-```json
-{"nonce": 0}
-```
+### Common Parameters
 
-> The nonce auto-increments after each successful relay call. Use this before signing any EIP-712 relay message.
+- `address`: `string` — 0x-prefixed, 40 hex chars, case-insensitive
+- `worknetId`: `string` — Globally unique: `(chainId << 64) | localId`, passed as decimal string
+- `chainId`: `integer` — Optional on most methods; omit for all-chain aggregation, specify for single-chain
+- `page`: `integer` — 1-indexed (default 1)
+- `limit`: `integer` — Items per page (default 20, max 100)
+- `status`: `string` — Enum. Worknet: `"Pending"`, `"Active"`, `"Paused"`, `"Banned"`. Proposal: `"Active"`, `"Canceled"`, `"Defeated"`, `"Succeeded"`, `"Queued"`, `"Expired"`, `"Executed"`
 
-### `GET /address/{addr}/check` Response
+---
 
+## JSON-RPC Methods
+
+### System
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `stats.global` | — | Global protocol stats (users, worknets, staked, emitted, chains) |
+| `registry.get` | `chainId?` | Contract addresses + EIP-712 domain. **Omit chainId → returns array of all chains** |
+| `health.check` | — | `{"status": "ok"}` |
+| `health.detailed` | — | Per-chain indexer/keeper status |
+| `chains.list` | — | Supported chains array |
+
+### Users
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `users.list` | `chainId?`, `page?`, `limit?` | Paginated user list |
+| `users.listGlobal` | `page?`, `limit?` | Cross-chain deduplicated |
+| `users.count` | `chainId?` | Total user count |
+| `users.get` | `address` (required), `chainId?` | User details (balance, agents, recipient) |
+| `users.getPortfolio` | `address` (required), `chainId?` | Full portfolio: identity + balance + positions + allocations + delegates |
+| `users.getDelegates` | `address` (required), `chainId?` | Agents bound to user |
+
+### Address & Nonce
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `address.check` | `address` (required), `chainId?` | Registration, binding, recipient. **Omit chainId → returns all chains where registered**. See response formats below |
+| `address.resolveRecipient` | `address` (required), `chainId?` | Walk bind chain to root, return recipient |
+| `address.batchResolveRecipients` | `addresses[]` (required, max 500), `chainId?` | Batch resolve |
+| `nonce.get` | `address` (required), `chainId?` | AWPRegistry EIP-712 nonce |
+| `nonce.getStaking` | `address` (required), `chainId?` | StakingVault EIP-712 nonce |
+
+#### `address.check` Response Formats
+
+**With `chainId` specified** (single-chain query):
 ```json
 {
   "isRegistered": true,
-  "boundTo": "0x...",
-  "recipient": "0x..."
+  "boundTo": "0xOwnerAddress...",
+  "recipient": "0xRecipientAddress..."
 }
 ```
-> `isRegistered` = `boundTo != 0x0 || recipient != 0x0`.
+- `isRegistered`: true if user has called `register()`, `setRecipient()`, or `bind()` on this chain
+- `boundTo`: address this user is bound to (empty string if not bound)
+- `recipient`: reward recipient address (empty string if not set; defaults to self)
 
-### Subnet REST Response
-
+**Without `chainId`** (all-chain query):
 ```json
 {
-  "subnet_id": 1,
-  "owner": "0x...",
-  "name": "My Subnet",
-  "symbol": "MSUB",
-  "subnet_contract": "0x...",
-  "skills_uri": "ipfs://QmSkills...",
-  "alpha_token": "0x...",
-  "lp_pool": "0x...",
-  "status": "Active",
-  "created_at": 1710000000,
-  "activated_at": 1710000100,
-  "min_stake": 0,
-  "immunity_ends_at": null,
-  "burned": false
+  "isRegistered": true,
+  "chains": [
+    {"chainId": 1, "isRegistered": true, "recipient": "0x..."},
+    {"chainId": 8453, "isRegistered": true, "boundTo": "0x...", "recipient": "0x..."}
+  ]
 }
 ```
+- `isRegistered`: true if registered on ANY chain
+- `chains`: array of per-chain registration info (only chains where user is registered)
+
+### Agents
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `agents.getByOwner` | `owner` (required), `chainId?` | All agents bound to owner |
+| `agents.getDetail` | `agent` (required), `chainId?` | Agent details |
+| `agents.lookup` | `agent` (required), `chainId?` | Returns `{"ownerAddress": "0x..."}` |
+| `agents.batchInfo` | `agents[]` (required, max 100), `worknetId` (required), `chainId?` | Batch agent info + stake |
+
+### Staking
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `staking.getBalance` | `address` (required), `chainId?` | Returns `{totalStaked, totalAllocated, unallocated}` in wei strings |
+| `staking.getUserBalanceGlobal` | `address` (required) | Aggregated across all chains |
+| `staking.getPositions` | `address` (required), `chainId?` | StakeNFT positions |
+| `staking.getPositionsGlobal` | `address` (required) | Positions across all chains (includes `chainId` per position) |
+| `staking.getAllocations` | `address` (required), `chainId?`, `page?`, `limit?` | Allocation records |
+| `staking.getAgentSubnetStake` | `agent` (required), `worknetId` (required) | Agent's stake in worknet (cross-chain) |
+| `staking.getAgentSubnets` | `agent` (required) | All worknets agent participates in |
+| `staking.getSubnetTotalStake` | `worknetId` (required) | Total stake in worknet |
+| `staking.getFrozen` | `address` (required), `chainId?` | Frozen allocations |
+| `staking.getPending` | — | Pending allocation changes (always empty) |
+
+### Worknets (subnets.*)
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `subnets.list` | `status?`, `chainId?`, `page?`, `limit?` | Filter: `Pending`/`Active`/`Paused`/`Banned` |
+| `subnets.listRanked` | `chainId?`, `page?`, `limit?` | Ranked by total stake |
+| `subnets.search` | `query` (required, 1-100 chars), `chainId?`, `page?`, `limit?` | Name/symbol search |
+| `subnets.getByOwner` | `owner` (required), `chainId?`, `page?`, `limit?` | Worknets owned by address |
+| `subnets.get` | `worknetId` (required) | Worknet details |
+| `subnets.getSkills` | `worknetId` (required) | Skills URI |
+| `subnets.getEarnings` | `worknetId` (required), `page?`, `limit?` | AWP earnings history |
+| `subnets.getAgentInfo` | `worknetId` (required), `agent` (required) | Agent info in worknet |
+| `subnets.listAgents` | `worknetId` (required), `chainId?`, `page?`, `limit?` | Agents ranked by stake |
+
+### Emission
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `emission.getCurrent` | `chainId?` | Current epoch, daily emission, total weight |
+| `emission.getSchedule` | `chainId?` | 30/90/365 day projections with decay |
+| `emission.getGlobalSchedule` | — | Aggregated across all chains |
+| `emission.listEpochs` | `chainId?`, `page?`, `limit?` | Settled epochs |
+| `emission.getEpochDetail` | `epochId` (required), `chainId?` | Per-recipient distributions |
+
+### Tokens
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `tokens.getAWP` | `chainId?` | AWP supply, max supply |
+| `tokens.getAWPGlobal` | — | Aggregated across chains |
+| `tokens.getAlphaInfo` | `worknetId` (required) | Alpha token info |
+| `tokens.getAlphaPrice` | `worknetId` (required) | Price from LP pool (cached 10min) |
+
+### Governance
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `governance.listProposals` | `status?`, `chainId?`, `page?`, `limit?` | Filter: `Active`/`Canceled`/`Defeated`/`Succeeded`/`Queued`/`Expired`/`Executed` |
+| `governance.listAllProposals` | `status?`, `page?`, `limit?` | Cross-chain |
+| `governance.getProposal` | `proposalId` (required), `chainId?` | Proposal details |
+| `governance.getTreasury` | — | Treasury address |
+
+### Announcements (REST)
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/announcements` | List active announcements. Query: `chainId?`, `category?`, `limit?` (default 20), `offset?` (default 0) |
+| `GET /api/announcements/{id}` | Get single announcement by ID |
+| `GET /api/announcements/llm-context` | Formatted for LLM consumption. Query: `chainId?` |
+
+Categories: `general`, `maintenance`, `governance`, `emission`, `security`. Priority: 0=info, 1=warning, 2=critical.
+
+---
+
+## Gasless Relay Endpoints (REST)
+
+Relay endpoints use REST (not JSON-RPC). Users sign EIP-712 messages off-chain; the relayer submits the transaction and pays gas.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `POST /api/relay/bind` | RelayBind | Gasless bind |
+| `POST /api/relay/unbind` | RelayUnbind | Gasless unbind |
+| `POST /api/relay/set-recipient` | RelaySetRecipient | Gasless setRecipient |
+| `POST /api/relay/register` | RelayRegister | Gasless register (= setRecipientFor to self) |
+| `POST /api/relay/allocate` | RelayAllocate | Gasless allocate |
+| `POST /api/relay/deallocate` | RelayDeallocate | Gasless deallocate |
+| `POST /api/relay/activate-subnet` | RelayActivateWorknet | Gasless activate worknet |
+| `POST /api/relay/register-subnet` | RelayRegisterWorknet | Gasless register worknet (with permit) |
+| `POST /api/relay/grant-delegate` | RelayGrantDelegate | Gasless grant delegate |
+| `POST /api/relay/revoke-delegate` | RelayRevokeDelegate | Gasless revoke delegate |
+| `GET /api/relay/status/{txHash}` | GetRelayStatus | Check relay tx status |
+
+### Relay Request Format Examples
+
+**Register** (simplest — user registers themselves):
+```json
+POST /api/relay/register
+{
+  "chainId": 8453,
+  "user": "0xUserAddress...",
+  "deadline": 1712345678,
+  "v": 27,
+  "r": "0x...(32 bytes hex)...",
+  "s": "0x...(32 bytes hex)..."
+}
+```
+
+**Bind:**
+```json
+POST /api/relay/bind
+{
+  "chainId": 8453,
+  "agent": "0xAgentAddress...",
+  "target": "0xOwnerAddress...",
+  "deadline": 1712345678,
+  "v": 27, "r": "0x...", "s": "0x..."
+}
+```
+
+**Allocate:**
+```json
+POST /api/relay/allocate
+{
+  "chainId": 8453,
+  "staker": "0x...",
+  "agent": "0x...",
+  "worknetId": "36364510078353408001",
+  "amount": "1000000000000000000000",
+  "deadline": 1712345678,
+  "v": 27, "r": "0x...", "s": "0x..."
+}
+```
+
+**Response (all relay endpoints):**
+```json
+{"txHash": "0x..."}
+```
+
+**Error response:**
+```json
+{"error": "invalid EIP-712 signature"}
+```
+
+### Relay Status Check
+
+```
+GET /api/relay/status/{txHash}
+```
+
+Returns the current status of a relay transaction by its hash.
+
+> Rate limit: 100 requests per IP per 1 hour (shared across all relay endpoints).
+
+### EIP-712 Type Definitions
+
+```
+Bind(address agent, address target, uint256 nonce, uint256 deadline)
+Unbind(address user, uint256 nonce, uint256 deadline)
+SetRecipient(address user, address recipient, uint256 nonce, uint256 deadline)
+GrantDelegate(address user, address delegate, uint256 nonce, uint256 deadline)
+RevokeDelegate(address user, address delegate, uint256 nonce, uint256 deadline)
+ActivateWorknet(address user, uint256 worknetId, uint256 nonce, uint256 deadline)
+RegisterWorknet(address user, WorknetParams params, uint256 nonce, uint256 deadline)
+  WorknetParams(string name, string symbol, address worknetManager, bytes32 salt, uint128 minStake, string skillsURI)
+Allocate(address staker, address agent, uint256 worknetId, uint256 amount, uint256 nonce, uint256 deadline)
+Deallocate(address staker, address agent, uint256 worknetId, uint256 amount, uint256 nonce, uint256 deadline)
+```
+
+**Nonce workflow**: Always fetch the current nonce via `nonce.get` (AWPRegistry) or `nonce.getStaking` (StakingVault) immediately before signing. Nonces auto-increment after each successful relay. Using a stale nonce causes `InvalidSignature` error.
+
+---
 
 ## Contract Quick Reference
 
-### AWPRegistry — getRegistry()
+### AWPRegistry — Account System
 
 ```solidity
-getRegistry() → (awpToken, subnetNFT, alphaTokenFactory, awpEmission, lpManager, stakingVault, stakeNFT, treasury, guardian)
-```
-> Returns `awpRegistry`-scoped addresses. No `accessManager` in the tuple.
+// Binding
+bind(address target)                          // Tree-based binding with anti-cycle check
+unbind()                                       // Unbind from current target
 
-### AWPRegistry — Account System V2
+// Recipient
+setRecipient(address recipient)               // Set reward recipient
+
+// Delegation
+grantDelegate(address delegate)               // Grant delegation
+revokeDelegate(address delegate)              // Revoke delegation
+
+// View
+resolveRecipient(address addr) view           // Walk boundTo chain to root
+batchResolveRecipients(address[] addrs) view  // Batch resolve
+isRegistered(address addr) view               // boundTo[addr] != 0 || recipient[addr] != 0
+boundTo(address) view                         // Direct binding target
+recipient(address) view                       // Reward recipient
+delegates(address user, address delegate) view // Delegation check
+nonces(address) view                          // EIP-712 nonce
+```
+> EIP-712 domain name: `"AWPRegistry"`.
+> `unbind()` is available — unbinds msg.sender from current target.
+
+### AWPRegistry — Worknet Management
 
 ```solidity
-register()                          // Optional; equivalent to setRecipient(msg.sender)
-bind(address target)                // Tree-based binding with anti-cycle check
-setRecipient(address recipient)     // Set reward recipient
-grantDelegate(address delegate)     // Grant delegation
-revokeDelegate(address delegate)    // Revoke delegation
-resolveRecipient(address addr) view // Walks boundTo chain to root
-isRegistered(address addr) view     // boundTo[addr] != 0 || recipient[addr] != 0
-```
-> EIP-712 domain name: `"AWPRegistry"` (not "AWPRootNet").
-> `unbind()` and `removeAgent()` are removed in V2.
-> `setDelegation` replaced by `grantDelegate` / `revokeDelegate`.
-> `setRewardRecipient` replaced by `setRecipient` + gasless `setRecipientFor`.
+struct WorknetParams {
+    string name;              // Alpha Token name (1-64 chars, no " or \)
+    string symbol;            // Alpha Token symbol (1-16 chars, no " or \)
+    address worknetManager;   // 0x0 = auto-deploy WorknetManager proxy
+    bytes32 salt;             // CREATE2 salt (0x0 = use worknetId)
+    uint128 minStake;         // Min stake for agents (reference only)
+    string skillsURI;         // Skills description URI
+}
 
-### AWPRegistry — Staking (allocation only)
+registerWorknet(WorknetParams params) returns (uint256 worknetId)  // Costs 100,000 AWP
+activateWorknet(uint256 worknetId)    // Pending -> Active, WorknetNFT owner only
+pauseWorknet(uint256 worknetId)       // Active -> Paused, WorknetNFT owner only
+resumeWorknet(uint256 worknetId)      // Paused -> Active, WorknetNFT owner only
+cancelWorknet(uint256 worknetId)      // Pending -> None (full AWP refund), WorknetNFT owner only
+
+// View
+getWorknet(uint256 worknetId) view
+getWorknetFull(uint256 worknetId) view
+getActiveWorknetCount() view
+isWorknetActive(uint256 worknetId) view
+initialAlphaPrice() view
+initialAlphaMint() view
+```
+
+### StakeNFT — AWP Staking
 
 ```solidity
-allocate(address staker, address agent, uint256 subnetId, uint256 amount)
-deallocate(address staker, address agent, uint256 subnetId, uint256 amount)
-reallocate(address staker, address fromAgent, uint256 fromSubnetId, address toAgent, uint256 toSubnetId, uint256 amount)
-```
-> `staker` is an explicit parameter (caller must be staker or delegate).
+deposit(uint256 amount, uint64 lockDuration) returns (uint256 tokenId)  // User must approve StakeNFT
+depositWithPermit(uint256 amount, uint64 lockDuration, uint256 deadline, uint8 v, bytes32 r, bytes32 s) returns (uint256 tokenId)
+addToPosition(uint256 tokenId, uint256 amount, uint64 newLockEndTime)
+withdraw(uint256 tokenId)                     // After lock expires, burns NFT
 
-### AWPEmission
+// View
+getUserTotalStaked(address user) view returns (uint256)
+getVotingPower(uint256 tokenId) view returns (uint256)
+remainingTime(uint256 tokenId) view returns (uint64)
+```
+
+### StakingVault — Allocation
 
 ```solidity
-awpRegistry() → address
-```
+// Caller must be staker or staker's delegate (NOT onlyAWPRegistry)
+allocate(address staker, address agent, uint256 worknetId, uint256 amount)
+deallocate(address staker, address agent, uint256 worknetId, uint256 amount)
+reallocate(address staker, address fromAgent, uint256 fromWorknetId, address toAgent, uint256 toWorknetId, uint256 amount)
 
-### StakeNFT
+// View
+userTotalAllocated(address user) view returns (uint256)
+getAgentStake(address user, address agent, uint256 worknetId) view returns (uint256)
+getAgentWorknets(address user, address agent) view returns (uint256[])
+nonces(address) view returns (uint256)        // StakingVault EIP-712 nonce (separate from AWPRegistry)
+```
+> StakingVault has its own EIP-712 domain (`"StakingVault"`, verifyingContract: `0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b`).
+
+### WorknetManager — Per-Worknet Operations
 
 ```solidity
-depositFor(address user, uint256 amount, uint64 lockDuration) → uint256 tokenId  // onlyAWPRegistry
+// Merkle claim (any user with valid proof)
+claim(uint32 epoch, uint256 amount, bytes32[] calldata proof)
+isClaimed(uint32 epoch, address account) view returns (bool)
+
+// View
+alphaToken() view returns (address)
+poolId() view returns (bytes32)
+currentStrategy() view returns (uint8)    // 0=Reserve, 1=AddLiquidity, 2=BuybackBurn
+slippageBps() view returns (uint256)      // Slippage tolerance in basis points
+strategyPaused() view returns (bool)      // Whether auto-strategy is paused
 ```
 
-### StakingVault
-
-```solidity
-allocate(address staker, address agent, uint256 subnetId, uint256 amount)    // onlyAWPRegistry
-deallocate(address staker, address agent, uint256 subnetId, uint256 amount)  // onlyAWPRegistry
-reallocate(...)                                                               // onlyAWPRegistry
-```
-> All functions use `staker` param name and `onlyAWPRegistry` modifier.
+---
 
 ## WebSocket Events
 
-> Source contract: **AWPRegistry** (not RootNet). 26 event types total.
+**Endpoint**: `wss://api.awp.sh/ws/live`
 
-| Event | Data Fields | Source |
-|-------|-------------|--------|
-| `Bound` | `{user, target, oldTarget}` | AWPRegistry |
-| `RecipientUpdated` | `{user, recipient}` | AWPRegistry |
-| `DelegateGranted` | `{user, delegate}` | AWPRegistry |
-| `DelegateRevoked` | `{user, delegate}` | AWPRegistry |
-| `Deposited` | `{user, tokenId, amount, lockEndTime}` | StakeNFT |
-| `PositionIncreased` | `{tokenId, addedAmount, newLockEndTime}` | StakeNFT |
-| `Withdrawn` | `{user, tokenId, amount}` | StakeNFT |
-| `Allocated` | `{user, agent, subnetId, amount, operator}` | AWPRegistry |
-| `Deallocated` | `{user, agent, subnetId, amount, operator}` | AWPRegistry |
-| `Reallocated` | `{user, fromAgent, fromSubnet, toAgent, toSubnet, amount, operator}` | AWPRegistry |
-| `SubnetRegistered` | `{subnetId, owner, name, symbol, subnetManager, alphaToken}` | AWPRegistry |
-| `LPCreated` | `{subnetId, poolId, awpAmount, alphaAmount}` | AWPRegistry |
-| `SkillsURIUpdated` | `{subnetId, skillsURI}` | SubnetNFT |
-| `MinStakeUpdated` | `{subnetId, minStake}` | SubnetNFT |
-| `SubnetActivated` | `{subnetId}` | AWPRegistry |
-| `SubnetPaused` | `{subnetId}` | AWPRegistry |
-| `SubnetResumed` | `{subnetId}` | AWPRegistry |
-| `SubnetBanned` | `{subnetId}` | AWPRegistry |
-| `SubnetUnbanned` | `{subnetId}` | AWPRegistry |
-| `SubnetDeregistered` | `{subnetId}` | AWPRegistry |
-| `GovernanceWeightUpdated` | `{addr, weight}` | AWPEmission |
-| `RecipientAWPDistributed` | `{epoch, recipient, awpAmount}` | AWPEmission |
-| `DAOMatchDistributed` | `{epoch, amount}` | AWPEmission |
-| `EpochSettled` | `{epoch, totalEmission, recipientCount}` | AWPEmission |
-| `AllocationsSubmitted` | `{nonce, recipients, weights}` | AWPEmission |
-| `OracleConfigUpdated` | `{oracles, threshold}` | AWPEmission |
+Events pushed as JSON messages with envelope:
+```json
+{"type": "EventName", "blockNumber": 12345, "txHash": "0x...", "data": {...}}
+```
+
+| Event | Fields | Description |
+|-------|--------|-------------|
+| `UserRegistered` | `user`, `chainId` | New user registration |
+| `Bound` | `user`, `target`, `chainId` | User bound to target |
+| `Unbound` | `user`, `chainId` | User unbound |
+| `RecipientSet` | `user`, `recipient`, `chainId` | Recipient changed |
+| `DelegateGranted` | `user`, `delegate`, `chainId` | Delegate granted |
+| `DelegateRevoked` | `user`, `delegate`, `chainId` | Delegate revoked |
+| `Deposited` | `user`, `tokenId`, `amount`, `lockEndTime`, `chainId` | AWP staked |
+| `Withdrawn` | `user`, `tokenId`, `amount`, `chainId` | AWP withdrawn |
+| `Allocated` | `staker`, `agent`, `worknetId`, `amount`, `chainId` | Stake allocated |
+| `Deallocated` | `staker`, `agent`, `worknetId`, `amount`, `chainId` | Stake deallocated |
+| `Reallocated` | `staker`, `fromAgent`, `fromWorknetId`, `toAgent`, `toWorknetId`, `amount`, `chainId` | Reallocation |
+| `WorknetRegistered` | `worknetId`, `owner`, `name`, `symbol`, `chainId` | New worknet |
+| `WorknetActivated` | `worknetId`, `chainId` | Worknet activated |
+| `WorknetCancelled` | `worknetId`, `chainId` | Worknet cancelled |
+| `EpochSettled` | `epoch`, `totalEmission`, `recipientCount`, `chainId` | Epoch settled |
+| `RecipientAWPDistributed` | `epoch`, `recipient`, `amount`, `chainId` | AWP distributed |
+| `AllocationsSubmitted` | `epoch`, `totalWeight`, `recipients`, `weights`, `chainId` | Allocation weights submitted |
+| `LPManagerUpdated` | `newLPManager`, `chainId` | LP manager updated |
+| `DefaultWorknetManagerImplUpdated` | `newImpl`, `chainId` | Default worknet manager implementation updated |
 
 For data structures, events, and constants, see **protocol.md**.
+
+---
+
+## Vanity Salt Endpoints
+
+For offline mining of vanity Alpha token CREATE2 addresses:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `GET /api/vanity/mining-params` | GET | Returns `{factoryAddress, initCodeHash, vanityRule}` needed for offline salt mining |
+| `POST /api/vanity/upload-salts` | POST | Upload pre-mined `{salts: [{salt, address}, ...]}`. Rate limited: 5/hr/IP |
+| `GET /api/vanity/salts/count` | GET | Number of available (unused) salts in the pool |
+| `POST /api/vanity/compute-salt` | POST | Server-side computation. Returns `{salt, address, source: "pool"\|"mined", elapsed}` |
+
+---
+
+## Key Protocol Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| AWP Max Supply | 10,000,000,000 (10B) | Hard cap across all chains. Each chain has independent mint. |
+| Initial Daily Emission | 31,600,000 AWP | Per chain per epoch. Subject to decay. |
+| Decay Factor | 996844 / 1,000,000 | ~0.3156% reduction per epoch. Formula: `emission *= 996844 / 1000000` |
+| Epoch Duration | 1 day (86,400 seconds) | Each epoch = 1 calendar day |
+| Worknet Registration Cost | 100,000 AWP | `initialAlphaMint (100M) * initialAlphaPrice (0.001)`. Escrowed until activation or refunded on cancel. |
+| Alpha Tokens per Worknet | 100,000,000 (100M) | Minted to LP pool on activation |
+| Initial Alpha Price | 0.001 AWP per Alpha | `1e15 wei`. Determines AWP escrow and LP ratio. |
+| Min Lock Duration (StakeNFT) | 1 day (86,400 seconds) | Minimum lock when depositing |
+| Max Voting Weight Duration | 54 weeks | Voting power formula: `amount * sqrt(min(remainingTime, 54 weeks) / 7 days)` |
+| Timelock Delay (Treasury) | 2 days (172,800 seconds) | DAO proposals require 2-day waiting period before execution |
+| LP Pool Fee | 10,000 bps (1%) | Uniswap V4 / PancakeSwap V4 pool fee tier |
+| LP Tick Spacing | 200 | Determines price granularity in LP pools |
+| Max Active Worknets | 10,000 | Per chain. Hard limit in AWPRegistry. |
+| Max Emission Recipients | 10,000 | Per chain per epoch. Hard limit in AWPEmission. |
+| WorknetId Format | `(chainId << 64) \| localCounter` | 256-bit globally unique identifier |

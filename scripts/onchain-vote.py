@@ -95,7 +95,7 @@ def main() -> None:
     step("proposalCreatedAt", proposalId=proposal_id, createdAt=proposal_created_at)
 
     # ── Step 2: fetch user positions ──
-    positions = api_get(f"staking/user/{wallet_addr}/positions")
+    positions = rpc("staking.getPositions", {"address": wallet_addr})
     if not isinstance(positions, list):
         die("Unexpected positions response")
 

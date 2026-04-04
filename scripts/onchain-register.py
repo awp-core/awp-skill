@@ -19,7 +19,7 @@ def main() -> None:
     awp_registry = require_contract(registry, "awpRegistry")
 
     # Check if already registered
-    check = api_get(f"address/{wallet_addr}/check")
+    check = rpc("address.check", {"address": wallet_addr})
     if isinstance(check, dict):
         # V2: .isRegistered; V1: .isRegisteredUser
         is_registered = check.get("isRegistered")

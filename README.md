@@ -157,7 +157,7 @@ Three operations support fully gasless execution via EIP-712 signatures and rela
 |-----------|---------------|------------|
 | Bind (tree-based) | `POST /relay/bind` | 1 (EIP-712 Bind) |
 | Set Recipient | `POST /relay/set-recipient` | 1 (EIP-712 SetRecipient) |
-| Subnet Registration | `POST /relay/register-subnet` | 2 (ERC-2612 Permit + EIP-712 RegisterSubnet) |
+| Worknet Registration | `POST /relay/register-subnet` | 2 (ERC-2612 Permit + EIP-712 RegisterWorknet) |
 
 Rate limit: 100 requests per IP per 1 hour across all relay endpoints.
 
@@ -256,6 +256,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 
 | Version | Changes |
 |---------|---------|
+| 1.0.0 | Multi-chain (Base/ETH/Arbitrum/BSC), JSON-RPC 2.0 API, Worknet terminology, 6 script bug fixes, skill description optimization |
 | 0.25.8 | Security: eliminate all process.env from wallet-raw-call.mjs, use os.homedir() + well-known paths |
 | 0.25.7 | Security: remove AWP_WALLET_DIR env var, use PATH + default paths only |
 | 0.25.6 | Security: hardcode registry URL in wallet-raw-call.mjs, prevent env var allowlist bypass |

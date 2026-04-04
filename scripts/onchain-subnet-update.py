@@ -59,7 +59,7 @@ def main() -> None:
     # ── Pre-checks ──
     wallet_addr = get_wallet_address()
     registry = get_registry()
-    subnet_nft = require_contract(registry, "subnetNFT")
+    subnet_nft = require_contract(registry, "worknetNFT")
 
     # ── Build calldata and send ──
     if skills_uri:

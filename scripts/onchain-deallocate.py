@@ -28,7 +28,7 @@ def main() -> None:
 
     # Fetch contract registry
     registry = get_registry()
-    awp_registry = require_contract(registry, "awpRegistry")
+    staking_vault = require_contract(registry, "stakingVault")
 
     amount_wei = to_wei(amount)
 
@@ -42,7 +42,7 @@ def main() -> None:
     )
 
     step("deallocate", staker=wallet_addr, agent=agent, subnet=subnet_id, amount=f"{amount} AWP")
-    result = wallet_send(token, awp_registry, calldata)
+    result = wallet_send(token, staking_vault, calldata)
     print(result)
 
 

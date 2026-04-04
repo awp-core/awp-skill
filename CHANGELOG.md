@@ -1,5 +1,67 @@
 # Changelog
 
+## v1.0.0
+
+### Multi-chain, JSON-RPC 2.0 API, Worknet Terminology, Bug Fixes
+
+**API**
+- REST API (`tapi.awp.sh/api`) replaced with JSON-RPC 2.0 (`api.awp.sh/v2`)
+- All scripts and reference docs updated to use `POST` with `{"jsonrpc":"2.0","method":"...","params":{...},"id":1}`
+- Batch support: up to 20 requests per call
+- Hardcoded API URL — `AWP_API_URL` env var removed
+- Gasless relay endpoints remain REST at `api.awp.sh/api/relay/*`
+- New relay methods: unbind, grant-delegate, revoke-delegate, allocate, deallocate
+- Relay status check: `GET /api/relay/status/{txHash}`
+
+**Multi-chain**
+- Deployed on Base (8453), Ethereum (1), Arbitrum (42161), BSC (56)
+- All contract addresses identical across all 4 chains
+- WorknetId globally unique: `(chainId << 64) | localCounter`
+- Cross-chain API methods: `users.listGlobal`, `staking.getUserBalanceGlobal`, `staking.getPositionsGlobal`, `tokens.getAWPGlobal`, `emission.getGlobalSchedule`
+
+**Terminology**
+- "Subnet" → "Worknet" in contracts and events
+- SubnetNFT → WorknetNFT
+- registerSubnet → registerWorknet, activateSubnet → activateWorknet, etc.
+- API namespace stays `subnets.*` for compatibility
+
+**Contracts**
+- New production addresses (same on all chains)
+- `unbind()` restored
+- `deposit`/`depositWithPermit` directly on StakeNFT
+- StakingVault callable directly (not only via AWPRegistry)
+- StakingVault has its own EIP-712 domain
+
+**New API Methods**
+- `subnets.search`, `subnets.listRanked`, `subnets.listAgents`
+- `users.getPortfolio`, `users.getDelegates`
+- `stats.global`, `health.detailed`, `chains.list`
+- `emission.getEpochDetail`, `emission.getGlobalSchedule`
+- `tokens.getAlphaPrice`, `tokens.getAWPGlobal`
+- `agents.getByOwner`, `agents.getDetail`, `agents.lookup`, `agents.batchInfo`
+
+**Protocol Constants**
+- Daily emission: 31,600,000 AWP per chain
+- Worknet registration cost: 100,000 AWP
+- Emission sections finalized (no longer DRAFT)
+
+**Scripts**
+- `awp_lib.py`: new `rpc()` function for JSON-RPC, `RELAY_BASE` for relay endpoints; `build_eip712()` now supports `extra_types` for nested structs
+- All `onchain-*.py` and `relay-*.py` scripts updated to JSON-RPC calls
+- `awp-daemon.py`: all API calls migrated to JSON-RPC
+- `wallet-raw-call.mjs`: registry fetch via JSON-RPC
+
+**Bug Fixes**
+- `relay-register-subnet.py`: fixed EIP-712 type — was flat `RegisterSubnet`, now uses correct `RegisterWorknet` + nested `WorknetParams` struct
+- `onchain-subnet-lifecycle.py`: added missing `cancel` action (`cancelWorknet`, selector `0x9bc68d94`; Pending→None with full 100,000 AWP refund)
+- `onchain-subnet-update.py`: fixed registry key `"subnetNFT"` → `"worknetNFT"` (crashed on every call)
+- `wallet-raw-call.mjs`: added null/type guard for registry response before `Object.entries()`
+- `awp-daemon.py`: fixed changelog truncation off-by-one, atomic temp-file write (`os.replace`), `seen_announcement_ids` capped at 500, PID cleanup via `try/finally`
+- `onchain-add-position.py`: fixed float vs Decimal handling for `extend_days`
+- Reference docs: `staking.getBalance` response field corrected to `unallocated` (not `available`)
+- SKILL.md: description rewritten for improved triggering recall; `--subnet` flag clarified in M2; relay scripts noted to handle EIP-712 internally (don't expose to user)
+- LPManager address corrected to `0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2` across all reference files
+
 ## v0.25.9
 
 ### Security — Remove env-var keyword from comments in wallet-raw-call.mjs

@@ -24,7 +24,7 @@ def main() -> None:
     extend_days_str: str = args.extend_days
     if not re.match(r"^[0-9]+\.?[0-9]*$", extend_days_str):
         die("Invalid --extend-days: must be a non-negative number")
-    extend_days = float(extend_days_str)
+    extend_days = int(extend_days_str) if "." not in extend_days_str else float(extend_days_str)
 
     # ── Pre-checks ──
     wallet_addr = get_wallet_address()

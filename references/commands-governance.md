@@ -1,6 +1,6 @@
 # AWP Governance Commands
 
-**API Base URL**: `{API_BASE}/api` (default `https://tapi.awp.sh/api`, override via `AWP_API_URL` env var)
+**API Endpoint**: `POST https://api.awp.sh/v2` (JSON-RPC 2.0)
 
 > **IMPORTANT**: Always use the bundled `scripts/*.py` files for write operations — they handle ABI encoding natively in Python, require only python3, and work without Foundry or curl/jq.
 > The `cast calldata` examples below are for reference only; do NOT run them directly.
@@ -9,13 +9,13 @@
 
 ```bash
 # Reference only — actual operations are handled automatically by scripts/*.py
-REGISTRY=$(curl -s {API_BASE}/api/registry)
-AWP_REGISTRY=$(echo $REGISTRY | jq -r '.awpRegistry')
-AWP_TOKEN=$(echo $REGISTRY | jq -r '.awpToken')
-STAKE_NFT=$(echo $REGISTRY | jq -r '.stakeNFT')
-SUBNET_NFT=$(echo $REGISTRY | jq -r '.subnetNFT')
-DAO_ADDR=$(echo $REGISTRY | jq -r '.dao')
-TREASURY=$(echo $REGISTRY | jq -r '.treasury')
+# Contract addresses (same on all chains)
+AWP_REGISTRY="0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A"
+AWP_TOKEN="0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1"
+STAKE_NFT="0x4E119560632698Bab67cFAB5d8EC0A373363ba2d"
+WORKNET_NFT="0xB9F03539BE496d09c4d7964921d674B8763f5233"
+DAO_ADDR="0x6a074aC9823c47f86EE4Fc7F62e4217Bc9C76004"
+TREASURY="0x82562023a053025F3201785160CaE6051efD759e"
 
 WALLET_ADDR=$(awp-wallet receive | jq -r '.eoaAddress')
 ```
@@ -82,12 +82,20 @@ python3 scripts/onchain-vote.py --token {T} --proposal {proposalId} --support 1 
 
 ## G3 · Query Proposals
 
-### REST
+### JSON-RPC
 
+```json
+// List proposals (with optional status filter)
+{"jsonrpc": "2.0", "method": "governance.listProposals", "params": {"status": "Active", "page": 1, "limit": 20}, "id": 1}
+
+// List all proposals cross-chain
+{"jsonrpc": "2.0", "method": "governance.listAllProposals", "params": {"status": "Active", "page": 1, "limit": 20}, "id": 1}
+
+// Get specific proposal
+{"jsonrpc": "2.0", "method": "governance.getProposal", "params": {"proposalId": "123"}, "id": 1}
 ```
-GET /governance/proposals?status=Active&page=1&limit=20
-GET /governance/proposals/{proposalId}
-```
+
+Proposal status values: `Active`, `Canceled`, `Defeated`, `Succeeded`, `Queued`, `Expired`, `Executed`.
 
 ### On-Chain Enrichment
 
@@ -103,14 +111,13 @@ function proposalThreshold() view returns (uint256)   // 1,000,000 AWP
 
 ## G4 · Query Treasury
 
-### REST
+### JSON-RPC
 
-```
-GET /governance/treasury
-```
 ```json
-{"treasuryAddress": "0x..."}
+{"jsonrpc": "2.0", "method": "governance.getTreasury", "params": {}, "id": 1}
 ```
+
+Treasury address: `0x82562023a053025F3201785160CaE6051efD759e`
 
 ### On-Chain (optional balance check)
 
@@ -124,71 +131,65 @@ function balanceOf(address account) view returns (uint256)   // on AWPToken
 
 ### AWP Token Info
 
-```
-GET /tokens/awp
-```
 ```json
-{"totalSupply": "5015800000000000000000000000", "maxSupply": "10000000000000000000000000000"}
+// Single chain
+{"jsonrpc": "2.0", "method": "tokens.getAWP", "params": {}, "id": 1}
+
+// Response
+{"jsonrpc": "2.0", "result": {"totalSupply": "5015800000000000000000000000", "maxSupply": "10000000000000000000000000000"}, "id": 1}
+
+// Aggregated across all chains
+{"jsonrpc": "2.0", "method": "tokens.getAWPGlobal", "params": {}, "id": 1}
 ```
 
 ### Alpha Token Info
 
-```
-GET /tokens/alpha/{subnetId}
-```
 ```json
-{"subnetId": 1, "name": "My Subnet Alpha", "symbol": "MSALPHA", "alphaToken": "0x..."}
+{"jsonrpc": "2.0", "method": "tokens.getAlphaInfo", "params": {"worknetId": "1"}, "id": 1}
+
+// Response
+{"jsonrpc": "2.0", "result": {"worknetId": "1", "name": "My Worknet Alpha", "symbol": "MWALPHA", "alphaToken": "0x..."}, "id": 1}
 ```
 
 ### Alpha Token Price
 
-```
-GET /tokens/alpha/{subnetId}/price
-```
 ```json
-{"priceInAWP": "0.015", "reserve0": "...", "reserve1": "...", "updatedAt": "..."}
+{"jsonrpc": "2.0", "method": "tokens.getAlphaPrice", "params": {"worknetId": "1"}, "id": 1}
+
+// Response (cached 10min)
+{"jsonrpc": "2.0", "result": {"priceInAWP": "0.015", "reserve0": "...", "reserve1": "...", "updatedAt": "..."}, "id": 1}
 ```
 
 ### User Profile
 
-```
-GET /users/{address}
-```
 ```json
-{
-  "user": {"address": "0x...", "bound_to": "0x...", "recipient": "0x...", "registered_at": 1710000000},
-  "balance": {"user_address": "0x...", "total_staked": "5000000000000000000000", "total_allocated": "3000000000000000000000"}
-}
+{"jsonrpc": "2.0", "method": "users.get", "params": {"address": "0x..."}, "id": 1}
+
+// Response
+{"jsonrpc": "2.0", "result": {
+  "user": {"address": "0x...", "boundTo": "0x...", "recipient": "0x...", "registeredAt": 1710000000},
+  "balance": {"totalStaked": "5000000000000000000000", "totalAllocated": "3000000000000000000000"}
+}, "id": 1}
+
+// Full portfolio (identity + balance + positions + allocations + delegates)
+{"jsonrpc": "2.0", "method": "users.getPortfolio", "params": {"address": "0x..."}, "id": 1}
 ```
 
 ### Staking Details
 
-```
-GET /staking/agent/{agent}/subnet/{subnetId}
-```
 ```json
-{"amount": "5000000000000000000000"}
+// Agent stake in worknet
+{"jsonrpc": "2.0", "method": "staking.getAgentSubnetStake", "params": {"agent": "0x...", "worknetId": "1"}, "id": 1}
+
+// All worknets agent participates in
+{"jsonrpc": "2.0", "method": "staking.getAgentSubnets", "params": {"agent": "0x..."}, "id": 1}
+
+// Total stake in worknet
+{"jsonrpc": "2.0", "method": "staking.getSubnetTotalStake", "params": {"worknetId": "1"}, "id": 1}
 ```
 
-```
-GET /staking/agent/{agent}/subnets
-```
-```json
-[{"subnet_id": 1, "amount": "5000000000000000000000"}, {"subnet_id": 3, "amount": "2000000000000000000000"}]
-```
+### Worknet Earnings
 
-```
-GET /staking/subnet/{subnetId}/total
-```
 ```json
-{"total": "50000000000000000000000"}
-```
-
-### Subnet Earnings
-
-```
-GET /subnets/{subnetId}/earnings?page=1&limit=20
-```
-```json
-[{"epoch_id": 5, "recipient": "0x1234...", "awp_amount": "7900000000000000000000000"}]
+{"jsonrpc": "2.0", "method": "subnets.getEarnings", "params": {"worknetId": "1", "page": 1, "limit": 20}, "id": 1}
 ```

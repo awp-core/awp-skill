@@ -7,8 +7,7 @@ import json
 import time
 
 from awp_lib import (
-    API_BASE,
-    api_get,
+    RELAY_BASE,
     api_post,
     base_parser,
     build_eip712,
@@ -17,6 +16,7 @@ from awp_lib import (
     get_registry,
     get_wallet_address,
     info,
+    rpc,
     step,
     validate_address,
     wallet_sign_typed_data,
@@ -57,7 +57,7 @@ def main() -> None:
 
     # Step 3: Check current status
     step("check_status")
-    check = api_get(f"address/{wallet_addr}/check")
+    check = rpc("address.check", {"address": wallet_addr})
     if isinstance(check, dict):
         is_registered = check.get("isRegistered", check.get("isRegisteredUser", False))
         bound_to = check.get("boundTo", "")
@@ -73,7 +73,7 @@ def main() -> None:
 
     # Step 4: Get nonce
     step("get_nonce")
-    nonce_resp = api_get(f"nonce/{wallet_addr}")
+    nonce_resp = rpc("nonce.get", {"address": wallet_addr})
     if not isinstance(nonce_resp, dict) or "nonce" not in nonce_resp:
         die(f"Invalid nonce response: {nonce_resp}")
     nonce = nonce_resp["nonce"]
@@ -100,7 +100,7 @@ def main() -> None:
                 "deadline": deadline,
             },
         )
-        relay_endpoint = f"{API_BASE}/relay/set-recipient"
+        relay_endpoint = f"{RELAY_BASE}/relay/set-recipient"
         relay_body: dict = {
             "user": wallet_addr,
             "recipient": wallet_addr,
@@ -125,7 +125,7 @@ def main() -> None:
                 "deadline": deadline,
             },
         )
-        relay_endpoint = f"{API_BASE}/relay/bind"
+        relay_endpoint = f"{RELAY_BASE}/relay/bind"
         relay_body = {
             "agent": wallet_addr,
             "target": target,

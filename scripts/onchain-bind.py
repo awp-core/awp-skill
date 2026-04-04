@@ -24,7 +24,7 @@ def main() -> None:
     awp_registry = require_contract(registry, "awpRegistry")
 
     # Check if already bound
-    check = api_get(f"address/{wallet_addr}/check")
+    check = rpc("address.check", {"address": wallet_addr})
     if isinstance(check, dict):
         # V2: .boundTo; V1: .isRegisteredAgent + .ownerAddress
         bound_to = check.get("boundTo", "")

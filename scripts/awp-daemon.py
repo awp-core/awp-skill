@@ -39,7 +39,7 @@ from typing import Any, Optional, Tuple
 
 # ── Config ───────────────────────────────────────
 
-API_BASE = os.environ.get("AWP_API_URL", "https://tapi.awp.sh/api")
+API_BASE = "https://api.awp.sh/v2"
 CHECK_INTERVAL = 300  # seconds (5 min default)
 SKILL_REPO = "https://github.com/awp-core/awp-skill.git"
 WALLET_REPO = "https://github.com/awp-core/awp-wallet.git"
@@ -134,9 +134,14 @@ def notify(title: str, message: str, level: str = "info") -> None:
         notifications = notifications[-50:]
         tmp_file = NOTIFY_FILE.with_suffix(".tmp")
         tmp_file.write_text(json.dumps(notifications, indent=2))
-        tmp_file.rename(NOTIFY_FILE)
+        os.replace(str(tmp_file), str(NOTIFY_FILE))
     except Exception as e:
         warn(f"Failed to write notification: {e}")
+        # 清理临时文件
+        try:
+            tmp_file.unlink(missing_ok=True)
+        except Exception:
+            pass
 
     # 2. Send via OpenClaw (if openclaw CLI is available)
     openclaw_bin = _find_openclaw()
@@ -171,14 +176,23 @@ def run(cmd: list[str]) -> Tuple[int, str]:
     except Exception as e:
         return 1, str(e)
 
-def api_get(path: str) -> Optional[Any]:
-    """GET request to the AWP API; returns parsed JSON or None."""
-    url = f"{API_BASE}{path}"
+def rpc(method: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
+    """JSON-RPC 2.0 调用 AWP API，返回 result 或 None"""
+    body = {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1}
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(
+        API_BASE, data=data, method="POST",
+        headers={"Content-Type": "application/json", "User-Agent": "awp-daemon/1.0"},
+    )
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "awp-daemon/1.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read())
-    except Exception:
+            result = json.loads(resp.read())
+            if "error" in result:
+                warn(f"RPC error for {method}: {result['error']}")
+                return None
+            return result.get("result")
+    except Exception as e:
+        warn(f"RPC call failed for {method}: {e}")
         return None
 
 def fetch_text(url: str) -> str:
@@ -246,11 +260,31 @@ def write_status(
 
 # ── Subnet Tracking ─────────────────────────────
 
+def fetch_announcements() -> list[dict[str, Any]]:
+    """从 REST API 获取活跃公告列表。"""
+    url = "https://api.awp.sh/api/announcements"
+    req = urllib.request.Request(url, headers={"User-Agent": "awp-daemon/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+            if isinstance(data, list):
+                return data
+            return []
+    except Exception as e:
+        warn(f"获取公告失败: {e}")
+        return []
+
+
 def fetch_active_subnets() -> list[dict[str, Any]]:
     """Fetch the list of active subnets."""
-    subnets = api_get("/subnets?status=Active&limit=50")
-    if subnets and isinstance(subnets, list):
-        return subnets
+    result = rpc("subnets.list", {"status": "Active", "limit": 50})
+    if isinstance(result, list):
+        return result
+    if isinstance(result, dict):
+        # 分页响应：提取 items/subnets/data 字段
+        for key in ("items", "subnets", "data"):
+            if isinstance(result.get(key), list):
+                return result[key]
     return []
 
 
@@ -437,7 +471,7 @@ def ensure_wallet_initialized() -> Optional[str]:
 
 def check_and_notify(wallet_addr: str) -> bool:
     """Check registration status, display info, and return is_registered."""
-    check = api_get(f"/address/{wallet_addr}/check")
+    check = rpc("address.check", {"address": wallet_addr})
 
     print()
     log("── agent status ──────────────────────")
@@ -471,8 +505,8 @@ def check_and_notify(wallet_addr: str) -> bool:
         if recipient:
             log(f"Recipient:  {recipient}")
 
-        balance = api_get(f"/staking/user/{wallet_addr}/balance")
-        if balance:
+        balance = rpc("staking.getBalance", {"address": wallet_addr})
+        if balance and isinstance(balance, dict):
             log(f"Staked:     {wei_to_awp(balance.get('totalStaked', '0'))} AWP")
             log(f"Allocated:  {wei_to_awp(balance.get('totalAllocated', '0'))} AWP")
             log(f"Unallocated:{wei_to_awp(balance.get('unallocated', '0'))} AWP")
@@ -483,8 +517,9 @@ def check_and_notify(wallet_addr: str) -> bool:
     print()
     log("── available subnets ─────────────────")
 
-    subnets = api_get("/subnets?status=Active&limit=10")
-    if subnets and isinstance(subnets, list) and len(subnets) > 0:
+    result = rpc("subnets.list", {"status": "Active", "limit": 10})
+    subnets = result if isinstance(result, list) else (result.get("items") or result.get("subnets") or result.get("data") or []) if isinstance(result, dict) else []
+    if subnets:
         for s in subnets:
             sid = s.get("subnet_id", "?")
             name = s.get("name", "Unknown")
@@ -530,6 +565,40 @@ def get_remote_version(url: str) -> str:
     match = re.search(r"Skill version:\s*([\d.]+)", text)
     return match.group(1) if match else ""
 
+def fetch_changelog(version: str) -> str:
+    """从远程 CHANGELOG.md 提取指定版本的更新日志摘要（标题 + 前几个要点）。"""
+    text = fetch_text(
+        "https://raw.githubusercontent.com/awp-core/awp-skill/main/CHANGELOG.md"
+    )
+    if not text:
+        return ""
+    # 查找目标版本段落：## vX.Y.Z
+    pattern = rf"(?m)^## v{re.escape(version)}\s*\n"
+    match = re.search(pattern, text)
+    if not match:
+        return ""
+    start = match.end()
+    # 截取到下一个 ## 或文件末尾
+    next_section = re.search(r"(?m)^## ", text[start:])
+    section = text[start:start + next_section.start()] if next_section else text[start:]
+    # 提取标题行和前 8 个要点
+    lines: list[str] = []
+    for line in section.strip().splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            # 子标题（### ...）
+            lines.append(stripped.lstrip("# "))
+        elif stripped.startswith("- "):
+            lines.append(stripped)
+        if len(lines) >= 8:
+            break
+    if len(lines) >= 8:
+        lines.append("...")
+    return "\n".join(lines)
+
+
 def check_updates() -> None:
     """Check for awp-skill and awp-wallet updates (informational only — no auto-download or execution)."""
     log("Checking for updates...")
@@ -543,8 +612,11 @@ def check_updates() -> None:
     if remote_ver and local_ver:
         if parse_version(remote_ver) > parse_version(local_ver):
             log(f"awp-skill {remote_ver} available (current: {local_ver})")
-            notify("Update Available",
-                   f"awp-skill {remote_ver} available (current: {local_ver})")
+            changelog = fetch_changelog(remote_ver)
+            msg = f"awp-skill {remote_ver} available (current: {local_ver})"
+            if changelog:
+                msg += f"\n\nChangelog:\n{changelog}"
+            notify("Update Available", msg)
         else:
             log(f"awp-skill {local_ver} — up to date ✓")
 
@@ -592,6 +664,17 @@ def main() -> None:
     NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
     PID_FILE.write_text(str(os.getpid()))
 
+    try:
+        _run_daemon(interval)
+    finally:
+        try:
+            PID_FILE.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _run_daemon(interval: int) -> None:
+    """守护进程主逻辑（由 main 包裹在 try/finally 中以确保 PID 文件清理）。"""
     # Phase 1: Fetch subnets + send welcome message
     log("Phase 1: Welcome...")
     initial_subnets = fetch_active_subnets()
@@ -599,6 +682,16 @@ def main() -> None:
     known_subnet_ids: set[int] = {
         int(s["subnet_id"]) for s in initial_subnets if s.get("subnet_id") is not None
     }
+
+    # 初始化公告跟踪集合 — 预填充已有公告 ID，避免首次启动时发送重复通知
+    seen_announcement_ids: set[int] = set()
+    initial_announcements = fetch_announcements()
+    for ann in initial_announcements:
+        ann_id = ann.get("id")
+        if ann_id is not None:
+            seen_announcement_ids.add(int(ann_id))
+    if initial_announcements:
+        log(f"已记录 {len(seen_announcement_ids)} 条现有公告（不发送通知）")
 
     # Phase 2: Check dependencies (no auto-install; notify and continue if missing)
     log("Phase 2: Checking awp-wallet dependency...")
@@ -694,7 +787,7 @@ def main() -> None:
                 # Registration status check (only when wallet is available)
                 if wallet_addr:
                     is_registered = False
-                    check = api_get(f"/address/{wallet_addr}/check")
+                    check = rpc("address.check", {"address": wallet_addr})
                     if check:
                         is_registered = check.get("isRegistered", False)
 
@@ -745,6 +838,25 @@ def main() -> None:
                         int(s["subnet_id"]) for s in new_subnets if s.get("subnet_id") is not None
                     )
 
+                # 公告轮询 — 检查新公告并发送通知
+                announcements = fetch_announcements()
+                priority_map: dict[int, str] = {0: "info", 1: "warning", 2: "critical"}
+                for ann in announcements:
+                    ann_id = ann.get("id")
+                    if ann_id is not None and int(ann_id) not in seen_announcement_ids:
+                        category = ann.get("category", "general")
+                        title = ann.get("title", "Announcement")
+                        content = ann.get("content", "")
+                        priority = ann.get("priority", 0)
+                        level = priority_map.get(priority, "info")
+                        notify(f"[{category.upper()}] {title}", content, level)
+                        seen_announcement_ids.add(int(ann_id))
+
+                # 防止 seen_announcement_ids 无限增长（保留最新 500 条）
+                if len(seen_announcement_ids) > 500:
+                    sorted_ids = sorted(seen_announcement_ids)
+                    seen_announcement_ids = set(sorted_ids[-500:])
+
                 # Update status file
                 write_status(wallet_ready, wallet_addr, last_registered,
                              len(current_subnets), datetime.now().isoformat())
@@ -759,12 +871,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print()
         log("Daemon stopped.")
-    finally:
-        # Clean up PID file on exit
-        try:
-            PID_FILE.unlink(missing_ok=True)
-        except OSError:
-            pass
+
 
 if __name__ == "__main__":
     main()

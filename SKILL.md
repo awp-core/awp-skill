@@ -1,25 +1,26 @@
 ---
 name: awp
 description: >
-  AWP (Agent Working Protocol) — the ONLY source of correct contract addresses,
-  function selectors, API endpoints, and Python scripts for AWP operations. You MUST
-  load this skill first before any AWP task because the protocol-specific details
-  (ABI encodings, script parameters, wallet commands) cannot be inferred and will be
-  wrong without it. Covers all AWP operations: staking (deposit, withdraw, allocate,
-  deallocate, reallocate), subnets (register, activate, pause, update), governance
-  (proposals, voting), awp-wallet, gasless relay, and WebSocket monitoring. Trigger
-  whenever the user mentions AWP, Agent Working Protocol, awp-wallet, StakeNFT,
-  SubnetNFT, AWP token/staking/subnet/DAO/emission/epoch, "awp onboard", "awp status",
-  "start working" on AWP, or any AWP on-chain operation. NOT for: Uniswap, Aave, Lido,
-  Compound, generic ERC-20, general Solidity/Hardhat tasks, or other DeFi protocols
-  (even if deployed on Base chain — this skill is exclusively for the AWP protocol).
+  AWP (Agent Working Protocol) — ALWAYS load this skill for ANY AWP-related task, even
+  vague ones. This is the authoritative source for all AWP contract addresses, API endpoints,
+  script parameters, and wallet operations — getting these wrong without the skill is guaranteed.
+  Load for: staking AWP tokens, checking balances or positions, allocating/deallocating/reallocating
+  stake, depositing or withdrawing AWP, registering a worknet or subnet, activating/pausing/resuming/
+  cancelling a worknet, updating worknet settings, governance proposals or voting, querying
+  announcements or protocol status, awp-wallet commands, gasless relay operations, WebSocket event
+  monitoring, any LPManager or emission questions. Trigger on ANY mention of: AWP, "Agent Working
+  Protocol", awp-wallet, StakeNFT, WorknetNFT, worknet, subnet (in AWP context), AWP staking,
+  AWP governance, AWP DAO, AWP emissions, AWP epoch, "start working" (AWP onboarding), "check my
+  balance" (on AWP), "list worknets", "register subnet", "reallocate stake", or any AWP on-chain
+  operation. Multi-chain: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). NOT for: Uniswap,
+  Aave, Lido, Compound, generic ERC-20/Solidity/Hardhat tasks unrelated to AWP, or other DeFi
+  protocols (even if deployed on Base).
 metadata:
   openclaw:
     requires:
-      env:
-        - AWP_API_URL          # REST API base URL (default: https://tapi.awp.sh/api)
       optional_env:
         - EVM_RPC_URL          # EVM chain RPC (default: https://mainnet.base.org)
+        - EVM_CHAIN            # Chain name or ID (base, ethereum, arbitrum, bsc). Default: base
       skills:
         - AWP Wallet           # awp-wallet CLI — install from https://github.com/awp-core/awp-wallet
       binaries:
@@ -29,29 +30,144 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 0.25.8**
+**Skill version: 1.0.0**
 
-## API URL
+## API — JSON-RPC 2.0
 
-All API calls in this skill use this base URL:
+All API calls in this skill use JSON-RPC 2.0 via POST:
 
 ```
-https://tapi.awp.sh/api
+POST https://api.awp.sh/v2
+Content-Type: application/json
 ```
 
-If the environment variable `AWP_API_URL` is set, use that value instead. The scripts read this automatically.
+Request: `{"jsonrpc":"2.0","method":"namespace.method","params":{...},"id":1}`
+Discovery: `GET https://api.awp.sh/v2` | WebSocket: `wss://api.awp.sh/ws/live` | Batch: up to 20 per request.
 
-WebSocket: `wss://tapi.awp.sh/ws/live`
+Explorers: Base → `basescan.org` | Ethereum → `etherscan.io` | Arbitrum → `arbiscan.io` | BSC → `bscscan.com`
 
-Explorer: deployment-specific (default: `https://basescan.org` for Base)
+Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.awp.sh/v2`. Do not use REST-style GET paths.
 
-Throughout this document, all `curl` commands use the full URL directly. Do not invent different URLs.
+### API Method Reference
+
+#### System
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `stats.global` | none | Global protocol stats: total users, worknets, staked AWP, emitted AWP, active chains |
+| `registry.get` | `chainId?` | All contract addresses + EIP-712 domain info. Omit chainId for array of all 4 chains. |
+| `health.check` | none | Returns `{"status": "ok"}` if API is running |
+| `health.detailed` | none | Per-chain health: indexer sync block, keeper status, RPC latency |
+| `chains.list` | none | Array of `{chainId, name, status, explorer}` for all supported chains |
+
+#### Users
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `users.list` | `chainId?`, `page?`, `limit?` | Paginated user list for one chain |
+| `users.listGlobal` | `page?`, `limit?` | Cross-chain deduplicated user list |
+| `users.count` | `chainId?` | Total registered user count |
+| `users.get` | `address` **(required)**, `chainId?` | User details: balance, bound agents, recipient, registration status |
+| `users.getPortfolio` | `address` **(required)**, `chainId?` | Complete portfolio: identity + staking + NFT positions + allocations + delegates |
+| `users.getDelegates` | `address` **(required)**, `chainId?` | List of addresses this user has authorized as delegates |
+
+#### Address & Nonce
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `address.check` | `address` **(required)**, `chainId?` | Check registration status, binding, recipient. See response format below. |
+| `address.resolveRecipient` | `address` **(required)**, `chainId?` | Walk bind chain to root, return effective reward recipient |
+| `address.batchResolveRecipients` | `addresses[]` **(required, max 500)**, `chainId?` | Batch resolve effective recipients (on-chain call) |
+| `nonce.get` | `address` **(required)**, `chainId?` | AWPRegistry EIP-712 nonce (for bind/unbind/setRecipient/registerWorknet/activateWorknet/grantDelegate/revokeDelegate) |
+| `nonce.getStaking` | `address` **(required)**, `chainId?` | StakingVault EIP-712 nonce (for allocate/deallocate) |
+
+#### Agents
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `agents.getByOwner` | `owner` **(required)**, `chainId?` | All agents (addresses) that have bound to this owner |
+| `agents.getDetail` | `agent` **(required)**, `chainId?` | Agent details: owner, binding chain, delegated status |
+| `agents.lookup` | `agent` **(required)**, `chainId?` | Quick lookup: returns `{"ownerAddress": "0x..."}` |
+| `agents.batchInfo` | `agents[]` **(required, max 100)**, `worknetId` **(required)**, `chainId?` | Batch query: agent info + their stake in specified worknet |
+
+#### Staking
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `staking.getBalance` | `address` **(required)**, `chainId?` | Returns `{totalStaked, totalAllocated, unallocated}` in wei strings |
+| `staking.getUserBalanceGlobal` | `address` **(required)** | Same as above but aggregated across ALL chains |
+| `staking.getPositions` | `address` **(required)**, `chainId?` | Array of StakeNFT positions: `{tokenId, amount, lockEndTime, createdAt}` |
+| `staking.getPositionsGlobal` | `address` **(required)** | Positions across all chains (includes chainId per position) |
+| `staking.getAllocations` | `address` **(required)**, `chainId?`, `page?`, `limit?` | Paginated allocation records: `{agent, worknetId, amount}` |
+| `staking.getFrozen` | `address` **(required)**, `chainId?` | Frozen allocations (from banned worknets) |
+| `staking.getAgentSubnetStake` | `agent` **(required)**, `worknetId` **(required)** | Agent's total allocated stake in a specific worknet (cross-chain) |
+| `staking.getAgentSubnets` | `agent` **(required)** | All worknetIds where this agent has non-zero allocations |
+| `staking.getSubnetTotalStake` | `worknetId` **(required)** | Total AWP staked across all agents in a worknet |
+
+#### Worknets
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `subnets.list` | `status?`, `chainId?`, `page?`, `limit?` | List worknets. Filter by status: `Pending`, `Active`, `Paused`, `Banned` |
+| `subnets.listRanked` | `chainId?`, `page?`, `limit?` | Worknets ranked by total stake (highest first) |
+| `subnets.search` | `query` **(required, 1-100 chars)**, `chainId?`, `page?`, `limit?` | Search by name or symbol (case-insensitive) |
+| `subnets.getByOwner` | `owner` **(required)**, `chainId?`, `page?`, `limit?` | Worknets owned by address |
+| `subnets.get` | `worknetId` **(required)** | Full worknet details: name, symbol, status, alphaToken, LP pool, owner, stakes |
+| `subnets.getSkills` | `worknetId` **(required)** | Skills URI (off-chain metadata describing the worknet's capabilities) |
+| `subnets.getEarnings` | `worknetId` **(required)**, `page?`, `limit?` | Paginated AWP earnings history by epoch |
+| `subnets.getAgentInfo` | `worknetId` **(required)**, `agent` **(required)** | Agent's info within a specific worknet: stake, validity, reward recipient |
+| `subnets.listAgents` | `worknetId` **(required)**, `chainId?`, `page?`, `limit?` | Agents in worknet ranked by stake |
+
+#### Emission
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `emission.getCurrent` | `chainId?` | Current epoch number, daily emission amount, total weight, settled epoch |
+| `emission.getSchedule` | `chainId?` | Emission projections: 30-day, 90-day, 365-day cumulative with decay applied |
+| `emission.getGlobalSchedule` | none | Same projections but aggregated across all 4 chains |
+| `emission.listEpochs` | `chainId?`, `page?`, `limit?` | Paginated list of settled epochs with emission totals |
+| `emission.getEpochDetail` | `epochId` **(required)**, `chainId?` | Detailed breakdown: per-recipient AWP distributions for a specific epoch |
+
+#### Tokens
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `tokens.getAWP` | `chainId?` | AWP token info: totalSupply, maxSupply, circulatingSupply (per chain) |
+| `tokens.getAWPGlobal` | none | AWP info aggregated across all chains |
+| `tokens.getAlphaInfo` | `worknetId` **(required)** | Alpha token info: address, name, symbol, totalSupply, minter |
+| `tokens.getAlphaPrice` | `worknetId` **(required)** | Alpha/AWP price from LP pool (cached 10min). Returns sqrtPriceX96 and human-readable price. |
+
+#### Governance
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `governance.listProposals` | `status?`, `chainId?`, `page?`, `limit?` | List proposals. Status: `Active`/`Canceled`/`Defeated`/`Succeeded`/`Queued`/`Expired`/`Executed` |
+| `governance.listAllProposals` | `status?`, `page?`, `limit?` | Cross-chain proposal list |
+| `governance.getProposal` | `proposalId` **(required)**, `chainId?` | Proposal details: description, votes, state, targets, calldatas |
+| `governance.getTreasury` | none | Returns treasury contract address |
 
 ---
 
 **IMPORTANT: Always show the user what you're doing.** Every query result, every transaction, every event — print it clearly. Never run API calls silently.
 
-**CRITICAL: Registration is FREE and most subnets require ZERO staking.** Do NOT tell users they need AWP tokens or staking to get started. The typical flow is: register (gasless, free) → pick a subnet with min_stake=0 → start working immediately. Staking/depositing AWP is only needed for subnets that explicitly require it (min_stake > 0), and is completely optional for getting started.
+**CRITICAL: Registration is FREE and most worknets require ZERO staking.** Do NOT tell users they need AWP tokens or staking to get started. The typical flow is: register (gasless, free) → pick a worknet with min_stake=0 → start working immediately. Staking/depositing AWP is only needed for worknets that explicitly require it (min_stake > 0), and is completely optional for getting started.
+
+## Contract Addresses (same on all 4 chains)
+
+```
+AWPToken:           0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1
+AWPRegistry:        0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A
+AWPEmission:        0x3C9cB73f8B81083882c5308Cce4F31f93600EaA9
+StakingVault:       0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b
+StakeNFT:           0x4E119560632698Bab67cFAB5d8EC0A373363ba2d
+WorknetNFT:         0xB9F03539BE496d09c4d7964921d674B8763f5233
+LPManager (proxy):  0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2
+AlphaTokenFactory:  0xB2e4897eD77d0f5BFa3140B9989594de09a8037c
+Treasury:           0x82562023a053025F3201785160CaE6051efD759e
+AWPDAO:             0x6a074aC9823c47f86EE4Fc7F62e4217Bc9C76004
+```
+
+Supported chains: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). All addresses identical across all 4 chains (except LPManager and WorknetManager impls which differ per DEX).
 
 ## On Skill Load (do this FIRST)
 
@@ -74,13 +190,13 @@ one protocol. infinite jobs. nonstop earnings.
 ── quick start ──────────────────
 "start working"    → register + join (free, no AWP needed)
 "check my balance" → staking overview
-"list subnets"     → browse active subnets
+"list worknets"    → browse active worknets
 "watch events"     → real-time monitor
 "awp help"         → all commands
 ──────────────────────────────────
 
 no AWP tokens needed to start.
-register for free → pick a subnet → start earning.
+register for free → pick a worknet → start earning.
 ```
 
 **Step 2 — Install wallet dependency** (if missing):
@@ -88,13 +204,7 @@ register for free → pick a subnet → start earning.
 which awp-wallet >/dev/null 2>&1
 ```
 - If found: proceed silently.
-- If NOT found: install the official `awp-wallet` dependency from the AWP core repository:
-  ```
-  [SETUP] Installing awp-wallet (official AWP dependency)...
-          Source: https://github.com/awp-core/awp-wallet
-  ```
-  Install it as a skill (`skill install https://github.com/awp-core/awp-wallet`), then follow its SKILL.md instructions to complete setup. This is the official AWP wallet maintained by awp-core — not a third-party dependency.
-  - Verify after install: `which awp-wallet`
+- If NOT found: `skill install https://github.com/awp-core/awp-wallet`, then follow its SKILL.md. Verify: `which awp-wallet`
 
 **Step 3 — Configure notifications** (recommended): If the `openclaw` CLI is available, write `~/.awp/openclaw.json` so the daemon can push messages:
 ```bash
@@ -128,23 +238,14 @@ If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available 
 
 **Step 7 — Background daemon** (optional, requires user consent):
 
-Ask the user before starting the daemon. Explain what it does:
-```
-[SETUP] The AWP daemon monitors registration status, checks for
-        updates, and can send notifications. It runs in the background
-        and writes status files to ~/.awp/.
-        Start the daemon? (yes/no)
-```
+Ask: `[SETUP] Start the AWP daemon? It monitors status and sends notifications. (yes/no)`
 
-If the user agrees, launch it:
+If yes:
 ```bash
 mkdir -p ~/.awp && pgrep -f "python3.*awp-daemon" >/dev/null 2>&1 || \
-  nohup python3 scripts/awp-daemon.py --interval 300 \
-    >> ~/.awp/daemon.log 2>&1 &
+  nohup python3 scripts/awp-daemon.py --interval 300 >> ~/.awp/daemon.log 2>&1 &
 ```
-> Note: Resolve the absolute path to `scripts/awp-daemon.py` relative to the skill directory.
-
-If the user declines, skip this step. All AWP operations work without the daemon — it only provides background monitoring and notifications. The user can start it later with `awp daemon start`.
+Resolve the absolute path to `scripts/awp-daemon.py` relative to the skill directory. If declined, skip. The user can start later with `awp daemon start`.
 
 **Step 8 — Route to action** using the Intent Routing table below.
 
@@ -152,16 +253,23 @@ If the user declines, skip this step. All AWP operations work without the daemon
 
 The user may type these at any time:
 
-**awp status** — fetch these 4 endpoints:
-- `https://tapi.awp.sh/api/address/{addr}/check`
-- `https://tapi.awp.sh/api/staking/user/{addr}/balance`
-- `https://tapi.awp.sh/api/staking/user/{addr}/positions`
-- `https://tapi.awp.sh/api/staking/user/{addr}/allocations`
+**awp status** — fetch via JSON-RPC batch:
+```bash
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '[
+    {"jsonrpc":"2.0","method":"address.check","params":{"address":"'$WALLET_ADDR'"},"id":1},
+    {"jsonrpc":"2.0","method":"staking.getBalance","params":{"address":"'$WALLET_ADDR'"},"id":2},
+    {"jsonrpc":"2.0","method":"staking.getPositions","params":{"address":"'$WALLET_ADDR'"},"id":3},
+    {"jsonrpc":"2.0","method":"staking.getAllocations","params":{"address":"'$WALLET_ADDR'"},"id":4}
+  ]'
+```
 ```
 ── my agent ──────────────────────
 address:        <short_address>
 status:         <registered/unregistered>
 role:           <solo / delegated agent / —>
+chain:          <current chain>
 total staked:   <amount> AWP
 allocated:      <amount> AWP
 unallocated:    <amount> AWP
@@ -173,13 +281,19 @@ positions:      <count>
 ```
 ── wallet ────────────────────────
 address:    <address>
-network:    Base
+chains:     Base · Ethereum · Arbitrum · BSC
 ETH:        <balance>
 AWP:        <balance>
 ──────────────────────────────────
 ```
 
-**awp subnets** — shortcut for Q5 (list active subnets)
+**awp announcements** — fetch and display protocol announcements:
+```bash
+curl -s https://api.awp.sh/api/announcements/llm-context
+```
+Display each announcement with its category, priority, and timestamp.
+
+**awp subnets** — shortcut for Q5 (list active worknets)
 
 **awp notifications** — read and display daemon notifications, then clear:
 ```bash
@@ -195,14 +309,29 @@ rm -f ~/.awp/notifications.json
 tail -50 ~/.awp/daemon.log 2>/dev/null
 ```
 
+**awp daemon start** — start the background daemon (with user consent):
+```bash
+mkdir -p ~/.awp && pgrep -f "python3.*awp-daemon" >/dev/null 2>&1 || \
+  nohup python3 scripts/awp-daemon.py --interval 300 \
+    >> ~/.awp/daemon.log 2>&1 &
+```
+
+**awp daemon stop** — stop the background daemon:
+```bash
+kill $(cat ~/.awp/daemon.pid 2>/dev/null) 2>/dev/null && rm -f ~/.awp/daemon.pid
+```
+
 **awp help**
 ```
 ── commands ──────────────────────
 awp status        → your agent overview
 awp wallet        → wallet address + balances
-awp subnets       → browse active subnets
+awp subnets       → browse active worknets
 awp notifications → daemon notifications
 awp log           → recent daemon log
+awp daemon start  → start background daemon
+awp daemon stop   → stop background daemon
+awp announcements → protocol announcements
 awp help          → this list
 
 ── actions ───────────────────────
@@ -225,7 +354,9 @@ When the user says "start working", "get started", or similar, run this guided f
 
 **Step 2: Register (FREE, gasless)**
 ```bash
-curl -s https://tapi.awp.sh/api/address/{addr}/check
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"address.check","params":{"address":"'$WALLET_ADDR'"},"id":1}'
 ```
 - Already registered → proceed to Step 3
 - Not registered → **present both options and WAIT for the user to choose.** Do NOT auto-select either option. The user must explicitly pick one.
@@ -260,30 +391,32 @@ python3 scripts/relay-start.py --token $TOKEN --mode agent --target <user_wallet
 
 Print: `[2/4] registered   ✓  (free, no AWP required)`
 
-**Step 3: Auto-select a free subnet**
+**Step 3: Auto-select a free worknet**
 ```bash
-curl -s "https://tapi.awp.sh/api/subnets?status=Active&limit=10"
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"subnets.list","params":{"status":"Active","limit":10},"id":1}'
 ```
-Filter for subnets with `min_stake = 0` AND `skills_uri` not empty. These subnets are FREE to join — no staking needed.
+Filter for worknets with `min_stake = 0` AND `skills_uri` not empty. These worknets are FREE to join — no staking needed.
 
-If there is exactly one free subnet with a skill: auto-select it without asking.
+If there is exactly one free worknet with a skill: auto-select it without asking.
 If there are multiple: show only the free ones first, let user pick.
 
 ```
-[3/4] discovering subnets...
+[3/4] discovering worknets...
 
-── free subnets (no staking needed) ──
+── free worknets (no staking needed) ──
 #1  Benchmark    ✓ skill ready    ← recommended
 ──────────────────────────────────
 
 Auto-selecting #1 Benchmark (free, skill ready)
 ```
 
-Only show subnets with min_stake > 0 if the user explicitly asks, or if no free subnets exist.
+Only show worknets with min_stake > 0 if the user explicitly asks, or if no free worknets exist.
 
-**Step 4: Install subnet skill and start working**
+**Step 4: Install worknet skill and start working**
 
-Check the subnet's `skills_uri` source. If it is from `github.com/awp-core/*`, install directly. If it is from a third-party source, show a warning and ask for confirmation before installing (see Q6 for the exact flow). If the user declines, return to the subnet list from Step 3.
+Check the worknet's `skills_uri` source. If it is from `github.com/awp-core/*`, install directly. If it is from a third-party source, show a warning and ask for confirmation before installing (see Q6 for the exact flow). If the user declines, return to the worknet list from Step 3.
 
 Install example (awp-core source):
 ```
@@ -292,33 +425,38 @@ Install example (awp-core source):
 
 ── onboarding complete ───────────
 wallet:     <short_address>
-subnet:     #1 "Benchmark"
+worknet:    #1 "Benchmark"
 cost:       FREE (no staking required)
 ──────────────────────────────────
 
-Your agent is now working on subnet #1.
+Your agent is now working on worknet #1.
 No AWP tokens were needed.
 ```
 
-If the user later wants to work on a subnet that requires staking, guide them to S2 (deposit) and S3 (allocate) at that time — not during initial onboarding.
+If the user later wants to work on a worknet that requires staking, guide them to S2 (deposit) and S3 (allocate) at that time — not during initial onboarding.
 
 ## Intent Routing
 
 | User wants to... | Action | Reference file to load |
 |-------------------|--------|------------------------|
 | Start / onboard / setup | ONBOARD | **references/commands-staking.md** |
-| Query subnet info | Q1 | None |
+| Query worknet info | Q1 | None |
 | Check balance / positions | Q2 | None |
-| View emission / epoch info | Q3 [DRAFT] | None |
+| View emission / epoch info | Q3 | None |
 | Look up agent info | Q4 | None |
-| Browse subnets | Q5 | None |
-| Find / install subnet skill | Q6 | None |
-| View epoch history | Q7 [DRAFT] | None |
-| Set recipient / bind / start mining | S1 | **references/commands-staking.md** |
+| Browse worknets | Q5 | None |
+| Find / install worknet skill | Q6 | None |
+| View epoch history | Q7 | None |
+| Search worknets by name | Q8 | None |
+| View ranked worknets | Q9 | None |
+| Portfolio overview | Q10 | None |
+| Cross-chain balance | Q11 | None |
+| Global stats | Q12 | None |
+| Set recipient / bind / unbind / start mining | S1 | **references/commands-staking.md** |
 | Deposit / stake AWP | S2 | **references/commands-staking.md** |
 | Allocate / deallocate / reallocate | S3 | **references/commands-staking.md** |
-| Register a new subnet | M1 | **references/commands-subnet.md** |
-| Activate / pause / resume subnet | M2 | **references/commands-subnet.md** |
+| Register a new worknet | M1 | **references/commands-subnet.md** |
+| Activate / pause / resume worknet | M2 | **references/commands-subnet.md** |
 | Update skills URI | M3 | **references/commands-subnet.md** |
 | Set minimum stake | M4 | **references/commands-subnet.md** |
 | Create governance proposal | G1 | **references/commands-governance.md** |
@@ -326,7 +464,8 @@ If the user later wants to work on a subnet that requires staking, guide them to
 | Query proposals | G3 | None |
 | Check treasury | G4 | None |
 | Watch / monitor events | W1 | None (presets below) |
-| Emission settlement alerts | W2 [DRAFT] | None (workflow below) |
+| Emission settlement alerts | W2 | None (workflow below) |
+| Check announcements | ANNOUNCEMENTS | None |
 | Check notifications | NOTIFICATIONS | None — read `~/.awp/notifications.json` |
 | View daemon log | LOG | None — `tail -50 ~/.awp/daemon.log` |
 
@@ -338,16 +477,16 @@ If the user later wants to work on a subnet that requires staking, guide them to
 |-----|------|
 | `[QUERY]` | Read-only data fetches |
 | `[STAKE]` | Staking operations |
-| `[SUBNET]` | Subnet management |
+| `[WORKNET]` | Worknet management |
 | `[GOV]` | Governance |
 | `[WATCH]` | WebSocket events |
 | `[GAS]` | Gas routing decisions |
-| `[TX]` | Transaction — always show basescan.org link |
+| `[TX]` | Transaction — always show chain-appropriate explorer link |
 | `[NEXT]` | Recommended next action |
 | `[SETUP]` | Install / setup operations |
 | `[!]` | Warnings and errors |
 
-**Transaction output:**
+**Transaction output** (use chain-appropriate explorer):
 ```
 [TX] hash: <txHash>
 [TX] view: https://basescan.org/tx/<txHash>
@@ -358,49 +497,36 @@ If the user later wants to work on a subnet that requires staking, guide them to
 
 **This is an agent work wallet — do NOT store personal assets in it.** The wallet created by this skill is for executing AWP protocol tasks only. Keep only the minimum ETH needed for gas. Do not transfer personal funds or valuable tokens into this wallet.
 
-Before executing any on-chain transaction, always show the user a summary of what will happen and ask for explicit confirmation:
-
+Before executing any on-chain transaction, show a summary and ask for explicit confirmation:
 ```
 [TX] deposit 1,000 AWP → new position (lock: 90 days)
-     contract: AWPRegistry (0x1234...abcd)
-     estimated gas: ~0.001 ETH
+     contract: StakeNFT (0x4E11...ba2d) | chain: Base (8453) | gas: ~0.001 ETH
      Proceed? (yes/no)
 ```
-
-After user confirms and transaction completes, show the result:
-
+After confirmation and completion:
 ```
-[TX] deposited 1,000 AWP → position #3
-[TX] lock ends 2026-06-19
-[TX] hash: 0xabc...
-[TX] view: https://basescan.org/tx/0xabc...
-[TX] confirmed ✓
+[TX] deposited 1,000 AWP → position #3 | lock ends 2026-06-19
+[TX] hash: 0xabc... | https://basescan.org/tx/0xabc... | confirmed ✓
 ```
 
-**Never execute a transaction without user confirmation.** Even though this is an agent work wallet, every on-chain action must be explicitly approved. The only exception is gasless registration via relay (Step 1 of onboarding), which costs nothing and is reversible.
-
-On first wallet setup, inform the user:
-```
-[WALLET] This is your agent work wallet — for AWP tasks only.
-         Do NOT store personal assets here. Keep only minimal ETH for gas.
-         Address: <address>
-```
+**Never execute a transaction without user confirmation.** Exception: gasless registration via relay (free, reversible).
 
 ## Rules
 
 1. **Registration is FREE.** Never tell users they need AWP tokens, ETH, or staking to register. Registration uses the gasless relay and costs nothing.
-2. **Most subnets are FREE to join.** Subnets with `min_stake = 0` require no staking at all. Always prefer these during onboarding. Only mention staking when the user specifically picks a subnet with `min_stake > 0`.
-3. **Do NOT block onboarding on staking.** The flow is: register → pick free subnet → start working. Staking is a separate, optional, later step.
+2. **Most worknets are FREE to join.** Worknets with `min_stake = 0` require no staking at all. Always prefer these during onboarding. Only mention staking when the user specifically picks a worknet with `min_stake > 0`.
+3. **Do NOT block onboarding on staking.** The flow is: register → pick free worknet → start working. Staking is a separate, optional, later step.
 4. **Use bundled scripts for ALL write operations.** Never manually construct calldata, ABI encoding, or EIP-712 JSON.
-5. **Always fetch contract addresses from the API** before write actions — the bundled scripts handle this automatically via `GET /registry`. Never hardcode contract addresses.
+5. **Always fetch contract addresses from the API** before write actions — the bundled scripts handle this automatically via `registry.get`. Never hardcode contract addresses.
 6. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei.
 7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
-8. Do not use stale V1 names: no "unbind()", no "removeAgent()". Binding changes use `bind(newTarget)`.
+8. Do not use stale V1 names: no `removeAgent()`. Binding changes use `bind(newTarget)` or `unbind()`.
 9. **Wallet handles credentials internally.** Just run `awp-wallet init` + `awp-wallet unlock`. No password generation, no password files, no user prompts.
-10. **This is an agent work wallet.** Always confirm with the user before executing any on-chain transaction — show the action, target contract, and estimated cost, then wait for explicit approval. Exception: gasless registration via relay (free, no gas cost) does not require confirmation. Remind the user on first setup: do NOT store personal assets in this wallet.
-11. **Subnet skill install (Q6):** Install `awp-core` skills directly. For third-party sources (not `github.com/awp-core/*`), show a warning and require user confirmation before installing.
+10. **This is an agent work wallet.** Always confirm with the user before executing any on-chain transaction — show the action, target contract, chain, and estimated cost, then wait for explicit approval. Exception: gasless registration via relay (free, no gas cost) does not require confirmation. Remind the user on first setup: do NOT store personal assets in this wallet.
+11. **Worknet skill install (Q6):** Install `awp-core` skills directly. For third-party sources (not `github.com/awp-core/*`), show a warning and require user confirmation before installing.
 12. **Onboarding requires user choice.** Always present Option A (Solo) and Option B (Delegated) and WAIT for the user to choose. Never auto-select an option.
 13. **Bind already sets the reward path.** After `bind(target)`, rewards resolve to the target via the bind chain. Do NOT call `setRecipient()` after a successful bind — it's redundant.
+14. **Multi-chain awareness.** Use chain-appropriate explorer links. Include `chainId` in API params when the user specifies a chain. Default to Base (8453) when unspecified.
 
 ## Bundled Scripts
 
@@ -411,38 +537,44 @@ scripts/
 ├── awp-daemon.py                     Background daemon (opt-in): monitors status/updates, writes PID to ~/.awp/daemon.pid, stops on Ctrl+C or kill
 ├── awp_lib.py                        Shared library (API, wallet, ABI encoding, validation)
 ├── wallet-raw-call.mjs               Node.js bridge: contract calls restricted to /registry allowlist only
-├── relay-start.py                    Gasless register or bind (no ETH needed)
-├── relay-register-subnet.py          Gasless subnet registration (no ETH needed)
+├── relay-start.py                    Gasless register or bind: --mode principal (solo) | --mode agent --target <addr> (delegated)
+├── relay-register-subnet.py          Gasless worknet registration (no ETH needed)
 ├── onchain-register.py               On-chain register
 ├── onchain-bind.py                   On-chain bind to target
 ├── onchain-deposit.py                Deposit AWP (approve + deposit)
-├── onchain-allocate.py               Allocate stake to agent+subnet
+├── onchain-allocate.py               Allocate stake to agent+worknet
 ├── onchain-deallocate.py             Deallocate stake
-├── onchain-reallocate.py             Move stake between agents/subnets
+├── onchain-reallocate.py             Move stake between agents/worknets
 ├── onchain-withdraw.py               Withdraw from expired position
 ├── onchain-add-position.py           Add AWP to existing position
 ├── onchain-register-and-stake.py     One-click register+deposit+allocate
 ├── onchain-vote.py                   Cast DAO vote
-├── onchain-subnet-lifecycle.py       Activate/pause/resume subnet
+├── onchain-subnet-lifecycle.py       Activate/pause/resume worknet
 └── onchain-subnet-update.py          Set skillsURI or minStake
 ```
 
 ## Security Controls
 
-**Contract allowlist**: `wallet-raw-call.mjs` fetches the AWP contract registry (`/registry`) on every invocation and rejects any `--to` address not present in the registry. This prevents calls to arbitrary contracts — only known AWP protocol contracts (AWPRegistry, StakeNFT, SubnetNFT, AWPDAO, AWPToken, etc.) are permitted.
+**Contract allowlist**: `wallet-raw-call.mjs` fetches the AWP contract registry (`registry.get`) on every invocation and rejects any `--to` address not present in the registry. This prevents calls to arbitrary contracts — only known AWP protocol contracts (AWPRegistry, StakeNFT, WorknetNFT, StakingVault, AWPDAO, AWPToken, etc.) are permitted.
 
-**Transaction confirmation**: All on-chain operations require explicit user confirmation before execution (see "Agent Wallet & Transaction Safety" above).
+**Transaction confirmation**: All on-chain operations require explicit user confirmation before execution.
 
-**Daemon lifecycle**: The daemon is opt-in — it only starts with explicit user consent (Step 7). It writes its PID to `~/.awp/daemon.pid` on start and removes it on exit. Stop it via `Ctrl+C` or `kill $(cat ~/.awp/daemon.pid)`. The daemon never auto-installs software, never auto-initializes wallets, and never executes transactions — it only monitors and notifies. All AWP operations work without the daemon running.
+**Daemon lifecycle**: Opt-in only (Step 7). PID in `~/.awp/daemon.pid`. Stop via `kill $(cat ~/.awp/daemon.pid)`. Never auto-installs, never executes transactions — only monitors and notifies.
 
-**Local files**: The skill may write files under `~/.awp/` (only with user consent for the daemon, or as part of explicit user actions):
-- `openclaw.json` — notification config (optional, only if user enables notifications)
-- `daemon.pid` — daemon process ID (only if daemon is running)
-- `daemon.log` — daemon output log (only if daemon is running)
-- `notifications.json` — queued notifications (only if daemon is running)
-- `status.json` — daemon state snapshot (only if daemon is running)
+**Local files** (`~/.awp/`): `openclaw.json`, `daemon.pid`, `daemon.log`, `notifications.json`, `status.json` — all written only with user consent or explicit actions.
 
-**Third-party skill installs**: Subnet skills from non-`awp-core` sources require explicit user confirmation before installation.
+**Third-party skill installs**: Worknet skills from non-`awp-core` sources require explicit user confirmation.
+
+## Vanity Salt Endpoints
+
+For offline mining of vanity Alpha token CREATE2 addresses:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `GET /api/vanity/mining-params` | GET | Returns `{factoryAddress, initCodeHash, vanityRule}` needed for offline salt mining |
+| `POST /api/vanity/upload-salts` | POST | Upload pre-mined `{salts: [{salt, address}, ...]}`. Rate limited: 5/hr/IP |
+| `GET /api/vanity/salts/count` | GET | Number of available (unused) salts in the pool |
+| `POST /api/vanity/compute-salt` | POST | Server-side computation. Returns `{salt, address, source: "pool"\|"mined", elapsed}` |
 
 ## Wallet Setup
 
@@ -468,50 +600,138 @@ All scripts accept `--token $TOKEN`. Chain defaults to Base (configured in awp-w
 
 ## Gas Routing
 
-Before bind/setRecipient/registerSubnet, check if the wallet has ETH:
+Before bind/unbind/setRecipient/registerWorknet, check if the wallet has ETH:
 ```bash
 awp-wallet balance --token $TOKEN
 ```
 - **Has ETH** → use `onchain-*.py` scripts
 - **No ETH** → use `relay-*.py` scripts (gasless, rate limit: 100/IP/1h)
-- deposit/allocate/vote always need ETH — no gasless option
+- deposit/vote/cancelWorknet always need ETH — no gasless option
+
+Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay/*`
+
+| Endpoint | Description | EIP-712 Domain |
+|----------|-------------|----------------|
+| `POST /api/relay/register` | Register (= setRecipient to self) | AWPRegistry |
+| `POST /api/relay/bind` | Bind agent to target | AWPRegistry |
+| `POST /api/relay/unbind` | Unbind from tree | AWPRegistry |
+| `POST /api/relay/set-recipient` | Set reward recipient | AWPRegistry |
+| `POST /api/relay/grant-delegate` | Authorize a delegate | AWPRegistry |
+| `POST /api/relay/revoke-delegate` | Revoke a delegate | AWPRegistry |
+| `POST /api/relay/activate-subnet` | Activate a pending worknet | AWPRegistry |
+| `POST /api/relay/register-subnet` | Register worknet (with AWP permit) | AWPRegistry |
+| `POST /api/relay/allocate` | Allocate stake to agent | StakingVault |
+| `POST /api/relay/deallocate` | Deallocate stake | StakingVault |
+| `GET /api/relay/status/{txHash}` | Check relay tx status | -- |
+
+Relay request format uses **v, r, s** signature components (not a combined signature hex):
+```json
+{
+  "chainId": 8453,
+  "user": "0xUserAddress...",
+  "deadline": 1712345678,
+  "v": 27,
+  "r": "0x...(32 bytes hex)...",
+  "s": "0x...(32 bytes hex)..."
+}
+```
+Response: `{"txHash": "0x..."}` | Error: `{"error": "invalid EIP-712 signature"}`
+
+### EIP-712 Domains
+
+**AWPRegistry domain** (bind, unbind, setRecipient, grantDelegate, revokeDelegate, registerWorknet, activateWorknet):
+```json
+{"name": "AWPRegistry", "version": "1", "chainId": 8453, "verifyingContract": "0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A"}
+```
+
+**StakingVault domain** (allocate, deallocate):
+```json
+{"name": "StakingVault", "version": "1", "chainId": 8453, "verifyingContract": "0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b"}
+```
+
+### EIP-712 Type Definitions
+
+```
+Bind(address agent, address target, uint256 nonce, uint256 deadline)
+Unbind(address user, uint256 nonce, uint256 deadline)
+SetRecipient(address user, address recipient, uint256 nonce, uint256 deadline)
+GrantDelegate(address user, address delegate, uint256 nonce, uint256 deadline)
+RevokeDelegate(address user, address delegate, uint256 nonce, uint256 deadline)
+ActivateWorknet(address user, uint256 worknetId, uint256 nonce, uint256 deadline)
+RegisterWorknet(address user, WorknetParams params, uint256 nonce, uint256 deadline)
+  WorknetParams(string name, string symbol, address worknetManager, bytes32 salt, uint128 minStake, string skillsURI)
+Allocate(address staker, address agent, uint256 worknetId, uint256 amount, uint256 nonce, uint256 deadline)
+Deallocate(address staker, address agent, uint256 worknetId, uint256 amount, uint256 nonce, uint256 deadline)
+```
+
+**Nonce workflow**: Always fetch the current nonce via `nonce.get` (AWPRegistry) or `nonce.getStaking` (StakingVault) immediately before signing. Nonces auto-increment after each successful relay. Using a stale nonce causes `InvalidSignature` error.
 
 ## Pre-Flight Checklist (before ANY write action)
 
 ```
 1. Wallet unlocked?     → TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 2. Wallet address?      → WALLET_ADDR=$(awp-wallet receive | python3 -c "import sys,json; print(json.load(sys.stdin)['eoaAddress'])")
-3. Registration status? → curl -s https://tapi.awp.sh/api/address/$WALLET_ADDR/check
+3. Registration status? → curl -s -X POST https://api.awp.sh/v2 -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"address.check","params":{"address":"'$WALLET_ADDR'"},"id":1}'
 4. Has gas?             → awp-wallet balance --token $TOKEN
 ```
+
+### `address.check` Response Format
+
+With `chainId` specified → single-chain result:
+```json
+{"isRegistered": true, "boundTo": "0x...", "recipient": "0x..."}
+```
+- `isRegistered`: true if user has called `register()`, `setRecipient()`, or `bind()` on this chain
+- `boundTo`: address this user is bound to (empty string if not bound)
+- `recipient`: reward recipient address (empty string if not set; defaults to self)
+
+Without `chainId` (omit) → all chains where registered:
+```json
+{
+  "isRegistered": true,
+  "chains": [
+    {"chainId": 1, "isRegistered": true, "recipient": "0x..."},
+    {"chainId": 8453, "isRegistered": true, "boundTo": "0x...", "recipient": "0x..."}
+  ]
+}
+```
+- `isRegistered`: true if registered on ANY chain
+- `chains`: array of per-chain registration info (only chains where user is registered)
 
 ---
 
 ## Query (read-only, no wallet needed)
 
-### Q1 · Query Subnet
+### Q1 · Query Worknet
 ```bash
-curl -s https://tapi.awp.sh/api/subnets/{id}
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"subnets.get","params":{"worknetId":"ID"},"id":1}'
 ```
 Print:
 ```
-[QUERY] Subnet #<id>
-── subnet ────────────────────────
+[QUERY] Worknet #<id>
+── worknet ───────────────────────
 name:           <name>
 status:         <status>
 owner:          <short_address>
 alpha token:    <short_address>
 skills:         <uri or "none">
 min stake:      <amount> AWP
+chain:          <chain name>
 ──────────────────────────────────
 ```
 
 ### Q2 · Query Balance
-Fetch three endpoints in parallel:
+Fetch via JSON-RPC batch:
 ```bash
-curl -s https://tapi.awp.sh/api/staking/user/{addr}/balance
-curl -s https://tapi.awp.sh/api/staking/user/{addr}/positions
-curl -s https://tapi.awp.sh/api/staking/user/{addr}/allocations
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '[
+    {"jsonrpc":"2.0","method":"staking.getBalance","params":{"address":"ADDR"},"id":1},
+    {"jsonrpc":"2.0","method":"staking.getPositions","params":{"address":"ADDR"},"id":2},
+    {"jsonrpc":"2.0","method":"staking.getAllocations","params":{"address":"ADDR"},"id":3}
+  ]'
 ```
 Print:
 ```
@@ -525,73 +745,136 @@ positions:
   #<id>  <amount> AWP  lock ends <date>
 
 allocations:
-  agent <short> → subnet #<id>  <amount> AWP
+  agent <short> → worknet #<id>  <amount> AWP
 ──────────────────────────────────
 ```
 
-### Q3 · Query Emission [DRAFT]
+### Q3 · Query Emission
 ```bash
-curl -s https://tapi.awp.sh/api/emission/current
-curl -s https://tapi.awp.sh/api/emission/schedule
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '[
+    {"jsonrpc":"2.0","method":"emission.getCurrent","params":{},"id":1},
+    {"jsonrpc":"2.0","method":"emission.getSchedule","params":{},"id":2}
+  ]'
 ```
 Print:
 ```
 [QUERY] Emission
 ── emission ──────────────────────
 epoch:          <number>
-daily rate:     <amount> AWP
+daily rate:     31,600,000 AWP (per chain)
 decay:          ~0.3156% per epoch
 ──────────────────────────────────
 ```
 
 ### Q4 · Query Agent
 ```bash
-curl -s https://tapi.awp.sh/api/subnets/{subnetId}/agents/{agent}
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"subnets.getAgentInfo","params":{"worknetId":"ID","agent":"0x..."},"id":1}'
 ```
 
-### Q5 · List Subnets
+### Q5 · List Worknets
 ```bash
-curl -s "https://tapi.awp.sh/api/subnets?status=Active&page=1&limit=20"
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"subnets.list","params":{"status":"Active","page":1,"limit":20},"id":1}'
 ```
-Sort: subnets with skills first, then min_stake ascending.
+Sort: worknets with skills first, then min_stake ascending.
 ```
-[QUERY] Active subnets
-── subnets ───────────────────────
+[QUERY] Active worknets
+── worknets ──────────────────────
 #<id>  <name>        min: 0 AWP      skills: ✓
 #<id>  <name>        min: 100 AWP    skills: —
 ──────────────────────────────────
-[NEXT] Install a subnet skill: say "install skill for subnet #<id>"
+[NEXT] Install a worknet skill: say "install skill for worknet #<id>"
 ```
 
-### Q6 · Install Subnet Skill
+### Q6 · Install Worknet Skill
 ```bash
-curl -s https://tapi.awp.sh/api/subnets/{id}/skills
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"subnets.getSkills","params":{"worknetId":"ID"},"id":1}'
 ```
 
 For `awp-core` sources (`github.com/awp-core/*`), install directly:
 ```
-[SETUP] Installing subnet #1 skill ...
+[SETUP] Installing worknet #1 skill ...
 [SETUP] Installed ✓
 ```
 
 For third-party sources, show a warning and ask for confirmation before installing:
 ```
-[SETUP] Subnet #5 skill source: https://github.com/other/repo
+[SETUP] Worknet #5 skill source: https://github.com/other/repo
         ⚠ Third-party source — not maintained by awp-core.
         Install? (yes/no)
 ```
-If the user confirms, install to `skills/awp-subnet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the subnet list.
+If the user confirms, install to `skills/awp-subnet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the worknet list.
 
-### Q7 · Epoch History [DRAFT]
+### Q7 · Epoch History
 ```bash
-curl -s "https://tapi.awp.sh/api/emission/epochs?page=1&limit=20"
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"emission.listEpochs","params":{"page":1,"limit":20},"id":1}'
 ```
+
+### Q8–Q12 · Additional Queries
+
+| Query | Method | Key Params |
+|-------|--------|------------|
+| **Q8** Search worknets | `subnets.search` | `{"query":"NAME"}` |
+| **Q9** Ranked worknets | `subnets.listRanked` | `{"page":1,"limit":20}` |
+| **Q10** Portfolio overview | `users.getPortfolio` | `{"address":"ADDR"}` |
+| **Q11** Cross-chain balance | `staking.getUserBalanceGlobal` | `{"address":"ADDR"}` |
+| **Q11b** Cross-chain positions | `staking.getPositionsGlobal` | `{"address":"ADDR"}` |
+| **Q12** Global stats | `stats.global` | `{}` |
+
+Additional cross-chain methods: `tokens.getAWPGlobal`, `emission.getGlobalSchedule`, `health.detailed`.
+
+All use the same JSON-RPC format: `POST https://api.awp.sh/v2` with `{"jsonrpc":"2.0","method":"...","params":{...},"id":1}`.
+
+### Q13 · Announcements
+Protocol announcements via REST (not JSON-RPC):
+```bash
+# List active announcements
+curl -s https://api.awp.sh/api/announcements
+
+# LLM-friendly format
+curl -s https://api.awp.sh/api/announcements/llm-context
+
+# Filter by chain or category
+curl -s "https://api.awp.sh/api/announcements?chainId=8453&category=emission"
+```
+Announcement Object:
+```json
+{
+  "id": 1,
+  "chainId": 0,
+  "title": "Emission schedule update",
+  "content": "Daily emission reduced to 31.6M AWP per chain starting epoch 5.",
+  "category": "emission",
+  "priority": 1,
+  "active": true,
+  "createdAt": "2026-04-02T00:00:00Z",
+  "expiresAt": "2026-04-10T00:00:00Z",
+  "metadata": {"epochId": 5, "newEmission": "31600000"}
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `chainId` | integer | 0 = applies to all chains; otherwise specific chainId |
+| `category` | string | `general`, `maintenance`, `governance`, `emission`, `security` |
+| `priority` | integer | 0 = info, 1 = warning, 2 = critical |
+| `expiresAt` | string/null | ISO 8601 timestamp; null = never expires |
+| `metadata` | object/null | Arbitrary JSON for structured data |
 
 ---
 
 ## Registration & Staking (load commands-staking.md first)
 
-### S1 · Register / Bind (FREE, gasless)
+### S1 · Register / Bind / Unbind (FREE, gasless)
 
 Registration is free and gasless. No AWP or ETH needed.
 
@@ -607,14 +890,19 @@ python3 scripts/relay-start.py --token $TOKEN --mode principal
 python3 scripts/relay-start.py --token $TOKEN --mode agent --target <root_address>
 ```
 
+**Unbind (detach from current target):**
+```bash
+python3 scripts/onchain-bind.py --token $TOKEN --unbind
+```
+
 If the wallet has ETH, use on-chain scripts instead:
 ```bash
 python3 scripts/onchain-bind.py --token $TOKEN --target <root_address>
 ```
 
-### S2 · Deposit AWP (optional — only for subnets that require staking)
+### S2 · Deposit AWP (optional — only for worknets that require staking)
 
-Most subnets have min_stake=0 and do not require any deposit. Only run these commands if the user wants to work on a subnet with min_stake > 0, or wants to earn voting power.
+Most worknets have min_stake=0 and do not require any deposit. Only run these commands if the user wants to work on a worknet with min_stake > 0, or wants to earn voting power.
 
 **New deposit:**
 ```bash
@@ -633,7 +921,7 @@ python3 scripts/onchain-withdraw.py --token $TOKEN --position 1
 
 ### S3 · Allocate / Deallocate / Reallocate (only after S2 deposit)
 
-Only needed if the user has deposited AWP and wants to direct it to a specific agent+subnet.
+Only needed if the user has deposited AWP and wants to direct it to a specific agent+worknet.
 
 **Allocate:**
 ```bash
@@ -645,7 +933,7 @@ python3 scripts/onchain-allocate.py --token $TOKEN --agent <addr> --subnet 1 --a
 python3 scripts/onchain-deallocate.py --token $TOKEN --agent <addr> --subnet 1 --amount 5000
 ```
 
-**Reallocate (move between agents/subnets):**
+**Reallocate (move between agents/worknets):**
 ```bash
 python3 scripts/onchain-reallocate.py --token $TOKEN --from-agent <addr> --from-subnet 1 --to-agent <addr> --to-subnet 2 --amount 5000
 ```
@@ -657,19 +945,23 @@ python3 scripts/onchain-register-and-stake.py --token $TOKEN --amount 5000 --loc
 
 ---
 
-## Subnet Management (wallet + SubnetNFT ownership — load commands-subnet.md first)
+## Worknet Management (wallet + WorknetNFT ownership — load commands-subnet.md first)
 
-### M1 · Register Subnet (gasless)
+### M1 · Register Worknet (gasless relay — costs 100,000 AWP)
 ```bash
-python3 scripts/relay-register-subnet.py --token $TOKEN --name "MySubnet" --symbol "MSUB" --skills-uri "ipfs://QmHash"
+python3 scripts/relay-register-subnet.py --token $TOKEN --name "MyWorknet" --symbol "MWKN" --skills-uri "ipfs://QmHash"
 ```
+The script handles all EIP-712 signing and relay submission internally — do not construct or show EIP-712 JSON to the user, just run the script.
 
-### M2 · Activate / Pause / Resume
+### M2 · Activate / Pause / Resume / Cancel
 ```bash
 python3 scripts/onchain-subnet-lifecycle.py --token $TOKEN --subnet 1 --action activate
 python3 scripts/onchain-subnet-lifecycle.py --token $TOKEN --subnet 1 --action pause
 python3 scripts/onchain-subnet-lifecycle.py --token $TOKEN --subnet 1 --action resume
+python3 scripts/onchain-subnet-lifecycle.py --token $TOKEN --subnet 1 --action cancel
 ```
+Note: the flag is `--subnet` (not `--worknet`) even though the protocol calls them worknets.
+Cancel is only valid for Pending worknets (before activation). Owner receives full AWP refund.
 
 ### M3 · Update Skills URI
 ```bash
@@ -696,12 +988,16 @@ Support: 0=Against, 1=For, 2=Abstain. The script handles position filtering and 
 
 ### G3 · Query Proposals
 ```bash
-curl -s "https://tapi.awp.sh/api/governance/proposals?page=1&limit=20"
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"governance.listProposals","params":{"status":"Active","page":1,"limit":20},"id":1}'
 ```
 
 ### G4 · Query Treasury
 ```bash
-curl -s https://tapi.awp.sh/api/governance/treasury
+curl -s -X POST https://api.awp.sh/v2 \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"governance.getTreasury","params":{},"id":1}'
 ```
 
 ---
@@ -710,25 +1006,50 @@ curl -s https://tapi.awp.sh/api/governance/treasury
 
 ### W1 · Watch Events
 
-Connect to `wss://tapi.awp.sh/ws/live`, subscribe to event presets:
+Connect to `wss://api.awp.sh/ws/live`, subscribe to event presets:
 
-| Preset | Events (26 total) | Emoji |
+| Preset | Events (19 total) | Emoji |
 |--------|-------------------|-------|
-| staking | Deposited, Withdrawn, PositionIncreased, Allocated, Deallocated, Reallocated | `$` |
-| subnets | SubnetRegistered, SubnetActivated, SubnetPaused, SubnetResumed, SubnetBanned, SubnetUnbanned, SubnetDeregistered, LPCreated, SkillsURIUpdated, MinStakeUpdated | `#` |
-| emission | EpochSettled, RecipientAWPDistributed, DAOMatchDistributed, GovernanceWeightUpdated, AllocationsSubmitted, OracleConfigUpdated | `~` |
-| users | Bound, RecipientUpdated, DelegateGranted, DelegateRevoked | `@` |
+| staking | Deposited, Withdrawn, Allocated, Deallocated, Reallocated | `$` |
+| worknets | WorknetRegistered, WorknetActivated, WorknetCancelled | `#` |
+| emission | EpochSettled, RecipientAWPDistributed, AllocationsSubmitted | `~` |
+| users | UserRegistered, Bound, Unbound, RecipientSet, DelegateGranted, DelegateRevoked | `@` |
+| protocol | LPManagerUpdated, DefaultWorknetManagerImplUpdated | `⚙` |
+
+All 19 WebSocket events with key fields (every event includes `chainId`):
+
+| Event | Key Fields |
+|-------|------------|
+| `UserRegistered` | `user`, `chainId` |
+| `Bound` | `user`, `target`, `chainId` |
+| `Unbound` | `user`, `chainId` |
+| `RecipientSet` | `user`, `recipient`, `chainId` |
+| `DelegateGranted` | `user`, `delegate`, `chainId` |
+| `DelegateRevoked` | `user`, `delegate`, `chainId` |
+| `Deposited` | `user`, `tokenId`, `amount`, `lockEndTime`, `chainId` |
+| `Withdrawn` | `user`, `tokenId`, `amount`, `chainId` |
+| `Allocated` | `staker`, `agent`, `worknetId`, `amount`, `chainId` |
+| `Deallocated` | `staker`, `agent`, `worknetId`, `amount`, `chainId` |
+| `Reallocated` | `staker`, `fromAgent`, `fromWorknetId`, `toAgent`, `toWorknetId`, `amount`, `chainId` |
+| `WorknetRegistered` | `worknetId`, `owner`, `name`, `symbol`, `chainId` |
+| `WorknetActivated` | `worknetId`, `chainId` |
+| `WorknetCancelled` | `worknetId`, `chainId` |
+| `EpochSettled` | `epoch`, `totalEmission`, `recipientCount`, `chainId` |
+| `RecipientAWPDistributed` | `epoch`, `recipient`, `amount`, `chainId` |
+| `AllocationsSubmitted` | `epoch`, `totalWeight`, `recipients`, `weights`, `chainId` |
+| `LPManagerUpdated` | `newLPManager`, `chainId` |
+| `DefaultWorknetManagerImplUpdated` | `newImpl`, `chainId` |
 
 Display format:
 ```
 $ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2026-12-01 | https://basescan.org/tx/0xabc...
-# SubnetRegistered | #12 "DataMiner" by 0x5678...efgh | https://basescan.org/tx/0xdef...
-~ EpochSettled | Epoch 42 | 15,800,000.0000 AWP to 150 recipients | https://basescan.org/tx/0x123...
+# WorknetRegistered | #12 "DataMiner" by 0x5678...efgh | https://basescan.org/tx/0xdef...
+~ EpochSettled | Epoch 42 | 31,600,000.0000 AWP to 150 recipients | https://basescan.org/tx/0x123...
 ```
 
-### W2 · Emission Alert [DRAFT]
+### W2 · Emission Alert
 
-Subscribe to `EpochSettled` + `RecipientAWPDistributed` + `DAOMatchDistributed`.
+Subscribe to `EpochSettled` + `RecipientAWPDistributed`.
 
 ---
 
@@ -736,8 +1057,9 @@ Subscribe to `EpochSettled` + `RecipientAWPDistributed` + `DAOMatchDistributed`.
 
 | Error | Print | Recovery |
 |-------|-------|----------|
-| 400 Bad Request | `[!] invalid request: <detail>` | Check inputs |
-| 404 Not Found | `[!] not found` | Suggest list/search |
+| JSON-RPC -32600 | `[!] invalid request: <detail>` | Check inputs |
+| JSON-RPC -32601 | `[!] method not found` | Check method name |
+| JSON-RPC -32001 | `[!] not found` | Suggest list/search |
 | 429 Rate Limit | `[!] rate limited. retrying in 60s...` | Auto-retry |
 | "not registered" | `[!] not registered. say "start working"` | Guide to onboarding |
 | "insufficient balance" | `[!] insufficient balance` | Guide to S2 |

@@ -39,6 +39,8 @@ def main() -> None:
     # Unit conversion
     amount_wei = to_wei(amount)
     lock_seconds = days_to_seconds(lock_days)
+    if lock_seconds > 2**64 - 1:
+        die(f"lock-days too large: {lock_days} days ({lock_seconds}s) exceeds uint64 max")
     allocate_wei = to_wei(allocate_amount)
 
     # Allocate amount must not exceed deposit amount
