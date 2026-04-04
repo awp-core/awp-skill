@@ -195,6 +195,7 @@ def main() -> None:
 
     step("submit_relay")
     relay_body = {
+        "chainId": chain_id,
         "user": wallet_addr,
         "name": name,
         "symbol": symbol,

@@ -81,6 +81,18 @@ def main() -> None:
     # Step 5: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600
 
+    chain_id = domain["chainId"]
+
+    def split_sig(sig: str) -> tuple[int, str, str]:
+        """Split 0x<r><s><v> 65-byte signature into (v, r, s)"""
+        raw = sig[2:] if sig.startswith("0x") else sig
+        if len(raw) != 130:
+            die(f"Invalid signature length: expected 130 hex chars, got {len(raw)}")
+        r = "0x" + raw[0:64]
+        s = "0x" + raw[64:128]
+        v = int(raw[128:130], 16)
+        return v, r, s
+
     # Step 6: Build EIP-712 typed data
     if mode == "principal":
         # Principal mode: setRecipient(self) via /relay/set-recipient
@@ -101,11 +113,11 @@ def main() -> None:
             },
         )
         relay_endpoint = f"{RELAY_BASE}/relay/set-recipient"
-        relay_body: dict = {
+        relay_body_base: dict = {
+            "chainId": chain_id,
             "user": wallet_addr,
             "recipient": wallet_addr,
             "deadline": deadline,
-            "signature": None,
         }
     else:
         # Agent mode: bind(target) via /relay/bind
@@ -126,17 +138,18 @@ def main() -> None:
             },
         )
         relay_endpoint = f"{RELAY_BASE}/relay/bind"
-        relay_body = {
+        relay_body_base = {
+            "chainId": chain_id,
             "agent": wallet_addr,
             "target": target,
             "deadline": deadline,
-            "signature": None,
         }
 
-    # Step 7: Sign
+    # Step 7: Sign and split signature into v/r/s
     step("sign_eip712")
     signature = wallet_sign_typed_data(token, eip712_data)
-    relay_body["signature"] = signature
+    sig_v, sig_r, sig_s = split_sig(signature)
+    relay_body: dict = {**relay_body_base, "v": sig_v, "r": sig_r, "s": sig_s}
 
     # Step 8: Submit to relay
     step("submit_relay", endpoint=relay_endpoint)
