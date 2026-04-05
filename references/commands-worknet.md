@@ -148,7 +148,7 @@ GET /api/vanity/salts/count
 
 ```bash
 # Gasless registration (recommended — no ETH needed, AWP only):
-python3 scripts/relay-register-subnet.py --token {T} --name "MyWorknet" --symbol "MWRK" --skills-uri "ipfs://QmHash"
+python3 scripts/relay-register-worknet.py --token {T} --name "MyWorknet" --symbol "MWRK" --skills-uri "ipfs://QmHash"
 ```
 
 ### Gasless Worknet Registration — EIP-712 Template
@@ -159,7 +159,7 @@ For fully gasless registration via `POST /api/relay/register-worknet`, the user 
 ```bash
 # Get permit nonce from AWPToken contract via RPC (NOT from nonce.get — that returns the registry nonce)
 # nonces(address) selector = 0x7ecebe00
-# Reference uses the hardcoded Base RPC URL — scripts/relay-register-subnet.py wraps this in awp_lib.rpc_call().
+# Reference uses the hardcoded Base RPC URL — scripts/relay-register-worknet.py wraps this in awp_lib.rpc_call().
 PERMIT_NONCE=$(python3 -c "
 import json, urllib.request
 addr = '$WALLET_ADDR'.lower().replace('0x','').zfill(64)
@@ -284,8 +284,8 @@ curl -s https://api.awp.sh/api/relay/status/{txHash}
 | 400 | `{"error": "missing signature"}` | Signature field empty |
 | 400 | `{"error": "invalid signature"}` | EIP-712 signature verification failed |
 | 400 | `{"error": "signature expired"}` | On-chain deadline check failed |
-| 400 | `{"error": "invalid subnet params (name 1-64 bytes, symbol 1-16 bytes)"}` | Name/symbol length violation |
-| 400 | `{"error": "subnet manager address required (auto-deploy not available)"}` | No default WorknetManager impl set |
+| 400 | `{"error": "invalid worknet params (name 1-64 bytes, symbol 1-16 bytes)"}` | Name/symbol length violation |
+| 400 | `{"error": "worknet manager address required (auto-deploy not available)"}` | No default WorknetManager impl set |
 | 400 | `{"error": "insufficient AWP balance"}` | User lacks AWP for worknet registration |
 | 400 | `{"error": "insufficient AWP allowance"}` | Permit signature did not authorize enough AWP |
 | 400 | `{"error": "contract is paused"}` | AWPRegistry is in emergency pause state |
@@ -313,7 +313,7 @@ Always check current status via JSON-RPC before calling:
 ### Gasless Activate Worknet
 
 ```
-POST /api/relay/activate-subnet
+POST /api/relay/activate-worknet
 ```
 
 **EIP-712 ActivateWorknet signature:**
@@ -353,7 +353,7 @@ awp-wallet sign-typed-data --token {T} --data '{
   }
 }'
 
-curl -X POST https://api.awp.sh/api/relay/activate-subnet \
+curl -X POST https://api.awp.sh/api/relay/activate-worknet \
   -H "Content-Type: application/json" \
   -d '{"chainId": 8453, "user": "'$WALLET_ADDR'", "worknetId": "'$WORKNET_ID'", "deadline": '$DEADLINE', "signature": "0x...(65 bytes hex)..."}'
 ```
@@ -361,10 +361,10 @@ curl -X POST https://api.awp.sh/api/relay/activate-subnet \
 ### Complete Command Templates
 
 ```bash
-python3 scripts/onchain-subnet-lifecycle.py --token {T} --subnet {worknetId} --action activate
-python3 scripts/onchain-subnet-lifecycle.py --token {T} --subnet {worknetId} --action pause
-python3 scripts/onchain-subnet-lifecycle.py --token {T} --subnet {worknetId} --action resume
-python3 scripts/onchain-subnet-lifecycle.py --token {T} --subnet {worknetId} --action cancel
+python3 scripts/onchain-worknet-lifecycle.py --token {T} --worknet {worknetId} --action activate
+python3 scripts/onchain-worknet-lifecycle.py --token {T} --worknet {worknetId} --action pause
+python3 scripts/onchain-worknet-lifecycle.py --token {T} --worknet {worknetId} --action resume
+python3 scripts/onchain-worknet-lifecycle.py --token {T} --worknet {worknetId} --action cancel
 ```
 
 ---
@@ -383,7 +383,7 @@ function setSkillsURI(uint256 worknetId, string skillsURI)   // on AWPWorkNet
 ### Complete Command Template
 
 ```bash
-python3 scripts/onchain-subnet-update.py --token {T} --subnet {worknetId} --skills-uri "{skillsURI}"
+python3 scripts/onchain-worknet-update.py --token {T} --worknet {worknetId} --skills-uri "{skillsURI}"
 ```
 
 ---
@@ -402,5 +402,5 @@ function setMinStake(uint256 worknetId, uint128 minStake)   // on AWPWorkNet
 ### Complete Command Template
 
 ```bash
-python3 scripts/onchain-subnet-update.py --token {T} --subnet {worknetId} --min-stake {minStakeWei}
+python3 scripts/onchain-worknet-update.py --token {T} --worknet {worknetId} --min-stake {minStakeWei}
 ```

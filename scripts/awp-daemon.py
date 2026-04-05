@@ -3,12 +3,12 @@
 AWP Daemon — background monitoring service for AWP skill.
 
 Runs continuously:
-  1. Send welcome message (banner + active subnets) via notify or stdout
+  1. Send welcome message (banner + active worknets) via notify or stdout
   2. Check that awp-wallet is installed (does NOT auto-install)
   3. Check that wallet is initialized (does NOT auto-init)
-  4. Show registration status + available subnets
+  4. Show registration status + available worknets
   5. Check for version updates (informational only, no auto-update)
-  6. Monitor: registration state changes, new subnet detection
+  6. Monitor: registration state changes, new worknet detection
 
 Security notes:
   - Never auto-downloads or auto-executes remote scripts
@@ -75,7 +75,7 @@ def _field(obj: dict[str, Any], *names: str, default: Any = "") -> Any:
     """Return the first present field from `obj`, checking each name in order.
 
     The AWP API has historically exposed worknet fields in snake_case
-    (`subnet_id`, `min_stake`, `skills_uri`, `created_at`) while the spec
+    (__`WORKNET_ID_BT`_0__, `min_stake`, `skills_uri`, `created_at`) while the spec
     documents camelCase. Accept either shape so the daemon works across server
     conventions without silent "(none found)" failures.
     """
@@ -246,7 +246,7 @@ def write_status(
     wallet_installed: bool,
     wallet_addr: Optional[str],
     registered: Optional[bool],
-    subnets_count: int,
+    worknets_count: int,
     last_check: str,
 ) -> None:
     """Write the daemon's latest state to ~/.awp/status.json. Agent can read this at any time."""
@@ -262,14 +262,14 @@ def write_status(
         next_step = 'Tell your agent: "start working" (free, gasless)'
     else:
         phase = "ready"
-        next_step = 'Tell your agent: "list subnets" or "start working"'
+        next_step = 'Tell your agent: "list worknets" or "start working"'
 
     status = {
         "phase": phase,
         "wallet_installed": wallet_installed,
         "wallet_address": wallet_addr,
         "registered": registered,
-        "active_subnets": subnets_count,
+        "active_worknets": worknets_count,
         "next_step": next_step,
         "last_check": last_check,
     }
@@ -280,7 +280,7 @@ def write_status(
         pass
 
 
-# ── Subnet Tracking ─────────────────────────────
+# ── Worknet Tracking ─────────────────────────────
 
 def fetch_announcements() -> list[dict[str, Any]]:
     """Fetch the active-announcements list from the REST endpoint."""
@@ -297,30 +297,30 @@ def fetch_announcements() -> list[dict[str, Any]]:
         return []
 
 
-def fetch_active_subnets() -> list[dict[str, Any]]:
-    """Fetch the list of active subnets."""
+def fetch_active_worknets() -> list[dict[str, Any]]:
+    """Fetch the list of active worknets."""
     result = rpc("subnets.list", {"status": "Active", "limit": 50})
     if isinstance(result, list):
         return result
     if isinstance(result, dict):
-        # 分页响应：提取 items/subnets/data 字段
-        for key in ("items", "subnets", "data"):
+        # 分页响应：提取 items/worknets/data 字段
+        for key in ("items", "worknets", "data"):
             if isinstance(result.get(key), list):
                 return result[key]
     return []
 
 
-def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
-    """Format the subnet list in receipt style with detailed info per subnet."""
+def format_worknet_list(worknets: list[dict[str, Any]]) -> str:
+    """Format the worknet list in receipt style with detailed info per worknet."""
     W = RECEIPT_WIDTH  # Content width (matches the banner)
     lines: list[str] = []
     lines.append("┌" + "─" * W + "┐")
-    lines.append("│" + "ACTIVE SUBNETS".center(W) + "│")
+    lines.append("│" + "ACTIVE WORKNETS".center(W) + "│")
     lines.append("├" + "─" * W + "┤")
-    if not subnets:
+    if not worknets:
         lines.append("│" + "  (none found)".ljust(W) + "│")
     else:
-        for i, s in enumerate(subnets):
+        for i, s in enumerate(worknets):
             sid = _field(s, "worknetId", "subnet_id", "subnetId", default="?")
             name = _field(s, "name", default="Unknown")
             symbol = _field(s, "symbol", default="")
@@ -362,15 +362,15 @@ def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
                 info_line = info_line[:W]
             lines.append("│" + info_line.ljust(W) + "│")
 
-            # Separator between subnets (not after the last one)
-            if i < len(subnets) - 1:
+            # Separator between worknets (not after the last one)
+            if i < len(worknets) - 1:
                 lines.append("│" + "  " + "· " * ((W - 4) // 2) + " " * ((W - 4) % 2) + "  │")
 
         lines.append("├" + "─" * W + "┤")
-        total = len(subnets)
-        free = sum(1 for s in subnets if _field(s, "minStake", "min_stake", default=0) == 0)
-        with_skills = sum(1 for s in subnets if _field(s, "skillsURI", "skills_uri", default=""))
-        summary = f"  {total} subnets · {free} free · {with_skills} with skills"
+        total = len(worknets)
+        free = sum(1 for s in worknets if _field(s, "minStake", "min_stake", default=0) == 0)
+        with_skills = sum(1 for s in worknets if _field(s, "skillsURI", "skills_uri", default=""))
+        summary = f"  {total} worknets · {free} free · {with_skills} with skills"
         lines.append("│" + summary.ljust(W) + "│")
     lines.append("└" + "─" * W + "┘")
     return "\n".join(lines)
@@ -398,18 +398,18 @@ WELCOME_BANNER = """\
 │                                          │
 │  "start working"    register + join      │
 │  "check my balance" staking overview     │
-│  "list subnets"     browse active        │
+│  "list worknets"     browse active        │
 │  "awp help"         all commands         │
 │                                          │
 │  no AWP tokens needed to start.          │
-│  register free → pick a subnet → earn.   │
+│  register free → pick a worknet → earn.   │
 └──────────────────────────────────────────┘"""
 
 
-def send_welcome(subnets: list[dict[str, Any]]) -> None:
-    """Send the welcome message (banner + active subnets). Pushes via notify if possible, otherwise prints to stdout."""
-    subnet_text = format_subnet_list(subnets)
-    full_message = f"{WELCOME_BANNER}\n\n{subnet_text}"
+def send_welcome(worknets: list[dict[str, Any]]) -> None:
+    """Send the welcome message (banner + active worknets). Pushes via notify if possible, otherwise prints to stdout."""
+    worknet_text = format_worknet_list(worknets)
+    full_message = f"{WELCOME_BANNER}\n\n{worknet_text}"
 
     if _can_push():
         notify("Hello World from the World of Agents!", full_message)
@@ -423,23 +423,23 @@ def send_welcome(subnets: list[dict[str, Any]]) -> None:
         notify("Hello World from the World of Agents!", full_message)
 
 
-# ── New Subnet Detection ────────────────────────
+# ── New Worknet Detection ────────────────────────
 
-def detect_new_subnets(
+def detect_new_worknets(
     current: list[dict[str, Any]],
     known_ids: set[int],
 ) -> list[dict[str, Any]]:
     """Compare current worknets against known IDs and return any newly discovered ones."""
-    new_subnets = []
+    new_worknets = []
     for s in current:
         sid = _field(s, "worknetId", "subnet_id", "subnetId", default=None)
         if sid is not None:
             try:
                 if int(sid) not in known_ids:
-                    new_subnets.append(s)
+                    new_worknets.append(s)
             except (ValueError, TypeError):
                 continue
-    return new_subnets
+    return new_worknets
 
 
 # ── 1. Wallet Installation ───────────────────────
@@ -539,22 +539,22 @@ def check_and_notify(wallet_addr: str) -> bool:
 
     log("──────────────────────────────────────")
 
-    # Subnet list
+    # Worknet list
     print()
-    log("── available subnets ─────────────────")
+    log("── available worknets ─────────────────")
 
-    subnets = fetch_active_subnets()
-    if subnets:
-        for s in subnets:
+    worknets = fetch_active_worknets()
+    if worknets:
+        for s in worknets:
             sid = _field(s, "worknetId", "subnet_id", "subnetId", default="?")
             name = _field(s, "name", default="Unknown")
             min_stake = _field(s, "minStake", "min_stake", default=0)
             skills = "✓" if _field(s, "skillsURI", "skills_uri", default="") else "—"
             log(f"  #{sid}  {str(name):<30s} min: {min_stake} AWP  skills: {skills}")
 
-        total = len(subnets)
-        free = sum(1 for s in subnets if _field(s, "minStake", "min_stake", default=0) == 0)
-        with_skills = sum(1 for s in subnets if _field(s, "skillsURI", "skills_uri", default=""))
+        total = len(worknets)
+        free = sum(1 for s in worknets if _field(s, "minStake", "min_stake", default=0) == 0)
+        with_skills = sum(1 for s in worknets if _field(s, "skillsURI", "skills_uri", default=""))
         log("")
         log(f"{total} worknets. {free} free (no staking). {with_skills} with skills.")
     else:
@@ -566,7 +566,7 @@ def check_and_notify(wallet_addr: str) -> bool:
     if not is_registered:
         log('→ Next: say "start working" to register for free')
     else:
-        log('→ Next: say "list subnets" to browse, or "install skill for subnet #1" to start')
+        log('→ Next: say "list worknets" to browse, or "install skill for worknet #1" to start')
     print()
 
     return is_registered
@@ -700,16 +700,16 @@ def main() -> None:
 
 def _run_daemon(interval: int) -> None:
     """守护进程主逻辑（由 main 包裹在 try/finally 中以确保 PID 文件清理）。"""
-    # Phase 1: Fetch subnets + send welcome message
+    # Phase 1: Fetch worknets + send welcome message
     log("Phase 1: Welcome...")
-    initial_subnets = fetch_active_subnets()
-    send_welcome(initial_subnets)
-    known_subnet_ids: set[int] = set()
-    for s in initial_subnets:
+    initial_worknets = fetch_active_worknets()
+    send_welcome(initial_worknets)
+    known_worknet_ids: set[int] = set()
+    for s in initial_worknets:
         sid = _field(s, "worknetId", "subnet_id", "subnetId", default=None)
         if sid is not None:
             try:
-                known_subnet_ids.add(int(sid))
+                known_worknet_ids.add(int(sid))
             except (ValueError, TypeError):
                 continue
 
@@ -746,15 +746,15 @@ def _run_daemon(interval: int) -> None:
                    "You are not registered yet. Registration is FREE (gasless).\n"
                    'Tell your agent: "start working"',
                    "info")
-        # Wallet ready and registered — guide user to pick a subnet and start working
+        # Wallet ready and registered — guide user to pick a worknet and start working
         else:
             addr = short_addr(wallet_addr)
             notify("Registered — Ready to Work",
                    f"Wallet {addr} is registered.\n"
                    'Next steps:\n'
-                   '  - Tell your agent: "list subnets" to browse available subnets\n'
-                   '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
-                   '  - Or just say: "start working" to auto-pick a free subnet',
+                   '  - Tell your agent: "list worknets" to browse available worknets\n'
+                   '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
+                   '  - Or just say: "start working" to auto-pick a free worknet',
                    "info")
     else:
         if not wallet_ready:
@@ -774,7 +774,7 @@ def _run_daemon(interval: int) -> None:
 
     # Write initial status file
     write_status(wallet_ready, wallet_addr, last_registered,
-                 len(initial_subnets), datetime.now().isoformat())
+                 len(initial_worknets), datetime.now().isoformat())
 
     # Phase 5: Check for updates (informational only, no auto-update)
     log("Phase 5: Checking for updates (informational only)...")
@@ -828,9 +828,9 @@ def _run_daemon(interval: int) -> None:
                             notify("Registered — Ready to Work",
                                    f"Wallet {addr} is now registered!\n"
                                    'Next steps:\n'
-                                   '  - Tell your agent: "list subnets" to browse available subnets\n'
-                                   '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
-                                   '  - Or just say: "start working" to auto-pick a free subnet',
+                                   '  - Tell your agent: "list worknets" to browse available worknets\n'
+                                   '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
+                                   '  - Or just say: "start working" to auto-pick a free worknet',
                                    "info")
                             check_and_notify(wallet_addr)
                         else:
@@ -844,10 +844,10 @@ def _run_daemon(interval: int) -> None:
                     last_registered = is_registered
 
                 # New worknet detection
-                current_subnets = fetch_active_subnets()
-                new_subnets = detect_new_subnets(current_subnets, known_subnet_ids)
-                if new_subnets:
-                    for s in new_subnets:
+                current_worknets = fetch_active_worknets()
+                new_worknets = detect_new_worknets(current_worknets, known_worknet_ids)
+                if new_worknets:
+                    for s in new_worknets:
                         sid = _field(s, "worknetId", "subnet_id", "subnetId", default="?")
                         name = _field(s, "name", default="Unknown")
                         symbol = _field(s, "symbol", default="")
@@ -864,11 +864,11 @@ def _run_daemon(interval: int) -> None:
                             msg += " | has skills"
                         notify("New Worknet", msg)
                     # Update known worknet set
-                    for s in new_subnets:
+                    for s in new_worknets:
                         sid = _field(s, "worknetId", "subnet_id", "subnetId", default=None)
                         if sid is not None:
                             try:
-                                known_subnet_ids.add(int(sid))
+                                known_worknet_ids.add(int(sid))
                             except (ValueError, TypeError):
                                 continue
 
@@ -893,7 +893,7 @@ def _run_daemon(interval: int) -> None:
 
                 # Update status file
                 write_status(wallet_ready, wallet_addr, last_registered,
-                             len(current_subnets), datetime.now().isoformat())
+                             len(current_worknets), datetime.now().isoformat())
 
                 # Update check (every UPDATE_CHECK_EVERY cycles)
                 if cycle_count % UPDATE_CHECK_EVERY == 0:

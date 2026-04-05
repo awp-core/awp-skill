@@ -173,7 +173,7 @@ awp-skill/
 ├── references/
 │   ├── api-reference.md                    # JSON-RPC endpoint index + contract quick reference
 │   ├── commands-staking.md                 # S1-S3 command templates + EIP-712
-│   ├── commands-subnet.md                  # M1-M4 command templates + gasless
+│   ├── commands-worknet.md                  # M1-M4 command templates + gasless
 │   ├── commands-governance.md              # G1-G4 commands + supplementary endpoints
 │   └── protocol.md                         # Shared structs, 19 events, constants
 ├── scripts/
@@ -181,7 +181,7 @@ awp-skill/
 │   ├── awp_lib.py                          # Shared library (API, wallet, ABI, validation)
 │   ├── wallet-raw-call.mjs                 # Node.js bridge: raw contract calls via awp-wallet
 │   ├── relay-start.py                      # Gasless onboarding (bind or set-recipient)
-│   ├── relay-register-subnet.py            # Gasless worknet registration (dual EIP-712)
+│   ├── relay-register-worknet.py            # Gasless worknet registration (dual EIP-712)
 │   ├── onchain-register.py                 # On-chain register (optional)
 │   ├── onchain-bind.py                     # On-chain bind
 │   ├── onchain-deposit.py                  # Deposit AWP (approve + deposit)
@@ -191,8 +191,8 @@ awp-skill/
 │   ├── onchain-withdraw.py                 # Withdraw from expired position
 │   ├── onchain-add-position.py             # Add AWP to existing position
 │   ├── onchain-vote.py                     # Cast DAO vote (nested ABI encode)
-│   ├── onchain-subnet-lifecycle.py         # Activate/pause/resume/cancel with state check
-│   └── onchain-subnet-update.py            # Set skillsURI or minStake on AWPWorkNet
+│   ├── onchain-worknet-lifecycle.py         # Activate/pause/resume/cancel with state check
+│   └── onchain-worknet-update.py            # Set skillsURI or minStake on AWPWorkNet
 ├── README.md
 └── LICENSE
 ```
@@ -226,9 +226,9 @@ The skill automatically checks ETH balance and routes to gasless relay when the 
 The skill provides a polished user experience with:
 
 - **ASCII art welcome screen** with quick start commands
-- **4-step guided onboarding** — wallet setup, registration, subnet discovery, skill install
+- **4-step guided onboarding** — wallet setup, registration, worknet discovery, skill install
 - **Option A / Option B** — Solo Mining (quick start) vs Delegated Mining (link wallet)
-- **User commands** — `awp status`, `awp wallet`, `awp subnets`, `awp help`
+- **User commands** — `awp status`, `awp wallet`, `awp worknets`, `awp help`
 - **Agent wallet model** — transactions execute directly (work wallet only, no personal assets)
 - **Balance notifications** — auto-show +/- delta after balance-changing operations
 - **Tagged output** — 11 prefixes: `[QUERY]`, `[STAKE]`, `[TX]`, `[NEXT]`, `[!]`, etc.
@@ -247,8 +247,8 @@ One address handles everything — staking, mining, and earning. No mandatory re
 ```
 1. "start working" or "awp onboard"
 2. Option A: Quick Start → auto-register
-3. Pick a subnet → skill auto-installs
-4. Start working immediately (min_stake=0 subnets)
+3. Pick a worknet → skill auto-installs
+4. Start working immediately (min_stake=0 worknets)
 ```
 
 ### Delegated Mining (tree-based binding)
@@ -329,7 +329,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 | 0.25.3 | Fix daemon crash: `created_at` may be integer, not string |
 | 0.25.2 | Description optimization — exclude other DeFi protocols on Base, 20/20 trigger eval |
 | 0.25.1 | Security: contract allowlist in wallet-raw-call.mjs, transaction confirmation, daemon PID lifecycle |
-| 0.25.0 | Unified English text, richer subnet display, cleaner notifications |
+| 0.25.0 | Unified English text, richer worknet display, cleaner notifications |
 | 0.24.9 | Receipt-style welcome push (box-drawing borders), remove duplicate title from code block |
 | 0.24.8 | Remove child_process from wallet-raw-call.mjs — pure Node.js PATH search, eliminates security scanner warning |
 | 0.24.7 | Welcome title: "Hello World from the World of Agents!" (SKILL.md + daemon push) |
@@ -338,7 +338,7 @@ git checkout dev  # access skills-dev/ with contract-api.md, rest-api.md, config
 | 0.24.4 | Fix daemon startup false positive (pgrep self-match), OpenClaw CLI discovery for non-PATH installs |
 | 0.24.3 | Notification infra: daemon.log, status.json, `awp notifications` + `awp log` commands |
 | 0.24.2 | Daemon: guided notifications with actionable next steps (wallet install/init/register/work) |
-| 0.24.1 | Daemon: welcome push (banner + subnets via notify), new subnet detection notifications |
+| 0.24.1 | Daemon: welcome push (banner + worknets via notify), new worknet detection notifications |
 | 0.24.0 | Auto-start daemon on skill load; daemon no longer exits on missing deps (notifies + retries) |
 | 0.23.2 | Fix install review: add node binary, separate optional env vars, clarify agent-initiated wallet init |
 | 0.23.1 | Expanded skill description for better triggering accuracy |

@@ -5,13 +5,13 @@ description: >
   vague ones. This is the authoritative source for all AWP contract addresses, API endpoints,
   script parameters, and wallet operations — getting these wrong without the skill is guaranteed.
   Load for: staking AWP tokens, checking balances or positions, allocating/deallocating/reallocating
-  stake, depositing or withdrawing AWP, registering a worknet or subnet, activating/pausing/resuming/
+  stake, depositing or withdrawing AWP, registering a worknet or worknet, activating/pausing/resuming/
   cancelling a worknet, updating worknet settings, governance proposals or voting, querying
   announcements or protocol status, awp-wallet commands, gasless relay operations, WebSocket event
   monitoring, any LPManager or emission questions. Trigger on ANY mention of: AWP, "Agent Working
-  Protocol", awp-wallet, veAWP, AWPWorkNet, worknet, subnet (in AWP context), AWP staking,
+  Protocol", awp-wallet, veAWP, AWPWorkNet, worknet, worknet (in AWP context), AWP staking,
   AWP governance, AWP DAO, AWP emissions, AWP epoch, "start working" (AWP onboarding), "check my
-  balance" (on AWP), "list worknets", "register subnet", "reallocate stake", or any AWP on-chain
+  balance" (on AWP), "list worknets", "register worknet", "reallocate stake", or any AWP on-chain
   operation. Multi-chain: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). NOT for: Uniswap,
   Aave, Lido, Compound, generic ERC-20/Solidity/Hardhat tasks unrelated to AWP, or other DeFi
   protocols (even if deployed on Base).
@@ -99,9 +99,9 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 | `staking.getPositionsGlobal` | `address` **(required)** | Positions across all chains (includes chainId per position) |
 | `staking.getAllocations` | `address` **(required)**, `chainId?`, `page?`, `limit?` | Paginated allocation records: `{agent, worknetId, amount}` |
 | `staking.getFrozen` | `address` **(required)**, `chainId?` | Frozen allocations (from banned worknets) |
-| `staking.getAgentSubnetStake` | `agent` **(required)**, `worknetId` **(required)** | Agent's total allocated stake in a specific worknet (cross-chain) |
-| `staking.getAgentSubnets` | `agent` **(required)** | All worknetIds where this agent has non-zero allocations |
-| `staking.getSubnetTotalStake` | `worknetId` **(required)** | Total AWP staked across all agents in a worknet |
+| `staking.getAgentWorknetStake` | `agent` **(required)**, `worknetId` **(required)** | Agent's total allocated stake in a specific worknet (cross-chain) |
+| `staking.getAgentWorknets` | `agent` **(required)** | All worknetIds where this agent has non-zero allocations |
+| `staking.getWorknetTotalStake` | `worknetId` **(required)** | Total AWP staked across all agents in a worknet |
 
 #### Worknets
 
@@ -328,7 +328,7 @@ curl -s https://api.awp.sh/api/announcements/llm-context
 ```
 Display each announcement with its category, priority, and timestamp.
 
-**awp subnets** — shortcut for Q5 (list active worknets)
+**awp worknets** — shortcut for Q5 (list active worknets)
 
 **awp notifications** — read and display daemon notifications, then clear:
 ```bash
@@ -361,7 +361,7 @@ kill $(cat ~/.awp/daemon.pid 2>/dev/null) 2>/dev/null && rm -f ~/.awp/daemon.pid
 ── commands ──────────────────────
 awp status        → your agent overview
 awp wallet        → wallet address + balances
-awp subnets       → browse active worknets
+awp worknets       → browse active worknets
 awp notifications → daemon notifications
 awp log           → recent daemon log
 awp daemon start  → start background daemon
@@ -490,10 +490,10 @@ If the user later wants to work on a worknet that requires staking, guide them t
 | Set recipient / bind / unbind / start mining | S1 | **references/commands-staking.md** |
 | Deposit / stake AWP | S2 | **references/commands-staking.md** |
 | Allocate / deallocate / reallocate | S3 | **references/commands-staking.md** |
-| Register a new worknet | M1 | **references/commands-subnet.md** |
-| Activate / pause / resume worknet | M2 | **references/commands-subnet.md** |
-| Update skills URI | M3 | **references/commands-subnet.md** |
-| Set minimum stake | M4 | **references/commands-subnet.md** |
+| Register a new worknet | M1 | **references/commands-worknet.md** |
+| Activate / pause / resume worknet | M2 | **references/commands-worknet.md** |
+| Update skills URI | M3 | **references/commands-worknet.md** |
+| Set minimum stake | M4 | **references/commands-worknet.md** |
 | Create governance proposal | G1 | **references/commands-governance.md** |
 | Vote on proposal | G2 | **references/commands-governance.md** |
 | Query proposals | G3 | None |
@@ -573,7 +573,7 @@ scripts/
 ├── awp_lib.py                        Shared library (API, wallet, ABI encoding, validation)
 ├── wallet-raw-call.mjs               Node.js bridge: contract calls restricted to /registry allowlist only
 ├── relay-start.py                    Gasless register or bind: --mode principal (solo) | --mode agent --target <addr> (delegated)
-├── relay-register-subnet.py          Gasless worknet registration (no ETH needed)
+├── relay-register-worknet.py          Gasless worknet registration (no ETH needed)
 ├── onchain-register.py               On-chain register
 ├── onchain-bind.py                   On-chain bind to target
 ├── onchain-deposit.py                Deposit AWP (approve + deposit)
@@ -583,8 +583,8 @@ scripts/
 ├── onchain-withdraw.py               Withdraw from expired position
 ├── onchain-add-position.py           Add AWP to existing position
 ├── onchain-vote.py                   Cast DAO vote
-├── onchain-subnet-lifecycle.py       Activate/pause/resume worknet
-└── onchain-subnet-update.py          Set skillsURI or minStake
+├── onchain-worknet-lifecycle.py       Activate/pause/resume worknet
+└── onchain-worknet-update.py          Set skillsURI or minStake
 ```
 
 ## Security Controls
@@ -652,7 +652,7 @@ Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay
 | `POST /api/relay/set-recipient` | Set reward recipient | AWPRegistry |
 | `POST /api/relay/grant-delegate` | Authorize a delegate | AWPRegistry |
 | `POST /api/relay/revoke-delegate` | Revoke a delegate | AWPRegistry |
-| `POST /api/relay/activate-subnet` | Activate a pending worknet | AWPRegistry |
+| `POST /api/relay/activate-worknet` | Activate a pending worknet | AWPRegistry |
 | `POST /api/relay/register-worknet` | Register worknet (with AWP permit) | AWPRegistry |
 | `POST /api/relay/allocate` | Allocate stake to agent | AWPAllocator |
 | `POST /api/relay/deallocate` | Deallocate stake | AWPAllocator |
@@ -858,7 +858,7 @@ For third-party sources, show a warning and ask for confirmation before installi
         ⚠ Third-party source — not maintained by awp-core.
         Install? (yes/no)
 ```
-If the user confirms, install to `skills/awp-subnet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the worknet list.
+If the user confirms, install to `skills/awp-worknet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the worknet list.
 
 ### Q7 · Epoch History
 ```bash
@@ -973,17 +973,17 @@ Only needed if the user has deposited AWP and wants to direct it to a specific a
 
 **Allocate:**
 ```bash
-python3 scripts/onchain-allocate.py --token $TOKEN --agent <addr> --subnet 1 --amount 5000
+python3 scripts/onchain-allocate.py --token $TOKEN --agent <addr> --worknet 1 --amount 5000
 ```
 
 **Deallocate:**
 ```bash
-python3 scripts/onchain-deallocate.py --token $TOKEN --agent <addr> --subnet 1 --amount 5000
+python3 scripts/onchain-deallocate.py --token $TOKEN --agent <addr> --worknet 1 --amount 5000
 ```
 
 **Reallocate (move between agents/worknets):**
 ```bash
-python3 scripts/onchain-reallocate.py --token $TOKEN --from-agent <addr> --from-subnet 1 --to-agent <addr> --to-subnet 2 --amount 5000
+python3 scripts/onchain-reallocate.py --token $TOKEN --from-agent <addr> --from-worknet 1 --to-agent <addr> --to-worknet 2 --amount 5000
 ```
 
 To combine register + deposit + allocate in a single user intent, run the three
@@ -993,32 +993,32 @@ would require a helper contract that AWPRegistry does not expose.
 
 ---
 
-## Worknet Management (wallet + AWPWorkNet ownership — load commands-subnet.md first)
+## Worknet Management (wallet + AWPWorkNet ownership — load commands-worknet.md first)
 
 ### M1 · Register Worknet (gasless relay — costs 100,000 AWP)
 ```bash
-python3 scripts/relay-register-subnet.py --token $TOKEN --name "MyWorknet" --symbol "MWKN" --skills-uri "ipfs://QmHash"
+python3 scripts/relay-register-worknet.py --token $TOKEN --name "MyWorknet" --symbol "MWKN" --skills-uri "ipfs://QmHash"
 ```
 The script handles all EIP-712 signing and relay submission internally — do not construct or show EIP-712 JSON to the user, just run the script.
 
 ### M2 · Activate / Pause / Resume / Cancel
 ```bash
-python3 scripts/onchain-subnet-lifecycle.py --token $TOKEN --subnet 1 --action activate
-python3 scripts/onchain-subnet-lifecycle.py --token $TOKEN --subnet 1 --action pause
-python3 scripts/onchain-subnet-lifecycle.py --token $TOKEN --subnet 1 --action resume
-python3 scripts/onchain-subnet-lifecycle.py --token $TOKEN --subnet 1 --action cancel
+python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action activate
+python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action pause
+python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action resume
+python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action cancel
 ```
-Note: the flag is `--subnet` (not `--worknet`) even though the protocol calls them worknets.
+Note: the flag is `--worknet` (not `--worknet`) even though the protocol calls them worknets.
 Cancel is only valid for Pending worknets (before activation). Owner receives full AWP refund.
 
 ### M3 · Update Skills URI
 ```bash
-python3 scripts/onchain-subnet-update.py --token $TOKEN --subnet 1 --skills-uri "ipfs://QmNewHash"
+python3 scripts/onchain-worknet-update.py --token $TOKEN --worknet 1 --skills-uri "ipfs://QmNewHash"
 ```
 
 ### M4 · Set Min Stake
 ```bash
-python3 scripts/onchain-subnet-update.py --token $TOKEN --subnet 1 --min-stake 1000000000000000000
+python3 scripts/onchain-worknet-update.py --token $TOKEN --worknet 1 --min-stake 1000000000000000000
 ```
 
 ---

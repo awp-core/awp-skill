@@ -477,8 +477,8 @@ curl -X POST https://api.awp.sh/api/relay/allocate \
 ```solidity
 function userTotalAllocated(address staker) view returns (uint256)
 function getAgentStake(address staker, address agent, uint256 worknetId) view returns (uint256)
-function getSubnetTotalStake(uint256 worknetId) view returns (uint256)
-function getAgentSubnets(address staker, address agent) view returns (uint256[])
+function getWorknetTotalStake(uint256 worknetId) view returns (uint256)
+function getAgentWorknets(address staker, address agent) view returns (uint256[])
 function nonces(address) view returns (uint256)   // AWPAllocator EIP-712 nonce
 ```
 
@@ -503,11 +503,11 @@ Returns frozen allocation details for the address. Useful for checking if any al
 
 ```bash
 # Allocate
-python3 scripts/onchain-allocate.py --token {T} --agent {agentAddr} --subnet {worknetId} --amount 5000
+python3 scripts/onchain-allocate.py --token {T} --agent {agentAddr} --worknet {worknetId} --amount 5000
 
 # Deallocate
-python3 scripts/onchain-deallocate.py --token {T} --agent {agentAddr} --subnet {worknetId} --amount 5000
+python3 scripts/onchain-deallocate.py --token {T} --agent {agentAddr} --worknet {worknetId} --amount 5000
 
 # Reallocate (immediate, no cooldown)
-python3 scripts/onchain-reallocate.py --token {T} --from-agent {fromAgent} --from-subnet {fromWorknetId} --to-agent {toAgent} --to-subnet {toWorknetId} --amount 5000
+python3 scripts/onchain-reallocate.py --token {T} --from-agent {fromAgent} --from-worknet {fromWorknetId} --to-agent {toAgent} --to-worknet {toWorknetId} --amount 5000
 ```

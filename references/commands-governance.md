@@ -179,13 +179,13 @@ function balanceOf(address account) view returns (uint256)   // on AWPToken
 
 ```json
 // Agent stake in worknet
-{"jsonrpc": "2.0", "method": "staking.getAgentSubnetStake", "params": {"agent": "0x...", "worknetId": "1"}, "id": 1}
+{"jsonrpc": "2.0", "method": "staking.getAgentWorknetStake", "params": {"agent": "0x...", "worknetId": "1"}, "id": 1}
 
 // All worknets agent participates in
-{"jsonrpc": "2.0", "method": "staking.getAgentSubnets", "params": {"agent": "0x..."}, "id": 1}
+{"jsonrpc": "2.0", "method": "staking.getAgentWorknets", "params": {"agent": "0x..."}, "id": 1}
 
 // Total stake in worknet
-{"jsonrpc": "2.0", "method": "staking.getSubnetTotalStake", "params": {"worknetId": "1"}, "id": 1}
+{"jsonrpc": "2.0", "method": "staking.getWorknetTotalStake", "params": {"worknetId": "1"}, "id": 1}
 ```
 
 ### Worknet Earnings

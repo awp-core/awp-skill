@@ -34,13 +34,13 @@ def encode_set_min_stake(worknet_id: int, min_stake: int) -> str:
 def main() -> None:
     # ── Parse arguments ──
     parser = base_parser("Update worknet settings: setSkillsURI or setMinStake")
-    # Kept --subnet as the CLI flag for SKILL.md backward-compat; internally we call it worknet.
-    parser.add_argument("--subnet", required=True, help="Worknet ID")
+    # Kept --worknet as the CLI flag for SKILL.md backward-compat; internally we call it worknet.
+    parser.add_argument("--worknet", required=True, help="Worknet ID")
     parser.add_argument("--skills-uri", default="", help="new skills URI")
     parser.add_argument("--min-stake", default="", help="new minimum stake amount (wei)")
     args = parser.parse_args()
 
-    worknet_id = validate_positive_int(args.subnet, "subnet")
+    worknet_id = validate_positive_int(args.worknet, "worknet")
     skills_uri: str = args.skills_uri
     min_stake_str: str = args.min_stake
 

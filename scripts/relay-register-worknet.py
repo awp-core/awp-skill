@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fully gasless subnet registration — via dual EIP-712 signatures (V2)"""
+"""Fully gasless worknet registration — via dual EIP-712 signatures (V2)"""
 
 from __future__ import annotations
 
@@ -31,8 +31,8 @@ from awp_lib import (
 
 
 def parse_args() -> tuple[str, str, str, str, int, str, str]:
-    """Parse command-line arguments, returning (token, name, symbol, salt, min_stake, subnet_manager, skills_uri)"""
-    parser = base_parser("AWP gasless subnet registration via dual EIP-712 signatures")
+    """Parse command-line arguments, returning (token, name, symbol, salt, min_stake, worknet_manager, skills_uri)"""
+    parser = base_parser("AWP gasless worknet registration via dual EIP-712 signatures")
     parser.add_argument("--name", required=True, help="worknet name")
     parser.add_argument("--symbol", required=True, help="worknet token symbol")
     parser.add_argument(
@@ -42,7 +42,7 @@ def parse_args() -> tuple[str, str, str, str, int, str, str]:
     )
     parser.add_argument("--min-stake", default="0", help="minimum stake amount (wei)")
     parser.add_argument(
-        "--subnet-manager",
+        "--worknet-manager",
         default="0x0000000000000000000000000000000000000000",
         help="worknet manager address",
     )
@@ -54,15 +54,15 @@ def parse_args() -> tuple[str, str, str, str, int, str, str]:
         die("Invalid --min-stake: must be a non-negative integer (wei)")
     min_stake = validate_uint128(int(args.min_stake), "min-stake")
 
-    validate_address(args.subnet_manager, "subnet-manager")
+    validate_address(args.worknet_manager, "worknet-manager")
     validate_bytes32(args.salt, "salt")
 
-    return args.token, args.name, args.symbol, args.salt, min_stake, args.subnet_manager, args.skills_uri
+    return args.token, args.name, args.symbol, args.salt, min_stake, args.worknet_manager, args.skills_uri
 
 
 def main() -> None:
     """Main flow"""
-    token, name, symbol, salt, min_stake, subnet_manager, skills_uri = parse_args()
+    token, name, symbol, salt, min_stake, worknet_manager, skills_uri = parse_args()
 
     # Step 1: Fetch registry
     step("fetch_registry")
@@ -162,7 +162,7 @@ def main() -> None:
             "params": {
                 "name": name,
                 "symbol": symbol,
-                "worknetManager": subnet_manager,
+                "worknetManager": worknet_manager,
                 "salt": salt,
                 "minStake": min_stake,
                 "skillsURI": skills_uri,
@@ -197,7 +197,7 @@ def main() -> None:
         "user": wallet_addr,
         "name": name,
         "symbol": symbol,
-        "worknetManager": subnet_manager,
+        "worknetManager": worknet_manager,
         "salt": salt,
         "minStake": str(min_stake),
         "skillsURI": skills_uri,

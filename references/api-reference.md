@@ -2,7 +2,7 @@
 
 Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, see the dedicated command files:
 - **commands-staking.md** — S1 Register/Bind, S2 Deposit, S3 Allocate
-- **commands-subnet.md** — M1 Register Worknet, M2 Lifecycle, M3-M4 Settings
+- **commands-worknet.md** — M1 Register Worknet, M2 Lifecycle, M3-M4 Settings
 - **commands-governance.md** — G1 Proposals, G2 Voting, G3/G4 Queries, Supplementary
 
 ---
@@ -136,12 +136,12 @@ Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, s
 | `staking.getPositions` | `address` (required), `chainId?` | veAWP positions |
 | `staking.getPositionsGlobal` | `address` (required) | Positions across all chains (includes `chainId` per position) |
 | `staking.getAllocations` | `address` (required), `chainId?`, `page?`, `limit?` | Allocation records |
-| `staking.getAgentSubnetStake` | `agent` (required), `worknetId` (required) | Agent's stake in worknet (cross-chain) |
-| `staking.getAgentSubnets` | `agent` (required) | All worknets agent participates in |
-| `staking.getSubnetTotalStake` | `worknetId` (required) | Total stake in worknet |
+| `staking.getAgentWorknetStake` | `agent` (required), `worknetId` (required) | Agent's stake in worknet (cross-chain) |
+| `staking.getAgentWorknets` | `agent` (required) | All worknets agent participates in |
+| `staking.getWorknetTotalStake` | `worknetId` (required) | Total stake in worknet |
 | `staking.getFrozen` | `address` (required), `chainId?` | Frozen allocations |
 
-### Worknets (subnets.*)
+### Worknets (worknets.*)
 
 | Method | Params | Description |
 |--------|--------|-------------|
@@ -207,7 +207,7 @@ Relay endpoints use REST (not JSON-RPC). Users sign EIP-712 messages off-chain; 
 | `POST /api/relay/register` | RelayRegister | Gasless register (= setRecipientFor to self) |
 | `POST /api/relay/allocate` | RelayAllocate | Gasless allocate |
 | `POST /api/relay/deallocate` | RelayDeallocate | Gasless deallocate |
-| `POST /api/relay/activate-subnet` | RelayActivateWorknet | Gasless activate worknet |
+| `POST /api/relay/activate-worknet` | RelayActivateWorknet | Gasless activate worknet |
 | `POST /api/relay/register-worknet` | RelayRegisterWorknet | Gasless register worknet (with permit) |
 | `POST /api/relay/grant-delegate` | RelayGrantDelegate | Gasless grant delegate |
 | `POST /api/relay/revoke-delegate` | RelayRevokeDelegate | Gasless revoke delegate |

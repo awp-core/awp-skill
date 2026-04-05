@@ -1,5 +1,68 @@
 # Changelog
 
+## v1.1.5
+
+### Terminology cleanup: subnet → worknet + get_registry API shape fix
+
+**Full subnet → worknet rename** for everything under the skill's control.
+Protocol terminology has been "worknet" since v1.1.0 but the rename was
+incomplete — script filenames, CLI flags, internal variables, and large chunks
+of prose still said "subnet". Finished it.
+
+**Files renamed (via `git mv` to preserve history):**
+
+- `scripts/onchain-subnet-lifecycle.py` → `scripts/onchain-worknet-lifecycle.py`
+- `scripts/onchain-subnet-update.py` → `scripts/onchain-worknet-update.py`
+- `scripts/relay-register-subnet.py` → `scripts/relay-register-worknet.py`
+- `references/commands-subnet.md` → `references/commands-worknet.md`
+
+**CLI flags renamed (hard rename, no `--subnet` alias retained):**
+
+- `--subnet` → `--worknet` (onchain-allocate, onchain-deallocate,
+  onchain-worknet-lifecycle, onchain-worknet-update)
+- `--from-subnet` / `--to-subnet` → `--from-worknet` / `--to-worknet`
+  (onchain-reallocate)
+- `--subnet-manager` → `--worknet-manager` (relay-register-worknet)
+
+**Internal Python variables renamed** across `onchain-allocate.py`,
+`onchain-deallocate.py`, `onchain-reallocate.py`, `onchain-worknet-lifecycle.py`,
+`onchain-worknet-update.py`, `awp-daemon.py`: `subnet_id` → `worknet_id`,
+`from_subnet` → `from_worknet`, `to_subnet` → `to_worknet`, `subnet_manager` →
+`worknet_manager`, step-log keyword args, docstring text.
+
+**Prose rewritten** throughout `SKILL.md`, `README.md`, and `references/*.md`:
+Section headings (Query Subnet → Query Worknet, Register Subnet → Register
+Worknet, Subnet Lifecycle → Worknet Lifecycle, etc.), UX copy ("Active Subnets"
+→ "Active Worknets"), user commands (`awp subnets` → `awp worknets`).
+
+**Preserved exactly** (because the live API controls these, not us):
+
+- API method namespace `subnets.*` (`subnets.list`, `subnets.get`,
+  `subnets.listRanked`, `subnets.search`, `subnets.getByOwner`,
+  `subnets.getSkills`, `subnets.getEarnings`, `subnets.getAgentInfo`,
+  `subnets.listAgents`). The server exposes these names; renaming them would
+  break every call.
+- snake_case API response field names in `_field()` fallback tuples in
+  `awp-daemon.py` (`"subnet_id"`, `"subnet_contract"`, `"subnetId"`) — these
+  match what the server actually returns, and the dual-casing fallback is the
+  whole point of the helper.
+- `CHANGELOG.md` historical entries describing past migrations — preserving
+  the exact strings from those versions.
+- `skill-reference.md` — external spec, not in this repo's scope.
+
+### get_registry() API shape fix (unrelated bug found during testing)
+
+The AWP API's `registry.get` method changed behavior: calling it with no params
+used to return an array of all 4 chain entries; it now returns a single dict
+(the default chain). Our `awp_lib.get_registry()` helper hard-required an array
+and died with `"Invalid registry.get response: expected non-empty array"` on
+the new shape.
+
+Fixed by always passing the explicit `chainId` from the `EVM_CHAIN` env var
+(default Base 8453), which gets a deterministic single-dict response regardless
+of server version. The helper also accepts the legacy array shape defensively
+for any stale endpoint that still returns it.
+
 ## v1.1.4
 
 ### Critical — revert wrong signature format for relay endpoints

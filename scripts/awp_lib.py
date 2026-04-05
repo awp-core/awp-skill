@@ -256,23 +256,44 @@ def wallet_sign_typed_data(token: str, data: dict) -> str:
 # ── Contract registry ───────────────────────────────────
 
 def get_registry() -> dict:
-    """通过 JSON-RPC 获取合约注册表，按 EVM_CHAIN 选择对应链条目（默认 Base）"""
-    result = rpc("registry.get")
-    # API 返回每条链的注册表数组
-    if not isinstance(result, list) or not result:
-        die("Invalid registry.get response: expected non-empty array")
+    """Fetch the contract registry entry for the currently selected chain.
+
+    The AWP API's `registry.get` method has returned different shapes at different
+    times:
+      - Array of per-chain entries when called with no params (historical behavior)
+      - Single dict when called with {chainId: N} (current behavior, and also the
+        default-chain dict when called with no params in newer API versions)
+    We always pass the explicit chainId so we get a deterministic single-dict
+    response regardless of server version, then sanity-check the shape.
+
+    Chain selection: EVM_CHAIN env var (name or numeric id), default Base (8453).
+    """
     chain_env = os.environ.get("EVM_CHAIN", "base").lower()
     target_chain_id = _CHAIN_IDS.get(chain_env)
     if target_chain_id is None:
-        # 尝试直接解析为数字
         try:
             target_chain_id = int(chain_env)
         except ValueError:
             target_chain_id = _DEFAULT_CHAIN_ID
-    entry = next((r for r in result if isinstance(r, dict) and r.get("chainId") == target_chain_id), None)
-    if entry is None:
-        info(f"Chain {target_chain_id} not found in registry, falling back to first entry")
-        entry = result[0]
+
+    result = rpc("registry.get", {"chainId": target_chain_id})
+
+    # Normalize the response: accept either a single dict or an array (legacy).
+    entry: dict | None = None
+    if isinstance(result, dict):
+        entry = result
+    elif isinstance(result, list) and result:
+        entry = next((r for r in result if isinstance(r, dict) and r.get("chainId") == target_chain_id), None)
+        if entry is None:
+            info(f"Chain {target_chain_id} not found in registry list, using first entry")
+            entry = result[0]
+
+    if not isinstance(entry, dict) or not entry.get("chainId"):
+        die(f"Invalid registry.get response for chain {target_chain_id}: {result}")
+
+    if entry.get("chainId") != target_chain_id:
+        info(f"Registry returned chain {entry.get('chainId')}, expected {target_chain_id}")
+
     return entry
 
 

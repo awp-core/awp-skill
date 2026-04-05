@@ -18,37 +18,37 @@ ACTION_CONFIG: dict[str, tuple[str, str]] = {
 def main() -> None:
     # ── Parse arguments ──
     parser = base_parser("Worknet lifecycle: activate / pause / resume / cancel")
-    parser.add_argument("--subnet", required=True, help="Subnet ID")
+    parser.add_argument("--worknet", required=True, help="Worknet ID")
     parser.add_argument("--action", required=True, choices=["activate", "pause", "resume", "cancel"],
                         help="action type")
     args = parser.parse_args()
 
-    subnet_id = validate_positive_int(args.subnet, "subnet")
+    worknet_id = validate_positive_int(args.worknet, "worknet")
     action: str = args.action
 
     # ── Pre-checks ──
     registry = get_registry()
     awp_registry = require_contract(registry, "awpRegistry")
 
-    # ── Check current subnet status ──
-    subnet_info = rpc("subnets.get", {"worknetId": str(subnet_id)})
-    if not isinstance(subnet_info, dict):
-        die(f"Subnet #{subnet_id} not found")
+    # ── Check current worknet status ──
+    worknet_info = rpc("subnets.get", {"worknetId": str(worknet_id)})
+    if not isinstance(worknet_info, dict):
+        die(f"Worknet #{worknet_id} not found")
 
-    status = subnet_info.get("status")
+    status = worknet_info.get("status")
     if not status or status == "null":
-        die(f"Subnet #{subnet_id} not found")
+        die(f"Worknet #{worknet_id} not found")
 
     # Validate state transition
     required_status, selector = ACTION_CONFIG[action]
     if status != required_status:
-        die(f"Cannot {action}: subnet is {status} (must be {required_status})")
+        die(f"Cannot {action}: worknet is {status} (must be {required_status})")
 
     # ── Send transaction ──
-    subnet_padded = pad_uint256(subnet_id)
-    calldata = encode_calldata(selector, subnet_padded)
+    worknet_padded = pad_uint256(worknet_id)
+    calldata = encode_calldata(selector, worknet_padded)
 
-    step(f"{action}Subnet", subnet=subnet_id, currentStatus=status)
+    step(f"{action}Worknet", worknet=worknet_id, currentStatus=status)
     result = wallet_send(args.token, awp_registry, calldata)
     print(result)
 
