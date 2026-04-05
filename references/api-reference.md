@@ -65,7 +65,8 @@ Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, s
 | Method | Params | Description |
 |--------|--------|-------------|
 | `stats.global` | — | Global protocol stats (users, worknets, staked, emitted, chains) |
-| `registry.get` | `chainId?` | Contract addresses + EIP-712 domain. **Omit chainId → returns array of all chains** |
+| `registry.get` | `chainId?` | Contract addresses + EIP-712 domain for one chain. Omit chainId → single dict for the default chain |
+| `registry.list` | — | Contract addresses for all chains (returns array of per-chain entries) |
 | `health.check` | — | `{"status": "ok"}` |
 | `health.detailed` | — | Per-chain indexer/keeper status |
 | `chains.list` | — | Supported chains array |

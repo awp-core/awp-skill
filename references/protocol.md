@@ -155,10 +155,11 @@ All events arrive via WebSocket (`wss://api.awp.sh/ws/live`) with envelope:
 
 | Event | Source | Data Fields | Pitfall |
 |-------|--------|-------------|---------|
-| Deposited | veAWP | `{user, tokenId, amount, lockEndTime, chainId}` | `lockEndTime` is **absolute** unix timestamp, NOT relative lock duration |
-| Withdrawn | veAWP | `{user, tokenId, amount, chainId}` | — |
-| Allocated | AWPAllocator | `{staker, agent, worknetId, amount, chainId}` | — |
-| Deallocated | AWPAllocator | `{staker, agent, worknetId, amount, chainId}` | — |
+| StakePositionCreated | veAWP | `{user, tokenId, amount, lockEndTime, chainId}` | `lockEndTime` is **absolute** unix timestamp, NOT relative lock duration |
+| StakePositionIncreased | veAWP | `{tokenId, addedAmount, newLockEndTime, chainId}` | — |
+| StakePositionClosed | veAWP | `{user, tokenId, amount, chainId}` | — |
+| Allocated | AWPAllocator | `{staker, agent, worknetId, amount, operator, chainId}` | — |
+| Deallocated | AWPAllocator | `{staker, agent, worknetId, amount, operator, chainId}` | — |
 | Reallocated | AWPAllocator | `{staker, fromAgent, fromWorknetId, toAgent, toWorknetId, amount, chainId}` | — |
 
 ### Worknet Events
@@ -167,22 +168,28 @@ All events arrive via WebSocket (`wss://api.awp.sh/ws/live`) with envelope:
 |-------|--------|-------------|
 | WorknetRegistered | AWPRegistry | `{worknetId, owner, name, symbol, chainId}` |
 | WorknetActivated | AWPRegistry | `{worknetId, chainId}` |
+| WorknetPaused | AWPRegistry | `{worknetId, chainId}` |
+| WorknetResumed | AWPRegistry | `{worknetId, chainId}` |
+| WorknetBanned | AWPRegistry | `{worknetId, chainId}` |
+| WorknetUnbanned | AWPRegistry | `{worknetId, chainId}` |
+| WorknetRejected | AWPRegistry | `{worknetId, chainId}` |
 | WorknetCancelled | AWPRegistry | `{worknetId, chainId}` |
+| WorknetNFTTransfer | AWPWorkNet | `{from, to, tokenId, chainId}` |
 
 ### Emission Events
 
 | Event | Source | Data Fields |
 |-------|--------|-------------|
 | EpochSettled | AWPEmission | `{epoch, totalEmission, recipientCount, chainId}` |
-| RecipientAWPDistributed | AWPEmission | `{epoch, recipient, amount, chainId}` |
 | AllocationsSubmitted | AWPEmission | `{epoch, totalWeight, recipients, weights, chainId}` |
 
 ### Protocol Events
 
 | Event | Source | Data Fields |
 |-------|--------|-------------|
-| LPManagerUpdated | AWPRegistry | `{newLPManager, chainId}` |
-| DefaultWorknetManagerImplUpdated | AWPRegistry | `{newImpl, chainId}` |
+| GuardianUpdated | AWPRegistry | `{newGuardian, chainId}` |
+| InitialAlphaPriceUpdated | AWPRegistry | `{newPrice, chainId}` |
+| WorknetTokenFactoryUpdated | AWPRegistry | `{newFactory, chainId}` |
 
 ---
 

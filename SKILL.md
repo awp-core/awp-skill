@@ -995,21 +995,30 @@ would require a helper contract that AWPRegistry does not expose.
 
 ## Worknet Management (wallet + AWPWorkNet ownership — load commands-worknet.md first)
 
-### M1 · Register Worknet (gasless relay — costs 100,000 AWP)
+### M1 · Register Worknet (gasless relay — costs ~1,000,000 AWP)
 ```bash
 python3 scripts/relay-register-worknet.py --token $TOKEN --name "MyWorknet" --symbol "MWKN" --skills-uri "ipfs://QmHash"
 ```
 The script handles all EIP-712 signing and relay submission internally — do not construct or show EIP-712 JSON to the user, just run the script.
 
-### M2 · Activate / Pause / Resume / Cancel
+Cost is computed dynamically from `initialAlphaPrice() × initialAlphaMint() ÷ 1e18`
+on AWPRegistry. At current on-chain parameters (price = 0.001 AWP per WorknetToken,
+mint = 1 billion WorknetTokens), the registration deposit is **1,000,000 AWP** (not
+100,000 — that's a legacy figure from when initial mint was 100M). The Guardian can
+adjust both parameters via `setInitialAlphaPrice` / `setInitialAlphaMint`, so always
+quote the figure as approximate.
+
+### M2 · Pause / Resume / Cancel (NFT owner only)
 ```bash
-python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action activate
 python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action pause
 python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action resume
 python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action cancel
 ```
-Note: the flag is `--worknet` (not `--worknet`) even though the protocol calls them worknets.
-Cancel is only valid for Pending worknets (before activation). Owner receives full AWP refund.
+`pause` / `resume` / `cancel` are the only actions a worknet owner can take on their
+own NFT. `activateWorknet` is **Guardian-only** — the Guardian calls it after verifying
+the LP pool was created; end users cannot self-activate and any attempt will revert.
+Cancel is only valid for Pending worknets (before Guardian activation) and refunds
+the full AWP escrow.
 
 ### M3 · Update Skills URI
 ```bash
@@ -1054,50 +1063,59 @@ curl -s -X POST https://api.awp.sh/v2 \
 
 ### W1 · Watch Events
 
-Connect to `wss://api.awp.sh/ws/live`, subscribe to event presets:
+Connect to `wss://api.awp.sh/ws/live`. Subscribe after the connection opens by sending
+a JSON message with `subscribe: [eventName, ...]`, optional `watchAllocations`, and
+optional `watchAddresses`. Every event includes `type`, `chainId`, `blockNumber`,
+`txHash`, and event-specific `data` fields.
 
-| Preset | Events (19 total) | Emoji |
+| Preset | Events (25 total) | Emoji |
 |--------|-------------------|-------|
-| staking | Deposited, Withdrawn, Allocated, Deallocated, Reallocated | `$` |
-| worknets | WorknetRegistered, WorknetActivated, WorknetCancelled | `#` |
-| emission | EpochSettled, RecipientAWPDistributed, AllocationsSubmitted | `~` |
-| users | UserRegistered, Bound, Unbound, RecipientSet, DelegateGranted, DelegateRevoked | `@` |
-| protocol | LPManagerUpdated, DefaultWorknetManagerImplUpdated | `⚙` |
+| staking | StakePositionCreated, StakePositionIncreased, StakePositionClosed, Allocated, Deallocated, Reallocated | `$` |
+| worknets | WorknetRegistered, WorknetActivated, WorknetPaused, WorknetResumed, WorknetBanned, WorknetUnbanned, WorknetRejected, WorknetCancelled | `#` |
+| emission | EpochSettled, AllocationsSubmitted | `~` |
+| users | Bound, Unbound, RecipientSet, DelegateGranted, DelegateRevoked | `@` |
+| protocol | GuardianUpdated, InitialAlphaPriceUpdated, WorknetTokenFactoryUpdated, WorknetNFTTransfer | `⚙` |
 
-All 19 WebSocket events with key fields (every event includes `chainId`):
+All 25 WebSocket events with key fields (every event includes `chainId`, `blockNumber`, `txHash`):
 
-| Event | Key Fields |
-|-------|------------|
-| `UserRegistered` | `user`, `chainId` |
-| `Bound` | `user`, `target`, `chainId` |
-| `Unbound` | `user`, `chainId` |
-| `RecipientSet` | `user`, `recipient`, `chainId` |
-| `DelegateGranted` | `user`, `delegate`, `chainId` |
-| `DelegateRevoked` | `user`, `delegate`, `chainId` |
-| `Deposited` | `user`, `tokenId`, `amount`, `lockEndTime`, `chainId` |
-| `Withdrawn` | `user`, `tokenId`, `amount`, `chainId` |
-| `Allocated` | `staker`, `agent`, `worknetId`, `amount`, `chainId` |
-| `Deallocated` | `staker`, `agent`, `worknetId`, `amount`, `chainId` |
-| `Reallocated` | `staker`, `fromAgent`, `fromWorknetId`, `toAgent`, `toWorknetId`, `amount`, `chainId` |
-| `WorknetRegistered` | `worknetId`, `owner`, `name`, `symbol`, `chainId` |
-| `WorknetActivated` | `worknetId`, `chainId` |
-| `WorknetCancelled` | `worknetId`, `chainId` |
-| `EpochSettled` | `epoch`, `totalEmission`, `recipientCount`, `chainId` |
-| `RecipientAWPDistributed` | `epoch`, `recipient`, `amount`, `chainId` |
-| `AllocationsSubmitted` | `epoch`, `totalWeight`, `recipients`, `weights`, `chainId` |
-| `LPManagerUpdated` | `newLPManager`, `chainId` |
-| `DefaultWorknetManagerImplUpdated` | `newImpl`, `chainId` |
+| Event | Source | Key Fields |
+|-------|--------|------------|
+| `Bound` | AWPRegistry | `addr`, `target` |
+| `Unbound` | AWPRegistry | `addr` |
+| `RecipientSet` | AWPRegistry | `addr`, `recipient` |
+| `DelegateGranted` | AWPRegistry | `staker`, `delegate` |
+| `DelegateRevoked` | AWPRegistry | `staker`, `delegate` |
+| `StakePositionCreated` | veAWP | `user`, `tokenId`, `amount`, `lockEndTime` |
+| `StakePositionIncreased` | veAWP | `tokenId`, `addedAmount`, `newLockEndTime` |
+| `StakePositionClosed` | veAWP | `user`, `tokenId`, `amount` |
+| `Allocated` | AWPAllocator | `staker`, `agent`, `worknetId`, `amount`, `operator` |
+| `Deallocated` | AWPAllocator | `staker`, `agent`, `worknetId`, `amount`, `operator` |
+| `Reallocated` | AWPAllocator | `staker`, `fromAgent`, `fromWorknetId`, `toAgent`, `toWorknetId`, `amount` |
+| `WorknetRegistered` | AWPRegistry | `worknetId`, `owner`, `name`, `symbol` |
+| `WorknetActivated` | AWPRegistry | `worknetId` |
+| `WorknetPaused` | AWPRegistry | `worknetId` |
+| `WorknetResumed` | AWPRegistry | `worknetId` |
+| `WorknetBanned` | AWPRegistry | `worknetId` |
+| `WorknetUnbanned` | AWPRegistry | `worknetId` |
+| `WorknetRejected` | AWPRegistry | `worknetId` |
+| `WorknetCancelled` | AWPRegistry | `worknetId` |
+| `EpochSettled` | AWPEmission | `epoch`, `totalEmission`, `recipientCount` |
+| `AllocationsSubmitted` | AWPEmission | `epoch`, `totalWeight`, `recipients[]`, `weights[]` |
+| `GuardianUpdated` | AWPRegistry | `newGuardian` |
+| `InitialAlphaPriceUpdated` | AWPRegistry | `newPrice` |
+| `WorknetTokenFactoryUpdated` | AWPRegistry | `newFactory` |
+| `WorknetNFTTransfer` | AWPWorkNet | `from`, `to`, `tokenId` |
 
 Display format:
 ```
-$ Deposited | 0x1234...abcd deposited 5,000.0000 AWP | lock ends 2026-12-01 | https://basescan.org/tx/0xabc...
-# WorknetRegistered | #12 "DataMiner" by 0x5678...efgh | https://basescan.org/tx/0xdef...
-~ EpochSettled | Epoch 42 | 31,600,000.0000 AWP to 150 recipients | https://basescan.org/tx/0x123...
+$ StakePositionCreated | 0x1234...abcd staked 5,000.0000 AWP | lock ends 2026-12-01 | https://basescan.org/tx/0xabc...
+# WorknetRegistered    | #12 "DataMiner" by 0x5678...efgh | https://basescan.org/tx/0xdef...
+~ EpochSettled         | Epoch 42 | 31,600,000.0000 AWP to 150 recipients | https://basescan.org/tx/0x123...
 ```
 
 ### W2 · Emission Alert
 
-Subscribe to `EpochSettled` + `RecipientAWPDistributed`.
+Subscribe to `EpochSettled` + `AllocationsSubmitted` and surface per-epoch totals.
 
 ---
 

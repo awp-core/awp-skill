@@ -87,15 +87,23 @@ def main() -> None:
             registry_nonce = int(raw)
 
     # Step 4: Batch the remaining read-only contract calls.
-    #   - initialAlphaPrice() on AWPRegistry → to compute the AWP deposit the user permits
-    #   - nonces(wallet) on AWPToken       → ERC-2612 permit nonce
-    #   - nonces(wallet) on AWPRegistry    → fallback if the API did not provide a nonce
-    # Selector 0x7ecebe00 = nonces(address).
+    #   - initialAlphaPrice() on AWPRegistry → wei AWP per whole WorknetToken
+    #   - initialAlphaMint()  on AWPRegistry → total WorknetTokens minted for LP (wei)
+    #   - nonces(wallet) on AWPToken         → ERC-2612 permit nonce
+    #   - nonces(wallet) on AWPRegistry      → fallback if the API did not provide a nonce
+    # Selectors verified by keccak256 against the live AWPRegistry bytecode:
+    #   0x6d345eea = initialAlphaPrice()
+    #   0x5bd9c498 = initialAlphaMint()
+    #   0x7ecebe00 = nonces(address)
+    # We read initialAlphaMint dynamically (rather than hardcoding) because Guardian
+    # can update it via setInitialAlphaMint. Current on-chain value is 1e27 wei
+    # (= 1e9 tokens). Hardcoding 1e8 tokens understates LP cost by 10x.
     step("get_onchain_params")
     addr_padded = pad_address(wallet_addr)
     batch_calls: list[tuple[str, str]] = [
         (awp_registry, "0x6d345eea"),                        # initialAlphaPrice()
-        (awp_token, f"0x7ecebe00{addr_padded}"),            # AWPToken.nonces(wallet)
+        (awp_registry, "0x5bd9c498"),                        # initialAlphaMint()
+        (awp_token, f"0x7ecebe00{addr_padded}"),             # AWPToken.nonces(wallet)
     ]
     if registry_nonce is None:
         batch_calls.append((awp_registry, f"0x7ecebe00{addr_padded}"))
@@ -105,15 +113,23 @@ def main() -> None:
     price_hex = results[0]
     if not price_hex or price_hex in ("0x", "null"):
         die("initialAlphaPrice() returned empty — is the AWPRegistry contract reachable?")
-    initial_alpha_price = hex_to_int(price_hex)
+    initial_alpha_price = hex_to_int(price_hex)  # wei AWP per whole WorknetToken
 
-    # LP_COST = 100M * 10^18 * initialAlphaPrice / 10^18
-    lp_cost = 100_000_000 * 10**18 * initial_alpha_price // 10**18
+    mint_hex = results[1]
+    if not mint_hex or mint_hex in ("0x", "null"):
+        die("initialAlphaMint() returned empty — is the AWPRegistry contract reachable?")
+    initial_alpha_mint = hex_to_int(mint_hex)    # total WorknetTokens (wei, 18 decimals)
 
-    permit_nonce = hex_to_int(results[1])
+    # LP cost in AWP wei = initialAlphaPrice × (initialAlphaMint / 1e18)
+    # Both price and mint are stored as 18-decimal wei; the division cancels one set of
+    # decimals so the result is AWP wei (also 18-decimal). Guardian-controlled params,
+    # fetched dynamically on every call.
+    lp_cost = initial_alpha_price * initial_alpha_mint // 10**18
+
+    permit_nonce = hex_to_int(results[2])
 
     if registry_nonce is None:
-        registry_nonce = hex_to_int(results[2])
+        registry_nonce = hex_to_int(results[3])
 
     # Step 5: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600

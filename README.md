@@ -44,7 +44,7 @@
 
 AWP is a decentralized **Agent Working** protocol deployed on 4 EVM chains (Base, Ethereum, Arbitrum, BSC). Users bind to a tree-based hierarchy, stake AWP via veAWP position NFTs, allocate to agents on worknets, and earn emissions. Each worknet auto-deploys a **WorknetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
-This repository is a single skill with **20 actions**, **14 bundled scripts** (plus shared `awp_lib.py` + Node bridge), and **19 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
+This repository is a single skill with **20 actions**, **14 bundled scripts** (plus shared `awp_lib.py` + Node bridge), and **25 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
 
 ## Quick Install
 
@@ -154,16 +154,16 @@ skill can proceed to its own onboarding flow. If it fails, the problem is almost
 | W1 | Watch Events | Subscribe to real-time events via WebSocket with 5 presets + 5-min stats |
 | W2 | Emission Alert [DRAFT] | Get notified on epoch settlements with top earner ranking |
 
-### 19 Event Types (5 presets)
+### 25 Event Types (5 presets)
 
 | Preset | Events | Count |
 |--------|--------|-------|
-| `staking` | Deposited, Withdrawn, Allocated, Deallocated, Reallocated | 5 |
-| `worknets` | WorknetRegistered, WorknetActivated, WorknetCancelled | 3 |
-| `emission` | EpochSettled, RecipientAWPDistributed, AllocationsSubmitted | 3 |
-| `users` | UserRegistered, Bound, Unbound, RecipientSet, DelegateGranted, DelegateRevoked | 6 |
-| `protocol` | LPManagerUpdated, DefaultWorknetManagerImplUpdated | 2 |
-| `all` | All of the above | 19 |
+| `staking` | StakePositionCreated, StakePositionIncreased, StakePositionClosed, Allocated, Deallocated, Reallocated | 6 |
+| `worknets` | WorknetRegistered, WorknetActivated, WorknetPaused, WorknetResumed, WorknetBanned, WorknetUnbanned, WorknetRejected, WorknetCancelled | 8 |
+| `emission` | EpochSettled, AllocationsSubmitted | 2 |
+| `users` | Bound, Unbound, RecipientSet, DelegateGranted, DelegateRevoked | 5 |
+| `protocol` | GuardianUpdated, InitialAlphaPriceUpdated, WorknetTokenFactoryUpdated, WorknetNFTTransfer | 4 |
+| `all` | All of the above | 25 |
 
 ## Architecture
 
@@ -175,7 +175,7 @@ awp-skill/
 │   ├── commands-staking.md                 # S1-S3 command templates + EIP-712
 │   ├── commands-worknet.md                  # M1-M4 command templates + gasless
 │   ├── commands-governance.md              # G1-G4 commands + supplementary endpoints
-│   └── protocol.md                         # Shared structs, 19 events, constants
+│   └── protocol.md                         # Shared structs, 25 events, constants
 ├── scripts/
 │   ├── awp-daemon.py                       # Background monitor: check deps, show status, notify updates
 │   ├── awp_lib.py                          # Shared library (API, wallet, ABI, validation)

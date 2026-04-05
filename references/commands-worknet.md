@@ -294,74 +294,37 @@ curl -s https://api.awp.sh/api/relay/status/{txHash}
 
 ---
 
-## M2 · Worknet Lifecycle
+## M2 · Worknet Lifecycle (NFT owner actions only)
 
 ### Contract Calls
 
 ```solidity
-function activateWorknet(uint256 worknetId)   // Pending -> Active, AWPWorkNet owner only
+// NFT owner actions — the only lifecycle transitions end users can trigger
 function pauseWorknet(uint256 worknetId)       // Active -> Paused, AWPWorkNet owner only
 function resumeWorknet(uint256 worknetId)      // Paused -> Active, AWPWorkNet owner only
-function cancelWorknet(uint256 worknetId)      // Pending -> None (full AWP refund), AWPWorkNet owner only
+function cancelWorknet(uint256 worknetId)      // Pending -> None (full AWP escrow refund), AWPWorkNet owner only
+
+// Guardian-only actions — NOT exposed to end users; documented here for reference
+// function activateWorknet(uint256 worknetId)  // Pending -> Active, Guardian only
+// function rejectWorknet(uint256 worknetId)    // Pending -> Rejected + refund, Guardian only
+// function banWorknet(uint256 worknetId)       // Active/Paused -> Banned, Guardian only
+// function unbanWorknet(uint256 worknetId)     // Banned -> Active, Guardian only
 ```
+
+`activateWorknet` is **Guardian-only**. End users do not activate their own worknets —
+the Guardian calls it after verifying the LP pool has been created and the worknet is
+ready for public participation. Any user call will revert with a guardian-access custom
+error. Users who want to abandon a Pending worknet should use `cancelWorknet` for a full
+AWP refund.
 
 Always check current status via JSON-RPC before calling:
 ```json
 {"jsonrpc": "2.0", "method": "subnets.get", "params": {"worknetId": "123"}, "id": 1}
 ```
 
-### Gasless Activate Worknet
-
-```
-POST /api/relay/activate-worknet
-```
-
-**EIP-712 ActivateWorknet signature:**
-```bash
-# Get AWPRegistry nonce via JSON-RPC
-NONCE=$(curl -s -X POST https://api.awp.sh/v2 \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"nonce.get","params":{"address":"'$WALLET_ADDR'"},"id":1}' | jq -r '.result.nonce')
-
-awp-wallet sign-typed-data --token {T} --data '{
-  "types": {
-    "EIP712Domain": [
-      {"name": "name", "type": "string"},
-      {"name": "version", "type": "string"},
-      {"name": "chainId", "type": "uint256"},
-      {"name": "verifyingContract", "type": "address"}
-    ],
-    "ActivateWorknet": [
-      {"name": "user", "type": "address"},
-      {"name": "worknetId", "type": "uint256"},
-      {"name": "nonce", "type": "uint256"},
-      {"name": "deadline", "type": "uint256"}
-    ]
-  },
-  "primaryType": "ActivateWorknet",
-  "domain": {
-    "name": "AWPRegistry",
-    "version": "1",
-    "chainId": 8453,
-    "verifyingContract": "0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A"
-  },
-  "message": {
-    "user": "'$WALLET_ADDR'",
-    "worknetId": "'$WORKNET_ID'",
-    "nonce": '$NONCE',
-    "deadline": '$DEADLINE'
-  }
-}'
-
-curl -X POST https://api.awp.sh/api/relay/activate-worknet \
-  -H "Content-Type: application/json" \
-  -d '{"chainId": 8453, "user": "'$WALLET_ADDR'", "worknetId": "'$WORKNET_ID'", "deadline": '$DEADLINE', "signature": "0x...(65 bytes hex)..."}'
-```
-
 ### Complete Command Templates
 
 ```bash
-python3 scripts/onchain-worknet-lifecycle.py --token {T} --worknet {worknetId} --action activate
 python3 scripts/onchain-worknet-lifecycle.py --token {T} --worknet {worknetId} --action pause
 python3 scripts/onchain-worknet-lifecycle.py --token {T} --worknet {worknetId} --action resume
 python3 scripts/onchain-worknet-lifecycle.py --token {T} --worknet {worknetId} --action cancel
