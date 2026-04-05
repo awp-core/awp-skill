@@ -721,20 +721,36 @@ chain:          <chain name>
 ```
 
 ### Q2 · Query Balance
-Fetch via JSON-RPC batch:
+
+**Preferred: one call — `users.getPortfolio`.** Returns identity (`isRegistered`,
+`boundTo`, `recipient`), `balance` (`totalStaked`, `totalAllocated`, `unallocated`),
+`positions[]`, `allocations[]`, and `delegates[]` in a single response. Use this
+whenever the user asks for "my balance", "my positions", "what am I working with",
+or any general "show me everything" prompt.
+
 ```bash
 curl -s -X POST https://api.awp.sh/v2 \
   -H 'Content-Type: application/json' \
-  -d '[
-    {"jsonrpc":"2.0","method":"staking.getBalance","params":{"address":"ADDR"},"id":1},
-    {"jsonrpc":"2.0","method":"staking.getPositions","params":{"address":"ADDR"},"id":2},
-    {"jsonrpc":"2.0","method":"staking.getAllocations","params":{"address":"ADDR"},"id":3}
-  ]'
+  -d '{"jsonrpc":"2.0","method":"users.getPortfolio","params":{"address":"ADDR","chainId":8453},"id":1}'
 ```
+
+If the user wants cross-chain aggregate numbers, follow up with
+`staking.getUserBalanceGlobal` and `staking.getPositionsGlobal` in a JSON-RPC batch.
+
+The old three-method batch (`staking.getBalance` + `staking.getPositions` +
+`staking.getAllocations`) still works and is equivalent in information, but
+`users.getPortfolio` is one round-trip instead of three and includes registration
+status for free — prefer it.
+
+Always report `unallocated` (not `available`) — that is the actual field name the
+API returns. The `skill-reference.md` spec calls it `available`; the live API
+disagrees and we follow the live API.
+
 Print:
 ```
 [QUERY] Balance for <short_address>
 ── staking ───────────────────────
+registered:     yes / no
 total staked:   <amount> AWP
 allocated:      <amount> AWP
 unallocated:    <amount> AWP
