@@ -15,7 +15,6 @@ def main() -> None:
     position = validate_positive_int(args.position, "position")
 
     # ── Pre-checks ──
-    wallet_addr = get_wallet_address()
     registry = get_registry()
     ve_awp = require_contract(registry, "veAWP")
 

@@ -7,19 +7,27 @@ import os
 import re
 import subprocess
 import sys
-import time
 import urllib.request
 import urllib.error
 from decimal import Decimal
 from pathlib import Path
 
 _UINT256_MAX = 2**256 - 1
+_UINT128_MAX = 2**128 - 1
 
 # ── Configuration ────────────────────────────────────────
+# API and RPC URLs are hardcoded — not overridable via env vars.
+# Rationale: wallet-raw-call.mjs already hardcodes these to prevent allowlist-bypass
+# attacks where a malicious environment variable could redirect RPC reads that feed
+# into signed-transaction parameters (e.g., lockEndTime, balances).
 
 API_BASE = "https://api.awp.sh/v2"
 RELAY_BASE = "https://api.awp.sh/api"
-RPC_URL = os.environ.get("EVM_RPC_URL", "https://mainnet.base.org")
+RPC_URL = "https://mainnet.base.org"
+
+# Cloudflare-fronted endpoints (including mainnet.base.org) reject the default
+# Python-urllib User-Agent with 403. Send a benign identifier instead.
+_USER_AGENT = "awp-skill/1.1 (+https://github.com/awp-core/awp-skill)"
 
 # 链名称 → chainId 映射
 _CHAIN_IDS: dict[str, int] = {"ethereum": 1, "eth": 1, "bsc": 56, "bnb": 56, "base": 8453, "arbitrum": 42161, "arb": 42161}
@@ -46,24 +54,16 @@ def die(msg: str) -> None:
 
 # ── HTTP ────────────────────────────────────────
 
-def api_get(path: str) -> dict | list | None:
-    """[已弃用] GET 旧版 REST API，仅保留向后兼容。新代码请使用 rpc()"""
-    url = f"{RELAY_BASE}/{path.lstrip('/')}"
-    try:
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read().decode())
-    except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
-        die(f"API request failed: {url} — {e}")
-        return None  # unreachable
-
-
 def api_post(url: str, body: dict) -> tuple[int, dict | str]:
     """POST JSON, return (http_code, parsed_body)"""
     data = json.dumps(body).encode()
     req = urllib.request.Request(
         url, data=data, method="POST",
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": _USER_AGENT,
+        },
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
@@ -85,7 +85,11 @@ def rpc(method: str, params: dict | None = None) -> dict | list | None:
     data = json.dumps(body).encode()
     req = urllib.request.Request(
         API_BASE, data=data, method="POST",
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": _USER_AGENT,
+        },
     )
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
@@ -109,7 +113,10 @@ def rpc_call(to: str, data: str) -> str:
     body = json.dumps(payload).encode()
     req = urllib.request.Request(
         RPC_URL, data=body, method="POST",
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": _USER_AGENT,
+        },
     )
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
@@ -117,12 +124,73 @@ def rpc_call(to: str, data: str) -> str:
             # Check for RPC-level errors (revert, etc.)
             if "error" in result:
                 err = result["error"]
-                msg = err.get("message", err) if isinstance(err, dict) else err
+                msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
                 die(f"RPC error: {msg}")
             return result.get("result", "")
     except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
         die(f"RPC call failed: {e}")
         return ""  # unreachable
+
+
+def rpc_call_batch(calls: list[tuple[str, str]]) -> list[str]:
+    """Batch eth_call via JSON-RPC. Returns results in the same order as `calls`.
+
+    Each call is (to, data). Saves RTT when a script needs several independent
+    read-only contract queries (e.g., initial price + two nonces in the same flow).
+    """
+    if not calls:
+        return []
+    payload = [
+        {
+            "jsonrpc": "2.0", "method": "eth_call",
+            "params": [{"to": to, "data": data}, "latest"], "id": idx,
+        }
+        for idx, (to, data) in enumerate(calls)
+    ]
+    body = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        RPC_URL, data=body, method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": _USER_AGENT,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            results = json.loads(resp.read().decode())
+    except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
+        die(f"RPC batch call failed: {e}")
+        return []  # unreachable
+    if not isinstance(results, list):
+        die(f"RPC batch: expected list response, got {type(results).__name__}")
+    # Sort by id to restore request order (servers may reorder batch responses)
+    results.sort(key=lambda r: r.get("id", 0) if isinstance(r, dict) else 0)
+    out: list[str] = []
+    for r in results:
+        if not isinstance(r, dict):
+            die(f"RPC batch: malformed entry {r}")
+        if "error" in r:
+            err = r["error"]
+            msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+            die(f"RPC batch error: {msg}")
+        out.append(r.get("result", ""))
+    return out
+
+
+def split_sig(sig: str) -> tuple[int, str, str]:
+    """Split a 0x<r><s><v> 65-byte compact signature into (v, r, s).
+
+    The wallet returns EIP-712 signatures as a single concatenated hex string;
+    relay endpoints and on-chain EIP-712 functions expect the v/r/s components
+    as separate fields.
+    """
+    raw = sig[2:] if sig.startswith("0x") else sig
+    if len(raw) != 130:
+        die(f"Invalid signature length: expected 130 hex chars, got {len(raw)}")
+    r = "0x" + raw[0:64]
+    s = "0x" + raw[64:128]
+    v = int(raw[128:130], 16)
+    return v, r, s
 
 
 def hex_to_int(val: str) -> int:
@@ -201,19 +269,6 @@ def wallet_sign_typed_data(token: str, data: dict) -> str:
     return sig
 
 
-def wallet_balance(token: str, asset: str | None = None) -> str:
-    """Query balance"""
-    args = ["balance", "--token", token]
-    if asset:
-        args += ["--asset", asset]
-    return wallet_cmd(args)
-
-
-def wallet_status(token: str) -> str:
-    """Query wallet status (address, session validity)"""
-    return wallet_cmd(["status", "--token", token])
-
-
 # ── Contract registry ───────────────────────────────────
 
 def get_registry() -> dict:
@@ -266,6 +321,19 @@ def pad_uint256(val: int) -> str:
     return format(val, "064x")
 
 
+def validate_uint128(val: int, name: str = "value") -> int:
+    """Enforce that val fits in a Solidity uint128 (0 .. 2^128-1).
+
+    Some contract parameters like `minStake` are declared uint128, but our calldata
+    encoder pads everything to uint256. Without an explicit check here, values ≥ 2^128
+    pass our encoder and then revert on the contract side with a cryptic abi-decode
+    error. Validating early gives a clear JSON error message instead.
+    """
+    if val < 0 or val > _UINT128_MAX:
+        die(f"{name}: value out of uint128 range (0..2^128-1): {val}")
+    return val
+
+
 def to_wei(human_amount: str) -> int:
     """Convert human-readable AWP amount to wei (uses Decimal to avoid floating-point precision loss)"""
     try:
@@ -300,6 +368,7 @@ def encode_calldata(selector: str, *params: str) -> str:
 # ── Input validation ─────────────────────────────────────
 
 ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
+BYTES32_RE = re.compile(r"^0x[0-9a-fA-F]{64}$")
 
 
 def validate_address(addr: str, name: str = "address") -> str:
@@ -307,6 +376,13 @@ def validate_address(addr: str, name: str = "address") -> str:
     if not ADDR_RE.match(addr):
         die(f"Invalid --{name}: must be 0x + 40 hex chars")
     return addr
+
+
+def validate_bytes32(val: str, name: str = "value") -> str:
+    """Validate a 0x-prefixed bytes32 hex string (0x + 64 hex chars)"""
+    if not BYTES32_RE.match(val):
+        die(f"Invalid --{name}: must be 0x + 64 hex chars (bytes32)")
+    return val
 
 
 def validate_positive_number(val: str, name: str = "amount") -> str:

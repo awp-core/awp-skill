@@ -12,8 +12,8 @@
 # Contract addresses (same on all chains)
 AWP_REGISTRY="0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A"
 AWP_TOKEN="0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1"
-STAKE_NFT="0x0000b534C63D78212f1BDCc315165852793A00A8"
-WORKNET_NFT="0x00000bfbdEf8533E5F3228c9C846522D906100A7"
+VE_AWP="0x0000b534C63D78212f1BDCc315165852793A00A8"
+AWP_WORKNET="0x00000bfbdEf8533E5F3228c9C846522D906100A7"
 DAO_ADDR="0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0"
 LP_MANAGER="0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2"
 
@@ -41,7 +41,7 @@ function initialAlphaPrice() view returns (uint256)   // on AWPRegistry
 // Currently: 100,000,000 x 0.001 = 100,000 AWP
 ```
 
-### WorknetParams Struct (6 fields — skillsURI is back!)
+### WorknetParams Struct (6 fields)
 
 ```solidity
 struct WorknetParams {
@@ -361,10 +361,10 @@ curl -X POST https://api.awp.sh/api/relay/activate-subnet \
 ### Complete Command Templates
 
 ```bash
-python3 scripts/onchain-subnet-lifecycle.py --token {T} --worknet {worknetId} --action activate
-python3 scripts/onchain-subnet-lifecycle.py --token {T} --worknet {worknetId} --action pause
-python3 scripts/onchain-subnet-lifecycle.py --token {T} --worknet {worknetId} --action resume
-python3 scripts/onchain-subnet-lifecycle.py --token {T} --worknet {worknetId} --action cancel
+python3 scripts/onchain-subnet-lifecycle.py --token {T} --subnet {worknetId} --action activate
+python3 scripts/onchain-subnet-lifecycle.py --token {T} --subnet {worknetId} --action pause
+python3 scripts/onchain-subnet-lifecycle.py --token {T} --subnet {worknetId} --action resume
+python3 scripts/onchain-subnet-lifecycle.py --token {T} --subnet {worknetId} --action cancel
 ```
 
 ---
@@ -383,7 +383,7 @@ function setSkillsURI(uint256 worknetId, string skillsURI)   // on AWPWorkNet
 ### Complete Command Template
 
 ```bash
-python3 scripts/onchain-subnet-update.py --token {T} --worknet {worknetId} --skills-uri "{skillsURI}"
+python3 scripts/onchain-subnet-update.py --token {T} --subnet {worknetId} --skills-uri "{skillsURI}"
 ```
 
 ---
@@ -402,5 +402,5 @@ function setMinStake(uint256 worknetId, uint128 minStake)   // on AWPWorkNet
 ### Complete Command Template
 
 ```bash
-python3 scripts/onchain-subnet-update.py --token {T} --worknet {worknetId} --min-stake {minStakeWei}
+python3 scripts/onchain-subnet-update.py --token {T} --subnet {worknetId} --min-stake {minStakeWei}
 ```

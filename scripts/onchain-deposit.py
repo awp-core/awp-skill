@@ -19,9 +19,6 @@ def main() -> None:
     validate_positive_number(amount, "amount")
     validate_positive_number(lock_days, "lock-days")
 
-    # Pre-check: get wallet address
-    wallet_addr = get_wallet_address()
-
     # Get contract registry
     registry = get_registry()
     awp_token = require_contract(registry, "awpToken")

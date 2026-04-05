@@ -17,6 +17,7 @@ from awp_lib import (
     get_wallet_address,
     info,
     rpc,
+    split_sig,
     step,
     validate_address,
     wallet_sign_typed_data,
@@ -59,10 +60,10 @@ def main() -> None:
     step("check_status")
     check = rpc("address.check", {"address": wallet_addr})
     if isinstance(check, dict):
-        is_registered = check.get("isRegistered", check.get("isRegisteredUser", False))
+        is_registered = bool(check.get("isRegistered", False))
         bound_to = check.get("boundTo", "")
 
-        if mode == "principal" and str(is_registered).lower() == "true":
+        if mode == "principal" and is_registered:
             print(json.dumps({"status": "already_registered", "address": wallet_addr}))
             return
 
@@ -82,16 +83,6 @@ def main() -> None:
     deadline = int(time.time()) + 3600
 
     chain_id = domain["chainId"]
-
-    def split_sig(sig: str) -> tuple[int, str, str]:
-        """Split 0x<r><s><v> 65-byte signature into (v, r, s)"""
-        raw = sig[2:] if sig.startswith("0x") else sig
-        if len(raw) != 130:
-            die(f"Invalid signature length: expected 130 hex chars, got {len(raw)}")
-        r = "0x" + raw[0:64]
-        s = "0x" + raw[64:128]
-        v = int(raw[128:130], 16)
-        return v, r, s
 
     # Step 6: Build EIP-712 typed data
     if mode == "principal":

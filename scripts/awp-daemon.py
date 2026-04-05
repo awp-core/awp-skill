@@ -32,18 +32,20 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional, Tuple
 
+# Make the shared awp_lib helpers importable when the daemon is launched from anywhere
+sys.path.insert(0, str(Path(__file__).parent.resolve()))
+from awp_lib import rpc as _awp_rpc  # noqa: E402
+
 # ── Config ───────────────────────────────────────
 
-API_BASE = "https://api.awp.sh/v2"
 CHECK_INTERVAL = 300  # seconds (5 min default)
-SKILL_REPO = "https://github.com/awp-core/awp-skill.git"
 WALLET_REPO = "https://github.com/awp-core/awp-wallet.git"
-WALLET_INSTALL_DIR = Path.home() / ".awp" / "awp-wallet"
 SCRIPT_DIR = Path(__file__).parent.resolve()
 SKILL_MD = SCRIPT_DIR.parent / "SKILL.md"
 NOTIFY_DIR = Path.home() / ".awp"
@@ -63,6 +65,12 @@ def warn(msg: str) -> None:
 def err(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] ✗ {msg}", file=sys.stderr)
 
+
+def short_addr(addr: str) -> str:
+    """Format an Ethereum address as first-8 + last-4 (e.g., 0xAbCdEf12...cdef)."""
+    return f"{addr[:8]}...{addr[-4:]}" if len(addr) >= 12 else addr
+
+
 def _get_openclaw_config() -> Tuple[str, str]:
     """Read OpenClaw channel and target from ~/.awp/openclaw.json.
 
@@ -78,7 +86,7 @@ def _get_openclaw_config() -> Tuple[str, str]:
             tg = data.get("target", "")
             if ch and tg:
                 return ch, tg
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             pass
     return "", ""
 
@@ -114,6 +122,7 @@ def notify(title: str, message: str, level: str = "info") -> None:
     timestamp = datetime.now().isoformat()
 
     # 1. Write to ~/.awp/notifications.json
+    tmp_file: Optional[Path] = None
     try:
         NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
         notifications = []
@@ -135,13 +144,13 @@ def notify(title: str, message: str, level: str = "info") -> None:
         tmp_file = NOTIFY_FILE.with_suffix(".tmp")
         tmp_file.write_text(json.dumps(notifications, indent=2))
         os.replace(str(tmp_file), str(NOTIFY_FILE))
-    except Exception as e:
+    except (OSError, TypeError, ValueError) as e:
         warn(f"Failed to write notification: {e}")
-        # 清理临时文件
-        try:
-            tmp_file.unlink(missing_ok=True)
-        except Exception:
-            pass
+        if tmp_file is not None:
+            try:
+                tmp_file.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     # 2. Send via OpenClaw (if openclaw CLI is available)
     openclaw_bin = _find_openclaw()
@@ -156,7 +165,7 @@ def notify(title: str, message: str, level: str = "info") -> None:
                      "--message", f"**🪼 {title}**\n```\n{message}\n```"],
                     capture_output=True, timeout=10
                 )
-            except Exception:
+            except (subprocess.SubprocessError, OSError):
                 pass  # Silently skip on send failure
 
     # 3. Terminal output
@@ -173,27 +182,26 @@ def run(cmd: list[str]) -> Tuple[int, str]:
         return result.returncode, result.stdout.strip()
     except subprocess.TimeoutExpired:
         return 1, ""
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError) as e:
         return 1, str(e)
 
+
 def rpc(method: str, params: Optional[dict[str, Any]] = None) -> Optional[Any]:
-    """JSON-RPC 2.0 调用 AWP API，返回 result 或 None"""
-    body = {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1}
-    data = json.dumps(body).encode()
-    req = urllib.request.Request(
-        API_BASE, data=data, method="POST",
-        headers={"Content-Type": "application/json", "User-Agent": "awp-daemon/1.0"},
-    )
+    """Thin wrapper around awp_lib.rpc that never terminates the daemon.
+
+    The shared helper dies on RPC failure (appropriate for one-shot CLI scripts),
+    but the long-running daemon must log and continue. We swallow SystemExit and
+    network errors here so a temporary API outage does not crash the monitoring loop.
+    """
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            result = json.loads(resp.read())
-            if "error" in result:
-                warn(f"RPC error for {method}: {result['error']}")
-                return None
-            return result.get("result")
-    except Exception as e:
+        return _awp_rpc(method, params)
+    except SystemExit:
+        warn(f"RPC error for {method}")
+        return None
+    except (urllib.error.URLError, OSError, json.JSONDecodeError) as e:
         warn(f"RPC call failed for {method}: {e}")
         return None
+
 
 def fetch_text(url: str) -> str:
     """Fetch remote text content."""
@@ -201,7 +209,7 @@ def fetch_text(url: str) -> str:
         req = urllib.request.Request(url, headers={"User-Agent": "awp-daemon/1.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             return resp.read().decode("utf-8")
-    except Exception:
+    except (urllib.error.URLError, OSError, UnicodeDecodeError):
         return ""
 
 def wei_to_awp(wei: str) -> str:
@@ -254,14 +262,14 @@ def write_status(
     try:
         NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
         STATUS_FILE.write_text(json.dumps(status, indent=2))
-    except Exception:
+    except OSError:
         pass
 
 
 # ── Subnet Tracking ─────────────────────────────
 
 def fetch_announcements() -> list[dict[str, Any]]:
-    """从 REST API 获取活跃公告列表。"""
+    """Fetch the active-announcements list from the REST endpoint."""
     url = "https://api.awp.sh/api/announcements"
     req = urllib.request.Request(url, headers={"User-Agent": "awp-daemon/1.0"})
     try:
@@ -270,8 +278,8 @@ def fetch_announcements() -> list[dict[str, Any]]:
             if isinstance(data, list):
                 return data
             return []
-    except Exception as e:
-        warn(f"获取公告失败: {e}")
+    except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
+        warn(f"Failed to fetch announcements: {e}")
         return []
 
 
@@ -554,7 +562,7 @@ def get_local_version() -> str:
         text = SKILL_MD.read_text()
         match = re.search(r"Skill version:\s*([\d.]+)", text)
         return match.group(1) if match else ""
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         return ""
 
 def get_remote_version(url: str) -> str:
@@ -710,17 +718,17 @@ def _run_daemon(interval: int) -> None:
         last_registered = check_and_notify(wallet_addr)
         # Wallet ready but not registered — prompt to register
         if not last_registered:
-            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
+            addr = short_addr(wallet_addr)
             notify("Wallet Ready — Next Step",
-                   f"Wallet is ready: {short_addr}\n"
+                   f"Wallet is ready: {addr}\n"
                    "You are not registered yet. Registration is FREE (gasless).\n"
                    'Tell your agent: "start working"',
                    "info")
         # Wallet ready and registered — guide user to pick a subnet and start working
         else:
-            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
+            addr = short_addr(wallet_addr)
             notify("Registered — Ready to Work",
-                   f"Wallet {short_addr} is registered.\n"
+                   f"Wallet {addr} is registered.\n"
                    'Next steps:\n'
                    '  - Tell your agent: "list subnets" to browse available subnets\n'
                    '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
@@ -777,9 +785,9 @@ def _run_daemon(interval: int) -> None:
                         last_registered = check_and_notify(wallet_addr)
                         # Wallet just became ready — push next-step guidance
                         if not last_registered:
-                            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
+                            addr = short_addr(wallet_addr)
                             notify("Wallet Ready — Next Step",
-                                   f"Wallet is now ready: {short_addr}\n"
+                                   f"Wallet is now ready: {addr}\n"
                                    "You are not registered yet. Registration is FREE (gasless).\n"
                                    'Tell your agent: "start working"',
                                    "info")
@@ -794,9 +802,9 @@ def _run_daemon(interval: int) -> None:
                     if is_registered != last_registered and last_registered is not None:
                         if is_registered:
                             log("Registration detected! You are now registered.")
-                            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
+                            addr = short_addr(wallet_addr)
                             notify("Registered — Ready to Work",
-                                   f"Wallet {short_addr} is now registered!\n"
+                                   f"Wallet {addr} is now registered!\n"
                                    'Next steps:\n'
                                    '  - Tell your agent: "list subnets" to browse available subnets\n'
                                    '  - Tell your agent: "install skill for subnet #N" to join a subnet\n'
@@ -805,9 +813,9 @@ def _run_daemon(interval: int) -> None:
                             check_and_notify(wallet_addr)
                         else:
                             log("Registration lost — address is no longer registered.")
-                            short_addr = f"{wallet_addr[:8]}...{wallet_addr[-4:]}" if len(wallet_addr) >= 12 else wallet_addr
+                            addr = short_addr(wallet_addr)
                             notify("Deregistered",
-                                   f"Address {short_addr} is no longer registered.\n"
+                                   f"Address {addr} is no longer registered.\n"
                                    'To re-register (free), tell your agent: "start working"',
                                    "warning")
 
@@ -865,7 +873,11 @@ def _run_daemon(interval: int) -> None:
                 if cycle_count % UPDATE_CHECK_EVERY == 0:
                     check_updates()
 
-            except Exception as e:
+            except (OSError, urllib.error.URLError, json.JSONDecodeError,
+                    subprocess.SubprocessError, ValueError, KeyError, TypeError) as e:
+                # Broad enough to keep the daemon alive through transient failures,
+                # but narrow enough that real programming bugs (AttributeError,
+                # NameError, etc.) still crash the loop so they can be fixed.
                 warn(f"Monitor cycle error: {e}")
 
     except KeyboardInterrupt:

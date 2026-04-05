@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""On-chain subnet lifecycle management — activate/pause/resume (V2)
-Checks current subnet status before calling to prevent invalid state transitions.
-Only the SubnetNFT owner may operate. Requires ETH for gas.
+"""On-chain worknet lifecycle management — activate/pause/resume/cancel
+Checks current worknet status before calling to prevent invalid state transitions.
+Only the AWPWorkNet NFT owner may operate. Requires ETH for gas.
 """
 from awp_lib import *
 
 # Action -> (required prior state, contract selector)
+# Selectors from keccak256 of the actual function signatures on AWPRegistry.
 ACTION_CONFIG: dict[str, tuple[str, str]] = {
-    "activate": ("Pending", "0xcead1c96"),   # activateWorknet(uint256)
-    "pause":    ("Active",  "0x44e047ca"),   # pauseWorknet(uint256)
-    "resume":   ("Paused",  "0x5364944c"),   # resumeWorknet(uint256)
+    "activate": ("Pending", "0x6d0c9b50"),   # activateWorknet(uint256)
+    "pause":    ("Active",  "0x71ac3737"),   # pauseWorknet(uint256)
+    "resume":   ("Paused",  "0x9e9769c1"),   # resumeWorknet(uint256)
     "cancel":   ("Pending", "0x9bc68d94"),   # cancelWorknet(uint256) — full AWP refund
 }
 
@@ -26,7 +27,6 @@ def main() -> None:
     action: str = args.action
 
     # ── Pre-checks ──
-    wallet_addr = get_wallet_address()
     registry = get_registry()
     awp_registry = require_contract(registry, "awpRegistry")
 

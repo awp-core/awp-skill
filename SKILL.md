@@ -30,7 +30,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 1.0.0**
+**Skill version: 1.1.0**
 
 ## API — JSON-RPC 2.0
 

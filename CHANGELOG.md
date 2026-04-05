@@ -1,5 +1,95 @@
 # Changelog
 
+## v1.1.1
+
+### Critical bug fixes and deep-review cleanup
+
+**Critical fixes (users affected):**
+
+- `onchain-subnet-lifecycle.py`: fixed wrong function selectors — the v1.1.0 rename
+  updated comments but left the pre-rename `0xcead1c96` / `0x44e047ca` / `0x5364944c`
+  selectors for activate/pause/resume, which no longer exist on-chain after the
+  rename. Replaced with the correct selectors computed from
+  `activateWorknet(uint256)` / `pauseWorknet(uint256)` / `resumeWorknet(uint256)`:
+  `0x6d0c9b50` / `0x71ac3737` / `0x9e9769c1`. M2 (lifecycle) workflows now work again.
+- `references/commands-subnet.md`: command templates said `--worknet {worknetId}` but
+  the scripts only accept `--subnet`. Aligned all templates to `--subnet`.
+- `SKILL.md`: `Skill version: 1.0.0` was stale — bumped to `1.1.0` so the built-in
+  update checker stops reporting "update available".
+
+**Security hardening:**
+
+- `awp_lib.py`: `RPC_URL` is now hardcoded (was `os.environ.get("EVM_RPC_URL", …)`)
+  to match the v0.25.x hardening applied to `wallet-raw-call.mjs`. The env var was a
+  latent bypass surface because on-chain reads (`rpc_call`) feed into signed
+  transaction parameters like `current_lock_end` and unallocated balances.
+- `awp_lib.py`: all urllib requests now send a benign User-Agent header. Cloudflare-
+  fronted endpoints (including `mainnet.base.org`) were returning 403 for Python's
+  default `Python-urllib/3.x` UA, breaking every script that called
+  `rpc_call()`/`rpc_call_batch()` on the public Base RPC.
+
+**Dead code and V1 fallbacks removed:**
+
+- `awp_lib.py`: removed `api_get`, `wallet_balance`, `wallet_status` (zero callers),
+  and the unused `import time`.
+- `onchain-register.py`, `onchain-bind.py`, `relay-start.py`: dropped V1 API field
+  fallbacks (`isRegisteredUser`, `isRegisteredAgent`, `ownerAddress`). The live API
+  only returns V2 shapes (`isRegistered`, `boundTo`, `recipient`).
+- `onchain-bind.py`: removed the undocumented `--principal` backward-compat alias.
+- `onchain-deposit.py`, `onchain-withdraw.py`, `onchain-add-position.py`,
+  `onchain-register-and-stake.py`, `onchain-subnet-lifecycle.py`,
+  `onchain-subnet-update.py`: removed six unused `get_wallet_address()` calls (each
+  was spawning `awp-wallet receive` subprocess for no reason).
+- `awp-daemon.py`: removed unused `SKILL_REPO`, `WALLET_INSTALL_DIR`, `API_BASE`
+  constants.
+
+**Refactor and helper extraction:**
+
+- `awp_lib.py`: new helpers — `split_sig(sig)`, `rpc_call_batch(calls)`,
+  `validate_uint128(val, name)`, `validate_bytes32(val, name)`.
+- `relay-start.py`, `relay-register-subnet.py`: replaced duplicated inline
+  `split_sig` with the shared helper.
+- `relay-register-subnet.py`: batched 3 sequential on-chain reads
+  (`initialAlphaPrice`, AWPToken nonce, AWPRegistry nonce fallback) into a single
+  JSON-RPC batch — saves 2 RTTs on every gasless worknet registration. Also uses
+  `validate_address`/`validate_bytes32`/`validate_uint128` instead of inline regex.
+- `onchain-add-position.py`: batched `remainingTime(tokenId)` + `positions(tokenId)`
+  into a single RPC batch call.
+- `onchain-subnet-update.py`: added `uint128` bounds check on `min-stake` before
+  sending to `setMinStake(uint256, uint128)`.
+- `onchain-subnet-update.py`: renamed local variable `subnet_nft` →
+  `awp_worknet`; step labels updated to `AWPWorkNet`.
+
+**Daemon refactor:**
+
+- `awp-daemon.py`: deleted its own `rpc()` + `API_BASE` reimplementation; now
+  delegates to `awp_lib.rpc()` with a thin wrapper that catches exceptions so the
+  long-running loop survives transient API failures.
+- `awp-daemon.py`: extracted `short_addr()` helper (was duplicated 5× inline).
+- `awp-daemon.py`: narrowed 7 bare `except Exception:` blocks to specific
+  exception tuples per the project style guide ("No bare except"). Programming
+  bugs (NameError, AttributeError) now fail loudly instead of being swallowed.
+- `awp-daemon.py`: `notify()` initializes `tmp_file = None` before the try block
+  so the atomic-write cleanup path can't raise `UnboundLocalError` when an
+  exception occurs before the temp-file assignment.
+
+**Documentation:**
+
+- `README.md`: rewritten for v1.1.0 terminology — subnet → worknet throughout, event
+  count corrected (26 → 19), preset count corrected (4 → 5), initial daily emission
+  corrected (15.8M → 31.6M per chain), "Deployment-specific" API block replaced with
+  actual `api.awp.sh/v2` endpoints, smart contracts table updated to AWPAllocator /
+  veAWP / AWPWorkNet / WorknetToken / WorknetManager. Removed the
+  `setRecipient(addr)` step from the Delegated Mining workflow per SKILL.md rule
+  (bind already sets the reward path).
+- `references/commands-staking.md`, `commands-subnet.md`, `commands-governance.md`:
+  renamed legacy bash variables `STAKE_NFT=` → `VE_AWP=`, `STAKING_VAULT=` →
+  `AWP_ALLOCATOR=`, `WORKNET_NFT=` → `AWP_WORKNET=`.
+- `references/commands-subnet.md`: removed leftover "(6 fields — skillsURI is
+  back!)" editorial remark.
+- `relay-register-subnet.py`: error message no longer references the defunct
+  `AWP_REGISTRY` env var.
+
 ## v1.1.0
 
 ### Protocol contract rename — StakingVault/StakeNFT/WorknetNFT/AlphaTokenFactory retired

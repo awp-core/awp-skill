@@ -27,29 +27,30 @@ def main() -> None:
     extend_days = int(extend_days_str) if "." not in extend_days_str else float(extend_days_str)
 
     # ── Pre-checks ──
-    wallet_addr = get_wallet_address()
     registry = get_registry()
     awp_token = require_contract(registry, "awpToken")
     ve_awp = require_contract(registry, "veAWP")
 
     token_id_hex = pad_uint256(position)
 
-    # ── Step 1: Check remainingTime(tokenId) — selector = 0x0c64a7f2 ──
-    remaining_hex = rpc_call(ve_awp, encode_calldata("0x0c64a7f2", token_id_hex))
+    # ── Step 1: Batch two independent reads to save a round-trip ──
+    #   - remainingTime(tokenId)  selector 0x0c64a7f2 — is the lock still active?
+    #   - positions(tokenId)      selector 0x99fbab88 — returns (amount, lockEndTime, createdAt)
+    remaining_hex, positions_hex = rpc_call_batch([
+        (ve_awp, encode_calldata("0x0c64a7f2", token_id_hex)),
+        (ve_awp, encode_calldata("0x99fbab88", token_id_hex)),
+    ])
+
     if not remaining_hex or remaining_hex in ("0x", "null"):
         die("remainingTime() call failed — position may not exist")
-
     remaining = hex_to_int(remaining_hex)
     if remaining == 0:
         die(f"PositionExpired: position {position} lock has expired (remainingTime=0). Cannot add to an expired position.")
 
-    # ── Step 2: Fetch current lockEndTime — positions(uint256) selector = 0x99fbab88 ──
-    # Returns (uint128 amount, uint64 lockEndTime, uint64 createdAt), each 32 bytes
-    positions_hex = rpc_call(ve_awp, encode_calldata("0x99fbab88", token_id_hex))
     if not positions_hex or positions_hex in ("0x", "null"):
         die("positions() call failed")
 
-    # word 1 (offset 64..128) = lockEndTime
+    # positions() returns three static-type words: amount (uint128) | lockEndTime (uint64) | createdAt (uint64)
     data = positions_hex.replace("0x", "")
     current_lock_end = int(data[64:128], 16)
 

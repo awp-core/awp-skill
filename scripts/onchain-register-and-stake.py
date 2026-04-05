@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""One-click registerAndStake: complete register + deposit + allocate in a single transaction
-Handles approve (to AWP_REGISTRY) + registerAndStake in two steps.
+"""One-click registerAndStake: register + deposit + allocate in a single on-chain call.
+Sends the AWP approval to the AWPRegistry contract (NOT veAWP), then calls
+registerAndStake on the same contract.
 """
 from awp_lib import *
 
@@ -28,9 +29,6 @@ def main() -> None:
     validate_address(agent, "agent")
     subnet_id: int = validate_positive_int(subnet, "subnet")
 
-    # Pre-check: fetch wallet address
-    wallet_addr = get_wallet_address()
-
     # Fetch contract registry
     registry = get_registry()
     awp_token = require_contract(registry, "awpToken")
@@ -47,9 +45,10 @@ def main() -> None:
     if allocate_wei > amount_wei:
         die(f"allocate-amount ({allocate_amount} AWP) exceeds deposit amount ({amount} AWP)")
 
-    # Step 1: Approve AWP to AWP_REGISTRY (note: target is AWP_REGISTRY, NOT veAWP)
+    # Step 1: Approve AWP to the AWPRegistry contract (NOT veAWP — registerAndStake
+    # pulls AWP through AWPRegistry and forwards it to veAWP internally).
     step("approve", spender=awp_registry,
-         note="Approve target is AWP_REGISTRY, NOT veAWP",
+         note="Approve target is AWPRegistry, NOT veAWP",
          amount=f"{amount} AWP")
     wallet_approve(token, awp_token, awp_registry, amount)
 
