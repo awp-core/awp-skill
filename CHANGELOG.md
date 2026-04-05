@@ -1,5 +1,104 @@
 # Changelog
 
+## v1.1.6
+
+### Spec-driven corrections — 10× LP cost bug, Guardian-only activate, 25 events
+
+User updated `skill-reference.md` with verified interfaces. Every spec claim was
+cross-checked against live API responses and on-chain reads before applying any
+fix — nothing was accepted on the strength of the spec alone.
+
+**Critical bug — LP cost for gasless worknet registration was 10× too low.**
+
+`relay-register-worknet.py` hardcoded `100_000_000 * 10**18` for the initial
+WorknetToken mint, but the actual `initialAlphaMint()` on AWPRegistry returns
+`1e27` wei = **1 billion tokens** (verified via keccak256 of the signature and a
+live `eth_call` against `0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A`). With
+`initialAlphaPrice() = 1e15` wei per token, the real LP cost is
+`1e15 × 1e9 = 1e24` wei AWP = **1,000,000 AWP**, not 100,000.
+
+Every gasless `registerWorknet` call since the initial implementation was
+under-signing the permit by 10×. The ERC-2612 permit would have insufficient
+allowance and the relay's subsequent `registerWorknetForWithPermit` call would
+revert at the AWP transfer step.
+
+Fix: read both `initialAlphaPrice` and `initialAlphaMint` dynamically from
+AWPRegistry via `rpc_call_batch`. Guardian can update either parameter via
+`setInitialAlphaPrice` / `setInitialAlphaMint`, so hardcoding any value is
+fragile. New formula:
+
+```python
+lp_cost = initial_alpha_price * initial_alpha_mint // 10**18
+```
+
+`SKILL.md` M1 description updated from "costs 100,000 AWP" to
+"costs ~1,000,000 AWP" with the formula shown and a note that Guardian can
+adjust both parameters.
+
+**`activateWorknet` removed from user-callable lifecycle actions.**
+
+`skill-reference.md` §4.1 marks `activateWorknet` as Guardian-only. Verified
+live via `eth_call activateWorknet(1)` from a dummy address → reverts with
+custom error `0xef6d0f02` (Guardian-access check), confirming the access
+control. `onchain-worknet-lifecycle.py` previously exposed `activate` as a user
+action in its argparse choices — every user invocation would have failed with
+this guardian revert.
+
+Fix: removed `"activate"` from `ACTION_CONFIG` and argparse `choices`. Script
+now only offers `pause` / `resume` / `cancel`, which are the actual NFT-owner
+actions. Docstring and `SKILL.md` M2 section updated to explain: users abandon
+a Pending worknet via `cancel` (which refunds the full AWP escrow); the
+Guardian activates worknets automatically after verifying LP pool creation.
+`references/commands-worknet.md` also updated with a Guardian-only note.
+
+**WebSocket event list: 19 → 25 events, renamed and extended.**
+
+`skill-reference.md` §7 enumerates 25 events in the authoritative list. Compared
+to the previous skill documentation:
+
+- Renamed: `Deposited` → `StakePositionCreated`, `Withdrawn` → `StakePositionClosed`
+- Added: `StakePositionIncreased`, `WorknetPaused`, `WorknetResumed`, `WorknetBanned`,
+  `WorknetUnbanned`, `WorknetRejected`, `GuardianUpdated`, `InitialAlphaPriceUpdated`,
+  `WorknetTokenFactoryUpdated`, `WorknetNFTTransfer`
+- Removed (not in spec §7): `UserRegistered`, `RecipientAWPDistributed`,
+  `LPManagerUpdated`, `DefaultWorknetManagerImplUpdated`
+
+`SKILL.md` W1, `README.md`, and `references/protocol.md` all updated to the
+25-event / 5-preset list. Display format examples also updated.
+
+**New API method `registry.list` documented.**
+
+Spec §3.1 adds `registry.list` (returns array of all chains, complementing
+`registry.get` which returns a single-chain dict). Verified live — the endpoint
+responds with 4 chain entries. Added to `references/api-reference.md`.
+
+### Preserved as known drift (spec is out of date on these points)
+
+The following spec claims conflict with live API behavior. Live API wins:
+
+- **`staking.getBalance` field name**: spec §3.5 says `available`; live API
+  returns `unallocated`. Scripts use `unallocated` — not changed. Spec section
+  should be updated to match.
+- **`WorknetTokenFactory` address**: spec §2 line 59 says
+  `0x0000D4996BDBb99c772e3fA9f0e94AB52AAFFAC7`; live `registry.get` returns
+  `0x000058EF25751Bb3687eB314185B46b942bE00AF`. Both are deployed on Base
+  (looks like old + new factory co-exist). Scripts use dynamic lookup via
+  `require_contract(registry, "worknetTokenFactory")` so runtime is safe either
+  way. Repo docs already match the live value from the v1.1.0 fix; not changed.
+
+### End-to-end verified
+
+```
+awp_lib.get_registry() + rpc_call_batch:
+  initialAlphaPrice: 1,000,000,000,000,000 wei (0.001 AWP/token)
+  initialAlphaMint:  1,000,000,000,000,000,000,000,000,000 wei (1B tokens)
+  lp_cost:           1,000,000,000,000,000,000,000,000 wei (1,000,000 AWP)
+```
+
+13 scripts `py_compile` pass. `onchain-worknet-lifecycle.py --help` shows
+`--action {pause,resume,cancel}` (activate removed). All `19-event` references
+in SKILL.md / README.md replaced with `25-event`.
+
 ## v1.1.5
 
 ### Terminology cleanup: subnet → worknet + get_registry API shape fix
