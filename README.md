@@ -44,7 +44,7 @@
 
 AWP is a decentralized **Agent Working** protocol deployed on 4 EVM chains (Base, Ethereum, Arbitrum, BSC). Users bind to a tree-based hierarchy, stake AWP via veAWP position NFTs, allocate to agents on worknets, and earn emissions. Each worknet auto-deploys a **WorknetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
-This repository is a single skill with **20 actions**, **15 bundled scripts** (plus shared `awp_lib.py` + Node bridge), and **19 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
+This repository is a single skill with **20 actions**, **14 bundled scripts** (plus shared `awp_lib.py` + Node bridge), and **19 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
 
 ## Quick Install
 
@@ -72,7 +72,7 @@ The skill installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) depe
 |----|--------|-------------|
 | S1 | Bind & Set Recipient | Tree-based binding or set reward recipient. Supports gasless via EIP-712 relay. |
 | S2 | Deposit AWP | Mint veAWP position with time-based lock. Add to position, withdraw on expiry. |
-| S3 | Allocate / Deallocate / Reallocate | Direct stake to agents on worknets. One-click registerAndStake available. |
+| S3 | Allocate / Deallocate / Reallocate | Direct stake to agents on worknets. Three-step flow for new users: register → deposit → allocate. |
 
 #### Worknet Management (wallet + AWPWorkNet ownership)
 | ID | Action | Description |
@@ -141,7 +141,7 @@ awp-skill/
 
 **Progressive loading**: The agent loads only what it needs per action. Query and Monitor actions use SKILL.md alone. Write actions load the specific command reference file, and all on-chain operations use bundled scripts — preventing manual calldata construction errors.
 
-**15 bundled scripts** (+ shared `awp_lib.py` library + `wallet-raw-call.mjs` Node bridge) cover every read and write operation. Each script handles:
+**14 bundled scripts** (+ shared `awp_lib.py` library + `wallet-raw-call.mjs` Node bridge) cover every read and write operation. Each script handles:
 
 - Input validation (address regex, numeric bounds, uint128 range checks)
 - Correct contract targeting (AWPRegistry vs veAWP vs AWPWorkNet vs AWPAllocator vs AWPDAO)

@@ -1,5 +1,49 @@
 # Changelog
 
+## v1.1.3
+
+### README regression fixes from v1.1.2
+
+Post-v1.1.2 audit caught three places in `README.md` that the v1.1.2 edit pass
+missed:
+
+- S3 action row still said "One-click registerAndStake available.", but
+  `onchain-register-and-stake.py` was deleted in v1.1.2. Users following that
+  promise would not find the script. Replaced with "Three-step flow for new
+  users: register → deposit → allocate."
+- "15 bundled scripts" appeared twice (`README.md:47` and `:144`). v1.1.2
+  computed `14 + 1 (new count)` but the baseline was already 14 Python scripts
+  after deleting register-and-stake, so the correct count is **14 bundled
+  scripts** (invokable `.py` entrypoints, excluding the shared `awp_lib.py`
+  library and the `wallet-raw-call.mjs` Node bridge).
+
+### Verification pass (no code changes)
+
+Independently re-verified every on-chain selector in scripts/ against the live
+runtime bytecode on Base mainnet:
+
+- AWPAllocator impl `0x1824053fda0e8ff9183cca739411d5dc48359ec7`: allocate,
+  deallocate, reallocate — all present.
+- veAWP `0x0000b534C63D78212f1BDCc315165852793A00A8`: deposit, withdraw,
+  remainingTime, positions, addToPosition — all present.
+- AWPWorkNet impl `0xb1c3c9304e40a649936c9998abeefaec939b8d09`: setSkillsURI,
+  setMinStake — all present.
+- AWPDAO impl `0x04b70805fcce77f9c1996d9e1147247d21c6a80e`: castVoteWithReason-
+  AndParams, proposalCreatedAt — both present. `proposalCreatedAt` is a
+  non-standard OZ Governor extension but genuinely exists in the deployed DAO.
+- AWPToken `0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1`: nonces — present.
+
+Combined with the v1.1.2 AWPRegistry bytecode audit, the skill's entire
+on-chain ABI surface is now verified against live deployed code on all five
+target contracts.
+
+Also live-probed JSON-RPC methods the scripts depend on (`nonce.get`,
+`nonce.getStaking`, `emission.getSchedule`, `emission.getCurrent`,
+`staking.getBalance`, `users.getPortfolio`, `address.check`) — all return the
+field shapes the scripts expect. `users.get` errors with `-32001 user not
+found` for unregistered addresses, but no script calls `users.get`; scripts
+use `address.check` and `users.getPortfolio`, which both handle the empty case.
+
 ## v1.1.2
 
 ### Critical — dead contract functions removed, field-casing drift hardened
