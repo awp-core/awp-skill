@@ -54,6 +54,64 @@ skill install https://github.com/awp-core/awp-skill
 
 The skill installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) dependency on first load if missing.
 
+### Installing as a dependency (for other skills)
+
+If your skill depends on `awp-skill` — for example, a mining skill that uses AWP for staking,
+allocation, or worknet registration — read this section carefully. The calling skill's agent
+does **not** automatically load `awp-skill/SKILL.md` during the dependency-install phase, so the
+install guidance has to live here where the calling agent will see it.
+
+**The install sequence the calling skill should run:**
+
+```bash
+# 1. Install awp-skill itself
+skill install https://github.com/awp-core/awp-skill
+
+# 2. Install the awp-wallet CLI dependency
+skill install https://github.com/awp-core/awp-wallet
+
+# 3. Make the wallet binary discoverable. Installers commonly drop it in
+#    ~/.local/bin / ~/.npm-global/bin / ~/.yarn/bin, none of which are in PATH
+#    on a fresh shell. Check all common locations:
+WALLET_BIN="$(command -v awp-wallet 2>/dev/null \
+  || ls -1 "$HOME/.local/bin/awp-wallet" "$HOME/.npm-global/bin/awp-wallet" \
+           "$HOME/.yarn/bin/awp-wallet" "/usr/local/bin/awp-wallet" 2>/dev/null \
+  | head -n1)"
+if [ -n "$WALLET_BIN" ] && ! command -v awp-wallet >/dev/null 2>&1; then
+  export PATH="$(dirname "$WALLET_BIN"):$PATH"
+fi
+
+# 4. Initialize the wallet (see the critical warning below before running)
+awp-wallet init
+```
+
+**CRITICAL — do not prompt the user for a password during `awp-wallet init`.**
+
+`awp-wallet init` is fully non-interactive. It generates an **agent work wallet** with
+credentials stored internally by the wallet CLI. There is no user-supplied password, no
+passphrase, no secret phrase, no seed words to transcribe. The calling skill's agent must not:
+
+- Ask the user to "pick a password" or "set a PIN"
+- Pipe a password into stdin
+- Present a password confirmation dialog
+- Treat a blank password as an error
+
+If the agent sees a prompt during `awp-wallet init` and assumes it's a password prompt, it will
+waste the user's time asking for a password that does not exist. The wallet is an **agent work
+wallet**, not a personal custody wallet — it is designed to be initialized, unlocked, and used
+autonomously by an AI agent without any human-memorable secrets. Users should NOT store personal
+assets in this wallet.
+
+**After init**, verify the setup succeeded:
+
+```bash
+awp-wallet receive   # should print {"eoaAddress": "0x..."}
+```
+
+If that command prints a JSON object with an `eoaAddress`, the wallet is ready and the calling
+skill can proceed to its own onboarding flow. If it fails, the problem is almost always Step 3
+(PATH) — re-run the detection, not the install.
+
 ## Features — 20 Actions
 
 #### Query (read-only, no wallet needed)

@@ -199,11 +199,47 @@ register for free → pick a worknet → start earning.
 ```
 
 **Step 2 — Install wallet dependency** (if missing):
+
+Detect awp-wallet in `$PATH` or in well-known install locations. `which` alone is not enough
+because fresh shells routinely lack `~/.local/bin` / `~/.npm-global/bin` / `~/.yarn/bin` in
+PATH even though that's where `npm i -g` and `pip install --user` drop binaries. Miss this
+and users get "command not found" after a successful install and are stuck forever.
+
 ```bash
-which awp-wallet >/dev/null 2>&1
+# Returns the wallet binary path if found anywhere reasonable, empty otherwise.
+WALLET_BIN="$(command -v awp-wallet 2>/dev/null \
+  || ls -1 "$HOME/.local/bin/awp-wallet" "$HOME/.npm-global/bin/awp-wallet" \
+           "$HOME/.yarn/bin/awp-wallet" "/usr/local/bin/awp-wallet" 2>/dev/null \
+  | head -n1)"
 ```
-- If found: proceed silently.
-- If NOT found: `skill install https://github.com/awp-core/awp-wallet`, then follow its SKILL.md. Verify: `which awp-wallet`
+
+**Case A — `WALLET_BIN` is non-empty and already in PATH** (`which awp-wallet` works): proceed silently.
+
+**Case B — `WALLET_BIN` is non-empty but NOT in PATH**: the binary exists, just hidden. Export the
+directory for this session and tell the user the one-line to make it permanent. Do NOT reinstall.
+```bash
+export PATH="$(dirname "$WALLET_BIN"):$PATH"
+```
+Then print:
+```
+[SETUP] awp-wallet found at <path>, added to PATH for this session.
+To make it permanent, run:
+  echo 'export PATH="<dir>:$PATH"' >> ~/.bashrc   # or ~/.zshrc
+```
+
+**Case C — `WALLET_BIN` is empty**: dependency missing. Install it:
+```bash
+skill install https://github.com/awp-core/awp-wallet
+```
+After install, re-run the detection snippet above (Case A or B). If still empty after a successful
+install, the install script did land the binary somewhere unusual — ask the user to run
+`find $HOME -name awp-wallet -type f 2>/dev/null` and add that directory to PATH.
+
+**Critical: do NOT prompt the user for a password during wallet init.** `awp-wallet init` is
+non-interactive — it generates an agent work wallet with credentials stored internally. No password
+input, no passphrase, no secret questions. If the wallet CLI itself appears to be waiting for
+input, it's waiting for something else (confirmation prompt, etc.) — never feed it a user-typed
+password. See Rule 9 under "Critical Rules" below.
 
 **Step 3 — Configure notifications** (recommended): If the `openclaw` CLI is available, write `~/.awp/openclaw.json` so the daemon can push messages:
 ```bash
@@ -520,7 +556,7 @@ After confirmation and completion:
 6. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei.
 7. **Addresses**: show as `0x1234...abcd` for display, full for parameters.
 8. Do not use stale V1 names: no `removeAgent()`. Binding changes use `bind(newTarget)` or `unbind()`.
-9. **Wallet handles credentials internally.** Just run `awp-wallet init` + `awp-wallet unlock`. No password generation, no password files, no user prompts.
+9. **Never ask the user for a wallet password. Ever.** `awp-wallet init` and `awp-wallet unlock` are non-interactive — the wallet CLI generates and stores all credentials internally. There is no user-supplied password, no passphrase, no PIN, no seed-phrase transcription step. If you are about to type "What password would you like to use?" or "Please enter your wallet password", stop — you're about to waste the user's time on a secret that does not exist. This applies at install time, first use, and every subsequent unlock. The wallet is an agent work wallet designed to be managed autonomously by an AI agent; humans are not in the key-custody loop. This rule is especially critical when `awp-skill` is being installed as a dependency by another skill — the calling agent will not have loaded this file, so the human-in-the-loop fallback of "read the instructions" does not apply. See the "Installing as a dependency" section in README.md for the canonical install flow calling skills should follow.
 10. **This is an agent work wallet.** Always confirm with the user before executing any on-chain transaction — show the action, target contract, chain, and estimated cost, then wait for explicit approval. Exception: gasless registration via relay (free, no gas cost) does not require confirmation. Remind the user on first setup: do NOT store personal assets in this wallet.
 11. **Worknet skill install (Q6):** Install `awp-core` skills directly. For third-party sources (not `github.com/awp-core/*`), show a warning and require user confirmation before installing.
 12. **Onboarding requires user choice.** Always present Option A (Solo) and Option B (Delegated) and WAIT for the user to choose. Never auto-select an option.
