@@ -12,9 +12,9 @@
 # Contract addresses (same on all chains)
 AWP_REGISTRY="0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A"
 AWP_TOKEN="0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1"
-STAKE_NFT="0x4E119560632698Bab67cFAB5d8EC0A373363ba2d"
-WORKNET_NFT="0xB9F03539BE496d09c4d7964921d674B8763f5233"
-DAO_ADDR="0x6a074aC9823c47f86EE4Fc7F62e4217Bc9C76004"
+STAKE_NFT="0x0000b534C63D78212f1BDCc315165852793A00A8"
+WORKNET_NFT="0x00000bfbdEf8533E5F3228c9C846522D906100A7"
+DAO_ADDR="0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0"
 LP_MANAGER="0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2"
 
 WALLET_ADDR=$(awp-wallet receive | jq -r '.eoaAddress')
@@ -59,7 +59,7 @@ struct WorknetParams {
 ### Contract Calls
 
 ```solidity
-// Step 1: Approve AWP to AWPRegistry (NOT StakeNFT)
+// Step 1: Approve AWP to AWPRegistry (NOT veAWP)
 function approve(address spender, uint256 amount) returns (bool)   // on AWPToken
 // spender = AWPRegistry address: 0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A
 
@@ -153,7 +153,7 @@ python3 scripts/relay-register-subnet.py --token {T} --name "MyWorknet" --symbol
 
 ### Gasless Worknet Registration — EIP-712 Template
 
-For fully gasless registration via `POST /api/relay/register-subnet`, the user signs two messages:
+For fully gasless registration via `POST /api/relay/register-worknet`, the user signs two messages:
 
 **1. ERC-2612 Permit signature** (authorizes AWPRegistry to spend AWP):
 ```bash
@@ -257,7 +257,7 @@ awp-wallet sign-typed-data --token {T} --data '{
 
 **3. Submit to relay:**
 ```bash
-curl -X POST https://api.awp.sh/api/relay/register-subnet \
+curl -X POST https://api.awp.sh/api/relay/register-worknet \
   -H "Content-Type: application/json" \
   -d '{
     "chainId": 8453,
@@ -299,10 +299,10 @@ curl -s https://api.awp.sh/api/relay/status/{txHash}
 ### Contract Calls
 
 ```solidity
-function activateWorknet(uint256 worknetId)   // Pending -> Active, WorknetNFT owner only
-function pauseWorknet(uint256 worknetId)       // Active -> Paused, WorknetNFT owner only
-function resumeWorknet(uint256 worknetId)      // Paused -> Active, WorknetNFT owner only
-function cancelWorknet(uint256 worknetId)      // Pending -> None (full AWP refund), WorknetNFT owner only
+function activateWorknet(uint256 worknetId)   // Pending -> Active, AWPWorkNet owner only
+function pauseWorknet(uint256 worknetId)       // Active -> Paused, AWPWorkNet owner only
+function resumeWorknet(uint256 worknetId)      // Paused -> Active, AWPWorkNet owner only
+function cancelWorknet(uint256 worknetId)      // Pending -> None (full AWP refund), AWPWorkNet owner only
 ```
 
 Always check current status via JSON-RPC before calling:
@@ -374,10 +374,10 @@ python3 scripts/onchain-subnet-lifecycle.py --token {T} --worknet {worknetId} --
 ### Contract Call
 
 ```solidity
-function setSkillsURI(uint256 worknetId, string skillsURI)   // on WorknetNFT
-// WorknetNFT owner only
+function setSkillsURI(uint256 worknetId, string skillsURI)   // on AWPWorkNet
+// AWPWorkNet owner only
 // Emits SkillsURIUpdated(worknetId, skillsURI)
-// worknetId = WorknetNFT tokenId (they correspond 1:1)
+// worknetId = AWPWorkNet tokenId (they correspond 1:1)
 ```
 
 ### Complete Command Template
@@ -393,8 +393,8 @@ python3 scripts/onchain-subnet-update.py --token {T} --worknet {worknetId} --ski
 ### Contract Call
 
 ```solidity
-function setMinStake(uint256 worknetId, uint128 minStake)   // on WorknetNFT
-// WorknetNFT owner only
+function setMinStake(uint256 worknetId, uint128 minStake)   // on AWPWorkNet
+// AWPWorkNet owner only
 // minStake in wei (0 = no minimum)
 // Emits MinStakeUpdated(worknetId, minStake)
 ```

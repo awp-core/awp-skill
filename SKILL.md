@@ -9,7 +9,7 @@ description: >
   cancelling a worknet, updating worknet settings, governance proposals or voting, querying
   announcements or protocol status, awp-wallet commands, gasless relay operations, WebSocket event
   monitoring, any LPManager or emission questions. Trigger on ANY mention of: AWP, "Agent Working
-  Protocol", awp-wallet, StakeNFT, WorknetNFT, worknet, subnet (in AWP context), AWP staking,
+  Protocol", awp-wallet, veAWP, AWPWorkNet, worknet, subnet (in AWP context), AWP staking,
   AWP governance, AWP DAO, AWP emissions, AWP epoch, "start working" (AWP onboarding), "check my
   balance" (on AWP), "list worknets", "register subnet", "reallocate stake", or any AWP on-chain
   operation. Multi-chain: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). NOT for: Uniswap,
@@ -79,7 +79,7 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 | `address.resolveRecipient` | `address` **(required)**, `chainId?` | Walk bind chain to root, return effective reward recipient |
 | `address.batchResolveRecipients` | `addresses[]` **(required, max 500)**, `chainId?` | Batch resolve effective recipients (on-chain call) |
 | `nonce.get` | `address` **(required)**, `chainId?` | AWPRegistry EIP-712 nonce (for bind/unbind/setRecipient/registerWorknet/activateWorknet/grantDelegate/revokeDelegate) |
-| `nonce.getStaking` | `address` **(required)**, `chainId?` | StakingVault EIP-712 nonce (for allocate/deallocate) |
+| `nonce.getStaking` | `address` **(required)**, `chainId?` | AWPAllocator EIP-712 nonce (for allocate/deallocate) |
 
 #### Agents
 
@@ -96,7 +96,7 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 |--------|--------|-------------|
 | `staking.getBalance` | `address` **(required)**, `chainId?` | Returns `{totalStaked, totalAllocated, unallocated}` in wei strings |
 | `staking.getUserBalanceGlobal` | `address` **(required)** | Same as above but aggregated across ALL chains |
-| `staking.getPositions` | `address` **(required)**, `chainId?` | Array of StakeNFT positions: `{tokenId, amount, lockEndTime, createdAt}` |
+| `staking.getPositions` | `address` **(required)**, `chainId?` | Array of veAWP positions: `{tokenId, amount, lockEndTime, createdAt}` |
 | `staking.getPositionsGlobal` | `address` **(required)** | Positions across all chains (includes chainId per position) |
 | `staking.getAllocations` | `address` **(required)**, `chainId?`, `page?`, `limit?` | Paginated allocation records: `{agent, worknetId, amount}` |
 | `staking.getFrozen` | `address` **(required)**, `chainId?` | Frozen allocations (from banned worknets) |
@@ -134,8 +134,8 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 |--------|--------|-------------|
 | `tokens.getAWP` | `chainId?` | AWP token info: totalSupply, maxSupply, circulatingSupply (per chain) |
 | `tokens.getAWPGlobal` | none | AWP info aggregated across all chains |
-| `tokens.getAlphaInfo` | `worknetId` **(required)** | Alpha token info: address, name, symbol, totalSupply, minter |
-| `tokens.getAlphaPrice` | `worknetId` **(required)** | Alpha/AWP price from LP pool (cached 10min). Returns sqrtPriceX96 and human-readable price. |
+| `tokens.getWorknetTokenInfo` | `worknetId` **(required)** | Alpha token info: address, name, symbol, totalSupply, minter |
+| `tokens.getWorknetTokenPrice` | `worknetId` **(required)** | Alpha/AWP price from LP pool (cached 10min). Returns sqrtPriceX96 and human-readable price. |
 
 #### Governance
 
@@ -158,13 +158,13 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 AWPToken:           0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1
 AWPRegistry:        0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A
 AWPEmission:        0x3C9cB73f8B81083882c5308Cce4F31f93600EaA9
-StakingVault:       0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b
-StakeNFT:           0x4E119560632698Bab67cFAB5d8EC0A373363ba2d
-WorknetNFT:         0xB9F03539BE496d09c4d7964921d674B8763f5233
+AWPAllocator:       0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA
+veAWP:           0x0000b534C63D78212f1BDCc315165852793A00A8
+AWPWorkNet:         0x00000bfbdEf8533E5F3228c9C846522D906100A7
 LPManager (proxy):  0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2
-AlphaTokenFactory:  0xB2e4897eD77d0f5BFa3140B9989594de09a8037c
+WorknetTokenFactory:  0x000058EF25751Bb3687eB314185B46b942bE00AF
 Treasury:           0x82562023a053025F3201785160CaE6051efD759e
-AWPDAO:             0x6a074aC9823c47f86EE4Fc7F62e4217Bc9C76004
+AWPDAO:             0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0
 ```
 
 Supported chains: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). All addresses identical across all 4 chains (except LPManager and WorknetManager impls which differ per DEX).
@@ -500,7 +500,7 @@ If the user later wants to work on a worknet that requires staking, guide them t
 Before executing any on-chain transaction, show a summary and ask for explicit confirmation:
 ```
 [TX] deposit 1,000 AWP → new position (lock: 90 days)
-     contract: StakeNFT (0x4E11...ba2d) | chain: Base (8453) | gas: ~0.001 ETH
+     contract: veAWP (0x4E11...ba2d) | chain: Base (8453) | gas: ~0.001 ETH
      Proceed? (yes/no)
 ```
 After confirmation and completion:
@@ -555,7 +555,7 @@ scripts/
 
 ## Security Controls
 
-**Contract allowlist**: `wallet-raw-call.mjs` fetches the AWP contract registry (`registry.get`) on every invocation and rejects any `--to` address not present in the registry. This prevents calls to arbitrary contracts — only known AWP protocol contracts (AWPRegistry, StakeNFT, WorknetNFT, StakingVault, AWPDAO, AWPToken, etc.) are permitted.
+**Contract allowlist**: `wallet-raw-call.mjs` fetches the AWP contract registry (`registry.get`) on every invocation and rejects any `--to` address not present in the registry. This prevents calls to arbitrary contracts — only known AWP protocol contracts (AWPRegistry, veAWP, AWPWorkNet, AWPAllocator, AWPDAO, AWPToken, etc.) are permitted.
 
 **Transaction confirmation**: All on-chain operations require explicit user confirmation before execution.
 
@@ -619,9 +619,9 @@ Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay
 | `POST /api/relay/grant-delegate` | Authorize a delegate | AWPRegistry |
 | `POST /api/relay/revoke-delegate` | Revoke a delegate | AWPRegistry |
 | `POST /api/relay/activate-subnet` | Activate a pending worknet | AWPRegistry |
-| `POST /api/relay/register-subnet` | Register worknet (with AWP permit) | AWPRegistry |
-| `POST /api/relay/allocate` | Allocate stake to agent | StakingVault |
-| `POST /api/relay/deallocate` | Deallocate stake | StakingVault |
+| `POST /api/relay/register-worknet` | Register worknet (with AWP permit) | AWPRegistry |
+| `POST /api/relay/allocate` | Allocate stake to agent | AWPAllocator |
+| `POST /api/relay/deallocate` | Deallocate stake | AWPAllocator |
 | `GET /api/relay/status/{txHash}` | Check relay tx status | -- |
 
 Relay request format uses **v, r, s** signature components (not a combined signature hex):
@@ -644,9 +644,9 @@ Response: `{"txHash": "0x..."}` | Error: `{"error": "invalid EIP-712 signature"}
 {"name": "AWPRegistry", "version": "1", "chainId": 8453, "verifyingContract": "0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A"}
 ```
 
-**StakingVault domain** (allocate, deallocate):
+**AWPAllocator domain** (allocate, deallocate):
 ```json
-{"name": "StakingVault", "version": "1", "chainId": 8453, "verifyingContract": "0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b"}
+{"name": "AWPAllocator", "version": "1", "chainId": 8453, "verifyingContract": "0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA"}
 ```
 
 ### EIP-712 Type Definitions
@@ -664,7 +664,7 @@ Allocate(address staker, address agent, uint256 worknetId, uint256 amount, uint2
 Deallocate(address staker, address agent, uint256 worknetId, uint256 amount, uint256 nonce, uint256 deadline)
 ```
 
-**Nonce workflow**: Always fetch the current nonce via `nonce.get` (AWPRegistry) or `nonce.getStaking` (StakingVault) immediately before signing. Nonces auto-increment after each successful relay. Using a stale nonce causes `InvalidSignature` error.
+**Nonce workflow**: Always fetch the current nonce via `nonce.get` (AWPRegistry) or `nonce.getStaking` (AWPAllocator) immediately before signing. Nonces auto-increment after each successful relay. Using a stale nonce causes `InvalidSignature` error.
 
 ## Pre-Flight Checklist (before ANY write action)
 
@@ -945,7 +945,7 @@ python3 scripts/onchain-register-and-stake.py --token $TOKEN --amount 5000 --loc
 
 ---
 
-## Worknet Management (wallet + WorknetNFT ownership — load commands-subnet.md first)
+## Worknet Management (wallet + AWPWorkNet ownership — load commands-subnet.md first)
 
 ### M1 · Register Worknet (gasless relay — costs 100,000 AWP)
 ```bash
@@ -975,7 +975,7 @@ python3 scripts/onchain-subnet-update.py --token $TOKEN --subnet 1 --min-stake 1
 
 ---
 
-## Governance (wallet + StakeNFT positions — load commands-governance.md for G1/G2)
+## Governance (wallet + veAWP positions — load commands-governance.md for G1/G2)
 
 ### G1 · Create Proposal
 Load commands-governance.md. Needs >= 1M AWP voting power.

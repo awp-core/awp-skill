@@ -212,7 +212,7 @@ def main() -> None:
         "registerS": register_s,
     }
 
-    relay_url = f"{RELAY_BASE}/relay/register-subnet"
+    relay_url = f"{RELAY_BASE}/relay/register-worknet"
     info(f"Submitting to {relay_url}")
     http_code, body = api_post(relay_url, relay_body)
 

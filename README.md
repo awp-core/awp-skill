@@ -71,7 +71,7 @@ The skill installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) depe
 | ID | Action | Description |
 |----|--------|-------------|
 | S1 | Bind & Set Recipient | Tree-based binding or set reward recipient. Supports gasless via EIP-712 relay. |
-| S2 | Deposit AWP | Mint StakeNFT position with time-based lock. Add to position, withdraw on expiry. |
+| S2 | Deposit AWP | Mint veAWP position with time-based lock. Add to position, withdraw on expiry. |
 | S3 | Allocate / Deallocate / Reallocate | Direct stake to agents on subnets. One-click registerAndStake available. |
 
 #### Subnet Management (wallet + SubnetNFT ownership)
@@ -82,7 +82,7 @@ The skill installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) depe
 | M3 | Update Skills URI | Set the subnet's SKILL.md URL via SubnetNFT |
 | M4 | Set Min Stake | Set minimum stake requirement for agents on the subnet |
 
-#### Governance (wallet + StakeNFT positions)
+#### Governance (wallet + veAWP positions)
 | ID | Action | Description |
 |----|--------|-------------|
 | G1 | Create Proposal | Executable (via Timelock) or signal-only proposals |
@@ -144,7 +144,7 @@ awp-skill/
 **14 bundled Python scripts** (+ shared `awp_lib.py` library) cover every write operation. Each script handles:
 
 - Input validation (address regex, numeric checks)
-- Correct contract targeting (AWPRegistry vs StakeNFT vs SubnetNFT vs DAO)
+- Correct contract targeting (AWPRegistry vs veAWP vs SubnetNFT vs DAO)
 - Correct function selector (all verified via keccak256)
 - Pre-checks (balance, state, expiry) before submitting transactions
 - Unit conversion (human-readable AWP to wei, days to seconds)
@@ -157,7 +157,7 @@ Three operations support fully gasless execution via EIP-712 signatures and rela
 |-----------|---------------|------------|
 | Bind (tree-based) | `POST /relay/bind` | 1 (EIP-712 Bind) |
 | Set Recipient | `POST /relay/set-recipient` | 1 (EIP-712 SetRecipient) |
-| Worknet Registration | `POST /relay/register-subnet` | 2 (ERC-2612 Permit + EIP-712 RegisterWorknet) |
+| Worknet Registration | `POST /relay/register-worknet` | 2 (ERC-2612 Permit + EIP-712 RegisterWorknet) |
 
 Rate limit: 100 requests per IP per 1 hour across all relay endpoints.
 
@@ -232,9 +232,9 @@ Root (cold wallet):                    Agent (hot wallet):
 | Contract | Role |
 |----------|------|
 | **AWPRegistry** | Unified entry point — binding, delegation, allocation, subnet lifecycle |
-| **StakeNFT** | ERC721 position NFTs — deposit AWP with time-based lock |
+| **veAWP** | ERC721 position NFTs — deposit AWP with time-based lock |
 | **AWPEmission** | Emission engine — daily epoch settlement via oracle [DRAFT] |
-| **StakingVault** | Pure allocation logic — allocate, deallocate, reallocate |
+| **AWPAllocator** | Pure allocation logic — allocate, deallocate, reallocate |
 | **SubnetNFT** | Subnet identity — on-chain name, skillsURI, minStake |
 | **SubnetManager** | Auto-deployed per subnet — Merkle distribution + AWP strategies |
 | **AWPDAO** | NFT-based governance — proposals, voting with position NFTs |

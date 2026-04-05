@@ -1,5 +1,63 @@
 # Changelog
 
+## v1.1.0
+
+### Protocol contract rename — StakingVault/StakeNFT/WorknetNFT/AlphaTokenFactory retired
+
+The AWP protocol renamed several core contracts. All scripts, library code, and reference
+documentation have been updated to the new names and addresses. API field names in
+`registry.get` also changed accordingly.
+
+**Contract renames (with new proxy addresses):**
+
+| Old name | New name | New address |
+|----------|----------|-------------|
+| `StakingVault` | `AWPAllocator` | `0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA` |
+| `StakeNFT` | `veAWP` | `0x0000b534C63D78212f1BDCc315165852793A00A8` |
+| `WorknetNFT` | `AWPWorkNet` | `0x00000bfbdEf8533E5F3228c9C846522D906100A7` |
+| `AlphaTokenFactory` | `WorknetTokenFactory` | `0x000058EF25751Bb3687eB314185B46b942bE00AF` |
+| `AWPDAO` (address changed) | `AWPDAO` | `0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0` |
+
+**Registry field renames in `registry.get` response:**
+
+- `stakingVault` → `awpAllocator`
+- `stakeNFT` → `veAWP`
+- `worknetNFT` → `awpWorkNet`
+- `alphaTokenFactory` → `worknetTokenFactory`
+- `stakingVaultEip712Domain` → `allocatorEip712Domain`
+
+**EIP-712 domain rename:**
+
+- Gasless allocate/deallocate now sign under the `AWPAllocator` domain (was `StakingVault`).
+- `awp_lib.get_eip712_domain(registry, "AWPAllocator")` replaces the old `"StakingVault"` arg.
+
+**API method renames:**
+
+- `tokens.getAlphaInfo` → `tokens.getWorknetTokenInfo`
+- `tokens.getAlphaPrice` → `tokens.getWorknetTokenPrice`
+
+**Relay endpoint rename:**
+
+- `POST /api/relay/register-subnet` → `POST /api/relay/register-worknet`
+- `relay-register-subnet.py` now posts to the new URL (script filename unchanged).
+
+**WorknetId format change (documentation only — scripts pass user strings through):**
+
+- Old: `(chainId << 64) | localCounter`
+- New: `chainId * 100_000_000 + localCounter` (e.g., `"845300000001"`)
+
+**Scripts updated:**
+
+- `awp_lib.py`: `get_eip712_domain("AWPAllocator")` path using `allocatorEip712Domain`
+- `onchain-allocate.py`, `onchain-deallocate.py`, `onchain-reallocate.py`: target `awpAllocator`
+- `onchain-deposit.py`, `onchain-withdraw.py`, `onchain-add-position.py`: target `veAWP`
+- `onchain-subnet-update.py`: target `awpWorkNet`
+- `relay-register-subnet.py`: POST to `/relay/register-worknet`
+- `onchain-vote.py`, `onchain-register-and-stake.py`: comments/messages updated
+
+**Docs updated:** `README.md`, `SKILL.md`, `references/protocol.md`, `references/api-reference.md`,
+`references/commands-staking.md`, `references/commands-subnet.md`, `references/commands-governance.md`.
+
 ## v1.0.2
 
 ### Bug Fixes — Relay format and documentation corrections

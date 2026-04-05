@@ -17,10 +17,10 @@ REGISTRY=$(curl -s -X POST https://api.awp.sh/v2 \
 # Contract addresses (same on all chains)
 AWP_REGISTRY="0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A"
 AWP_TOKEN="0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1"
-STAKE_NFT="0x4E119560632698Bab67cFAB5d8EC0A373363ba2d"
-STAKING_VAULT="0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b"
-WORKNET_NFT="0xB9F03539BE496d09c4d7964921d674B8763f5233"
-DAO_ADDR="0x6a074aC9823c47f86EE4Fc7F62e4217Bc9C76004"
+STAKE_NFT="0x0000b534C63D78212f1BDCc315165852793A00A8"
+STAKING_VAULT="0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA"
+WORKNET_NFT="0x00000bfbdEf8533E5F3228c9C846522D906100A7"
+DAO_ADDR="0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0"
 LP_MANAGER="0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2"
 
 WALLET_ADDR=$(awp-wallet receive | jq -r '.eoaAddress')
@@ -81,7 +81,7 @@ function register()
 // One-click: register + deposit + allocate
 function registerAndStake(uint256 depositAmount, uint64 lockDuration, address agent, uint256 worknetId, uint256 allocateAmount)
 // lockDuration is in SECONDS (not epochs)
-// IMPORTANT: approve target for registerAndStake is AWPRegistry, NOT StakeNFT
+// IMPORTANT: approve target for registerAndStake is AWPRegistry, NOT veAWP
 // AWPToken.approve(awpRegistry, depositAmount) -> then registerAndStake(...)
 ```
 
@@ -345,27 +345,27 @@ python3 scripts/onchain-bind.py --token {T} --target {targetAddress}
 ### Contract Calls
 
 ```solidity
-// Step 1: Approve AWP transfer to StakeNFT (NOT AWPRegistry)
+// Step 1: Approve AWP transfer to veAWP (NOT AWPRegistry)
 function approve(address spender, uint256 amount) returns (bool)   // on AWPToken
-// spender = StakeNFT address: 0x4E119560632698Bab67cFAB5d8EC0A373363ba2d
+// spender = veAWP address: 0x0000b534C63D78212f1BDCc315165852793A00A8
 
-// Step 2: Deposit directly on StakeNFT (after approve receipt confirmed)
-function deposit(uint256 amount, uint64 lockDuration) returns (uint256 tokenId)   // on StakeNFT
+// Step 2: Deposit directly on veAWP (after approve receipt confirmed)
+function deposit(uint256 amount, uint64 lockDuration) returns (uint256 tokenId)   // on veAWP
 // lockDuration in SECONDS (e.g., 15724800 = ~26 weeks)
 // Emits Deposited(user, tokenId, amount, lockEndTime) — lockEndTime is ABSOLUTE TIMESTAMP
 
 // Alternative: Deposit with ERC-2612 permit (no prior approve needed)
-function depositWithPermit(uint256 amount, uint64 lockDuration, uint256 deadline, uint8 v, bytes32 r, bytes32 s) returns (uint256 tokenId)   // on StakeNFT
+function depositWithPermit(uint256 amount, uint64 lockDuration, uint256 deadline, uint8 v, bytes32 r, bytes32 s) returns (uint256 tokenId)   // on veAWP
 
 // Optional: Add to existing position
-function addToPosition(uint256 tokenId, uint256 amount, uint64 newLockEndTime)   // on StakeNFT
+function addToPosition(uint256 tokenId, uint256 amount, uint64 newLockEndTime)   // on veAWP
 // newLockEndTime is absolute timestamp, must be >= current lockEndTime
-// Requires AWPToken.approve(stakeNFT, amount) before calling — same pattern as initial deposit
+// Requires AWPToken.approve(veAWP, amount) before calling — same pattern as initial deposit
 // CAUTION: Reverts with PositionExpired if the position's lock has already expired.
 // Check remainingTime(tokenId) > 0 before calling.
 
 // Withdraw after lock expires (burns position NFT, returns AWP)
-function withdraw(uint256 tokenId)   // on StakeNFT
+function withdraw(uint256 tokenId)   // on veAWP
 // Only callable when remainingTime(tokenId) == 0
 ```
 
@@ -404,18 +404,18 @@ python3 scripts/onchain-add-position.py --token {T} --position {tokenId} --amoun
 ### Contract Calls
 
 ```solidity
-// All on StakingVault — caller must be staker or delegate (direct access, NOT onlyAWPRegistry)
+// All on AWPAllocator — caller must be staker or delegate (direct access, NOT onlyAWPRegistry)
 function allocate(address staker, address agent, uint256 worknetId, uint256 amount)
 function deallocate(address staker, address agent, uint256 worknetId, uint256 amount)
 function reallocate(address staker, address fromAgent, uint256 fromWorknetId, address toAgent, uint256 toWorknetId, uint256 amount)
 // Reallocate is immediate — no cooldown
 ```
 > `staker` is an explicit parameter. Caller must be the staker themselves or their delegate.
-> StakingVault functions are called directly (not through AWPRegistry).
+> AWPAllocator functions are called directly (not through AWPRegistry).
 
 ### Gasless Allocate/Deallocate Relay
 
-StakingVault has its own EIP-712 domain for gasless operations:
+AWPAllocator has its own EIP-712 domain for gasless operations:
 
 ```
 POST /api/relay/allocate
@@ -423,7 +423,7 @@ POST /api/relay/deallocate
 GET  /api/relay/status/{txHash}
 ```
 
-**Get StakingVault nonce:**
+**Get AWPAllocator nonce:**
 ```json
 {"jsonrpc": "2.0", "method": "nonce.getStaking", "params": {"address": "0x..."}, "id": 1}
 ```
@@ -449,10 +449,10 @@ awp-wallet sign-typed-data --token {T} --data '{
   },
   "primaryType": "Allocate",
   "domain": {
-    "name": "StakingVault",
+    "name": "AWPAllocator",
     "version": "1",
     "chainId": 8453,
-    "verifyingContract": "0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b"
+    "verifyingContract": "0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA"
   },
   "message": {
     "staker": "'$WALLET_ADDR'",
@@ -471,14 +471,14 @@ curl -X POST https://api.awp.sh/api/relay/allocate \
 
 **EIP-712 Deallocate** follows the same pattern with `"Deallocate"` primaryType and `POST /api/relay/deallocate`.
 
-### StakingVault View Functions
+### AWPAllocator View Functions
 
 ```solidity
 function userTotalAllocated(address staker) view returns (uint256)
 function getAgentStake(address staker, address agent, uint256 worknetId) view returns (uint256)
 function getSubnetTotalStake(uint256 worknetId) view returns (uint256)
 function getAgentSubnets(address staker, address agent) view returns (uint256[])
-function nonces(address) view returns (uint256)   // StakingVault EIP-712 nonce
+function nonces(address) view returns (uint256)   // AWPAllocator EIP-712 nonce
 ```
 
 ### Check Available Balance

@@ -28,7 +28,7 @@ def main() -> None:
 
     # Fetch contract registry
     registry = get_registry()
-    staking_vault = require_contract(registry, "stakingVault")
+    awp_allocator = require_contract(registry, "awpAllocator")
 
     # Check unallocated balance
     balance = rpc("staking.getBalance", {"address": wallet_addr})
@@ -56,7 +56,7 @@ def main() -> None:
     )
 
     step("allocate", staker=wallet_addr, agent=agent, subnet=subnet_id, amount=f"{amount} AWP")
-    result = wallet_send(token, staking_vault, calldata)
+    result = wallet_send(token, awp_allocator, calldata)
     print(result)
 
 

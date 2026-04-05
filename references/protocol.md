@@ -21,13 +21,13 @@ AWP is deployed on **4 chains** with identical contract addresses (except LPMana
 AWPToken:           0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1
 AWPRegistry:        0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A
 AWPEmission:        0x3C9cB73f8B81083882c5308Cce4F31f93600EaA9
-StakingVault:       0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b
-StakeNFT:           0x4E119560632698Bab67cFAB5d8EC0A373363ba2d
-WorknetNFT:         0xB9F03539BE496d09c4d7964921d674B8763f5233
+AWPAllocator:       0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA
+veAWP:           0x0000b534C63D78212f1BDCc315165852793A00A8
+AWPWorkNet:         0x00000bfbdEf8533E5F3228c9C846522D906100A7
 LPManager (proxy):  0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2
-AlphaTokenFactory:  0xB2e4897eD77d0f5BFa3140B9989594de09a8037c
+WorknetTokenFactory:  0x000058EF25751Bb3687eB314185B46b942bE00AF
 Treasury:           0x82562023a053025F3201785160CaE6051efD759e
-AWPDAO:             0x6a074aC9823c47f86EE4Fc7F62e4217Bc9C76004
+AWPDAO:             0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0
 ```
 
 ### WorknetManager Implementations (differ per chain)
@@ -56,7 +56,7 @@ Default implementation contracts for auto-deployed WorknetManagers. Each worknet
 
 ### WorknetInfo (on-chain struct)
 
-Returned by `AWPRegistry.getWorknet(worknetId)`. AWPRegistry lifecycle state only — identity data lives in WorknetNFT.
+Returned by `AWPRegistry.getWorknet(worknetId)`. AWPRegistry lifecycle state only — identity data lives in AWPWorkNet.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -69,7 +69,7 @@ Returned by `AWPRegistry.getWorknet(worknetId)`. AWPRegistry lifecycle state onl
 
 ### WorknetFullInfo (on-chain struct)
 
-Returned by `AWPRegistry.getWorknetFull(worknetId)`. Combined: AWPRegistry state + WorknetNFT identity.
+Returned by `AWPRegistry.getWorknetFull(worknetId)`. Combined: AWPRegistry state + AWPWorkNet identity.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -81,9 +81,9 @@ Returned by `AWPRegistry.getWorknetFull(worknetId)`. Combined: AWPRegistry state
 | activatedAt | uint64 | Unix timestamp when activated (0 if never activated) |
 | name | string | Alpha token name |
 | symbol | string | Alpha token symbol |
-| skillsURI | string | Skills file URI (set via WorknetNFT.setSkillsURI) |
+| skillsURI | string | Skills file URI (set via AWPWorkNet.setSkillsURI) |
 | minStake | uint128 | Minimum stake for agents (0 = no minimum) |
-| owner | address | WorknetNFT owner |
+| owner | address | AWPWorkNet owner |
 
 ### WorknetParams (registration input)
 
@@ -119,9 +119,9 @@ Returned by `AWPRegistry.getAgentInfo(agent, worknetId)`.
 | stake | uint256 |
 | recipient | address |
 
-### StakeNFT Position
+### veAWP Position
 
-Returned by `StakeNFT.positions(tokenId)`.
+Returned by `veAWP.positions(tokenId)`.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -129,7 +129,7 @@ Returned by `StakeNFT.positions(tokenId)`.
 | lockEndTime | uint64 | Unix timestamp when lock expires |
 | createdAt | uint64 | Unix timestamp when position was created |
 
-> **Important**: StakeNFT is NOT ERC721Enumerable. Token IDs cannot be iterated on-chain. Always retrieve position lists via `staking.getPositions(address)`.
+> **Important**: veAWP is NOT ERC721Enumerable. Token IDs cannot be iterated on-chain. Always retrieve position lists via `staking.getPositions(address)`.
 
 ---
 
@@ -155,11 +155,11 @@ All events arrive via WebSocket (`wss://api.awp.sh/ws/live`) with envelope:
 
 | Event | Source | Data Fields | Pitfall |
 |-------|--------|-------------|---------|
-| Deposited | StakeNFT | `{user, tokenId, amount, lockEndTime, chainId}` | `lockEndTime` is **absolute** unix timestamp, NOT relative lock duration |
-| Withdrawn | StakeNFT | `{user, tokenId, amount, chainId}` | — |
-| Allocated | StakingVault | `{staker, agent, worknetId, amount, chainId}` | — |
-| Deallocated | StakingVault | `{staker, agent, worknetId, amount, chainId}` | — |
-| Reallocated | StakingVault | `{staker, fromAgent, fromWorknetId, toAgent, toWorknetId, amount, chainId}` | — |
+| Deposited | veAWP | `{user, tokenId, amount, lockEndTime, chainId}` | `lockEndTime` is **absolute** unix timestamp, NOT relative lock duration |
+| Withdrawn | veAWP | `{user, tokenId, amount, chainId}` | — |
+| Allocated | AWPAllocator | `{staker, agent, worknetId, amount, chainId}` | — |
+| Deallocated | AWPAllocator | `{staker, agent, worknetId, amount, chainId}` | — |
+| Reallocated | AWPAllocator | `{staker, fromAgent, fromWorknetId, toAgent, toWorknetId, amount, chainId}` | — |
 
 ### Worknet Events
 
@@ -203,16 +203,16 @@ Used for: bind, unbind, setRecipient, grantDelegate, revokeDelegate, registerWor
 
 Nonce: fetch via `nonce.get(address)`.
 
-### StakingVault Domain
+### AWPAllocator Domain
 
 Used for: allocate, deallocate.
 
 ```json
 {
-  "name": "StakingVault",
+  "name": "AWPAllocator",
   "version": "1",
   "chainId": <chainId>,
-  "verifyingContract": "0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b"
+  "verifyingContract": "0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA"
 }
 ```
 
@@ -236,18 +236,18 @@ Deallocate(address staker, address agent, uint256 worknetId, uint256 amount, uin
 
 ---
 
-## StakeNFT — AWP Staking
+## veAWP — AWP Staking
 
 ```solidity
 // Deposit AWP and mint a position NFT. lockDuration in seconds (min 1 day).
-// Caller must approve StakeNFT to spend AWP first.
+// Caller must approve veAWP to spend AWP first.
 function deposit(uint256 amount, uint64 lockDuration) external returns (uint256 tokenId);
 
 // Same as deposit but uses ERC-2612 permit (no prior approve needed — user signs a permit off-chain)
 function depositWithPermit(uint256 amount, uint64 lockDuration, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external returns (uint256 tokenId);
 ```
 
-## StakingVault — Allocation
+## AWPAllocator — Allocation
 
 ```solidity
 // Atomic move: deallocate from one (agent, worknet) and allocate to another in a single tx.
@@ -278,10 +278,10 @@ function strategyPaused() external view returns (bool);     // Whether auto-stra
 
 ---
 
-## AWPDAO (`0x6a074aC9823c47f86EE4Fc7F62e4217Bc9C76004`) — Governance
+## AWPDAO (`0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0`) — Governance
 
 ```solidity
-// ── Propose (caller must hold StakeNFT positions with sufficient voting power) ──
+// ── Propose (caller must hold veAWP positions with sufficient voting power) ──
 // Submit an executable proposal (targets + calldatas executed via Treasury timelock)
 function proposeWithTokens(
     address[] memory targets, uint256[] memory values, bytes[] memory calldatas,
@@ -326,11 +326,11 @@ Returns all protocol contract addresses + EIP-712 domain info. Fetch dynamically
   "awpRegistry": "0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A",
   "awpToken": "0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1",
   "awpEmission": "0x3C9cB73f8B81083882c5308Cce4F31f93600EaA9",
-  "stakingVault": "0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b",
-  "stakeNFT": "0x4E119560632698Bab67cFAB5d8EC0A373363ba2d",
-  "worknetNFT": "0xB9F03539BE496d09c4d7964921d674B8763f5233",
-  "alphaTokenFactory": "0xB2e4897eD77d0f5BFa3140B9989594de09a8037c",
-  "dao": "0x6a074aC9823c47f86EE4Fc7F62e4217Bc9C76004",
+  "awpAllocator": "0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA",
+  "veAWP": "0x0000b534C63D78212f1BDCc315165852793A00A8",
+  "awpWorkNet": "0x00000bfbdEf8533E5F3228c9C846522D906100A7",
+  "worknetTokenFactory": "0x000058EF25751Bb3687eB314185B46b942bE00AF",
+  "dao": "0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0",
   "treasury": "0x82562023a053025F3201785160CaE6051efD759e"
 }, "id": 1}
 ```
@@ -383,8 +383,8 @@ Check registration status for any address.
 | Proposal Threshold | 1,000,000 AWP voting power |
 | Worknet Registration Cost | 100,000 AWP (initialAlphaMint x initialAlphaPrice) |
 | Alpha Mint per Worknet | 100,000,000 |
-| WorknetId Format | `(chainId << 64) \| localCounter` — globally unique |
-| Min Lock Duration (StakeNFT) | 1 day |
+| WorknetId Format | `chainId * 100_000_000 + localCounter` — globally unique |
+| Min Lock Duration (veAWP) | 1 day |
 | Immunity Period | 30 days |
 | Timelock Delay | 2 days |
 | LP Pool Fee | 1% (PancakeSwap V4 CL) |

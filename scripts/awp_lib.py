@@ -331,18 +331,18 @@ def validate_positive_int(val: str, name: str = "id") -> int:
 # ── EIP-712 construction ─────────────────────────────────
 
 def get_eip712_domain(registry: dict, contract_name: str = "AWPRegistry") -> dict:
-    """获取 EIP-712 domain 信息，支持 AWPRegistry 和 StakingVault"""
+    """获取 EIP-712 domain 信息，支持 AWPRegistry 和 AWPAllocator"""
     domain = registry.get("eip712Domain", {})
     chain_id = domain.get("chainId") or registry.get("chainId")
 
-    if contract_name == "StakingVault":
-        # StakingVault 使用 registry 中的专用 domain 字段
-        sv_domain = registry.get("stakingVaultEip712Domain", {})
+    if contract_name == "AWPAllocator":
+        # AWPAllocator 使用 registry 中的专用 domain 字段 allocatorEip712Domain
+        alloc_domain = registry.get("allocatorEip712Domain", {})
         return {
-            "name": sv_domain.get("name", "StakingVault"),
-            "version": str(sv_domain.get("version", "1")),
-            "chainId": int(sv_domain.get("chainId") or chain_id or _DEFAULT_CHAIN_ID),
-            "verifyingContract": sv_domain.get("verifyingContract") or registry.get("stakingVault", ""),
+            "name": alloc_domain.get("name", "AWPAllocator"),
+            "version": str(alloc_domain.get("version", "1")),
+            "chainId": int(alloc_domain.get("chainId") or chain_id or _DEFAULT_CHAIN_ID),
+            "verifyingContract": alloc_domain.get("verifyingContract") or registry.get("awpAllocator", ""),
         }
 
     # AWPRegistry domain（默认）

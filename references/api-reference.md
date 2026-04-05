@@ -50,7 +50,7 @@ Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, s
 ### Common Parameters
 
 - `address`: `string` — 0x-prefixed, 40 hex chars, case-insensitive
-- `worknetId`: `string` — Globally unique: `(chainId << 64) | localId`, passed as decimal string
+- `worknetId`: `string` — Globally unique: `chainId * 100_000_000 + localId`, passed as decimal string
 - `chainId`: `integer` — Optional on most methods; omit for all-chain aggregation, specify for single-chain
 - `page`: `integer` — 1-indexed (default 1)
 - `limit`: `integer` — Items per page (default 20, max 100)
@@ -89,7 +89,7 @@ Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, s
 | `address.resolveRecipient` | `address` (required), `chainId?` | Walk bind chain to root, return recipient |
 | `address.batchResolveRecipients` | `addresses[]` (required, max 500), `chainId?` | Batch resolve |
 | `nonce.get` | `address` (required), `chainId?` | AWPRegistry EIP-712 nonce |
-| `nonce.getStaking` | `address` (required), `chainId?` | StakingVault EIP-712 nonce |
+| `nonce.getStaking` | `address` (required), `chainId?` | AWPAllocator EIP-712 nonce |
 
 #### `address.check` Response Formats
 
@@ -133,7 +133,7 @@ Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, s
 |--------|--------|-------------|
 | `staking.getBalance` | `address` (required), `chainId?` | Returns `{totalStaked, totalAllocated, unallocated}` in wei strings |
 | `staking.getUserBalanceGlobal` | `address` (required) | Aggregated across all chains |
-| `staking.getPositions` | `address` (required), `chainId?` | StakeNFT positions |
+| `staking.getPositions` | `address` (required), `chainId?` | veAWP positions |
 | `staking.getPositionsGlobal` | `address` (required) | Positions across all chains (includes `chainId` per position) |
 | `staking.getAllocations` | `address` (required), `chainId?`, `page?`, `limit?` | Allocation records |
 | `staking.getAgentSubnetStake` | `agent` (required), `worknetId` (required) | Agent's stake in worknet (cross-chain) |
@@ -172,8 +172,8 @@ Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, s
 |--------|--------|-------------|
 | `tokens.getAWP` | `chainId?` | AWP supply, max supply |
 | `tokens.getAWPGlobal` | — | Aggregated across chains |
-| `tokens.getAlphaInfo` | `worknetId` (required) | Alpha token info |
-| `tokens.getAlphaPrice` | `worknetId` (required) | Price from LP pool (cached 10min) |
+| `tokens.getWorknetTokenInfo` | `worknetId` (required) | Alpha token info |
+| `tokens.getWorknetTokenPrice` | `worknetId` (required) | Price from LP pool (cached 10min) |
 
 ### Governance
 
@@ -209,7 +209,7 @@ Relay endpoints use REST (not JSON-RPC). Users sign EIP-712 messages off-chain; 
 | `POST /api/relay/allocate` | RelayAllocate | Gasless allocate |
 | `POST /api/relay/deallocate` | RelayDeallocate | Gasless deallocate |
 | `POST /api/relay/activate-subnet` | RelayActivateWorknet | Gasless activate worknet |
-| `POST /api/relay/register-subnet` | RelayRegisterWorknet | Gasless register worknet (with permit) |
+| `POST /api/relay/register-worknet` | RelayRegisterWorknet | Gasless register worknet (with permit) |
 | `POST /api/relay/grant-delegate` | RelayGrantDelegate | Gasless grant delegate |
 | `POST /api/relay/revoke-delegate` | RelayRevokeDelegate | Gasless revoke delegate |
 | `GET /api/relay/status/{txHash}` | GetRelayStatus | Check relay tx status |
@@ -290,7 +290,7 @@ Allocate(address staker, address agent, uint256 worknetId, uint256 amount, uint2
 Deallocate(address staker, address agent, uint256 worknetId, uint256 amount, uint256 nonce, uint256 deadline)
 ```
 
-**Nonce workflow**: Always fetch the current nonce via `nonce.get` (AWPRegistry) or `nonce.getStaking` (StakingVault) immediately before signing. Nonces auto-increment after each successful relay. Using a stale nonce causes `InvalidSignature` error.
+**Nonce workflow**: Always fetch the current nonce via `nonce.get` (AWPRegistry) or `nonce.getStaking` (AWPAllocator) immediately before signing. Nonces auto-increment after each successful relay. Using a stale nonce causes `InvalidSignature` error.
 
 ---
 
@@ -335,10 +335,10 @@ struct WorknetParams {
 }
 
 registerWorknet(WorknetParams params) returns (uint256 worknetId)  // Costs 100,000 AWP
-activateWorknet(uint256 worknetId)    // Pending -> Active, WorknetNFT owner only
-pauseWorknet(uint256 worknetId)       // Active -> Paused, WorknetNFT owner only
-resumeWorknet(uint256 worknetId)      // Paused -> Active, WorknetNFT owner only
-cancelWorknet(uint256 worknetId)      // Pending -> None (full AWP refund), WorknetNFT owner only
+activateWorknet(uint256 worknetId)    // Pending -> Active, AWPWorkNet owner only
+pauseWorknet(uint256 worknetId)       // Active -> Paused, AWPWorkNet owner only
+resumeWorknet(uint256 worknetId)      // Paused -> Active, AWPWorkNet owner only
+cancelWorknet(uint256 worknetId)      // Pending -> None (full AWP refund), AWPWorkNet owner only
 
 // View
 getWorknet(uint256 worknetId) view
@@ -349,10 +349,10 @@ initialAlphaPrice() view
 initialAlphaMint() view
 ```
 
-### StakeNFT — AWP Staking
+### veAWP — AWP Staking
 
 ```solidity
-deposit(uint256 amount, uint64 lockDuration) returns (uint256 tokenId)  // User must approve StakeNFT
+deposit(uint256 amount, uint64 lockDuration) returns (uint256 tokenId)  // User must approve veAWP
 depositWithPermit(uint256 amount, uint64 lockDuration, uint256 deadline, uint8 v, bytes32 r, bytes32 s) returns (uint256 tokenId)
 addToPosition(uint256 tokenId, uint256 amount, uint64 newLockEndTime)
 withdraw(uint256 tokenId)                     // After lock expires, burns NFT
@@ -363,7 +363,7 @@ getVotingPower(uint256 tokenId) view returns (uint256)
 remainingTime(uint256 tokenId) view returns (uint64)
 ```
 
-### StakingVault — Allocation
+### AWPAllocator — Allocation
 
 ```solidity
 // Caller must be staker or staker's delegate (NOT onlyAWPRegistry)
@@ -375,9 +375,9 @@ reallocate(address staker, address fromAgent, uint256 fromWorknetId, address toA
 userTotalAllocated(address user) view returns (uint256)
 getAgentStake(address user, address agent, uint256 worknetId) view returns (uint256)
 getAgentWorknets(address user, address agent) view returns (uint256[])
-nonces(address) view returns (uint256)        // StakingVault EIP-712 nonce (separate from AWPRegistry)
+nonces(address) view returns (uint256)        // AWPAllocator EIP-712 nonce (separate from AWPRegistry)
 ```
-> StakingVault has its own EIP-712 domain (`"StakingVault"`, verifyingContract: `0xE8A204fD9c94C7E28bE11Af02fc4A4AC294Df29b`).
+> AWPAllocator has its own EIP-712 domain (`"AWPAllocator"`, verifyingContract: `0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA`).
 
 ### WorknetManager — Per-Worknet Operations
 
@@ -455,11 +455,11 @@ For offline mining of vanity Alpha token CREATE2 addresses:
 | Worknet Registration Cost | 100,000 AWP | `initialAlphaMint (100M) * initialAlphaPrice (0.001)`. Escrowed until activation or refunded on cancel. |
 | Alpha Tokens per Worknet | 100,000,000 (100M) | Minted to LP pool on activation |
 | Initial Alpha Price | 0.001 AWP per Alpha | `1e15 wei`. Determines AWP escrow and LP ratio. |
-| Min Lock Duration (StakeNFT) | 1 day (86,400 seconds) | Minimum lock when depositing |
+| Min Lock Duration (veAWP) | 1 day (86,400 seconds) | Minimum lock when depositing |
 | Max Voting Weight Duration | 54 weeks | Voting power formula: `amount * sqrt(min(remainingTime, 54 weeks) / 7 days)` |
 | Timelock Delay (Treasury) | 2 days (172,800 seconds) | DAO proposals require 2-day waiting period before execution |
 | LP Pool Fee | 10,000 bps (1%) | Uniswap V4 / PancakeSwap V4 pool fee tier |
 | LP Tick Spacing | 200 | Determines price granularity in LP pools |
 | Max Active Worknets | 10,000 | Per chain. Hard limit in AWPRegistry. |
 | Max Emission Recipients | 10,000 | Per chain per epoch. Hard limit in AWPEmission. |
-| WorknetId Format | `(chainId << 64) \| localCounter` | 256-bit globally unique identifier |
+| WorknetId Format | `chainId * 100_000_000 + localCounter` | 256-bit globally unique identifier |

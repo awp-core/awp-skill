@@ -47,9 +47,9 @@ def main() -> None:
     if allocate_wei > amount_wei:
         die(f"allocate-amount ({allocate_amount} AWP) exceeds deposit amount ({amount} AWP)")
 
-    # Step 1: Approve AWP to AWP_REGISTRY (note: target is AWP_REGISTRY, NOT StakeNFT)
+    # Step 1: Approve AWP to AWP_REGISTRY (note: target is AWP_REGISTRY, NOT veAWP)
     step("approve", spender=awp_registry,
-         note="Approve target is AWP_REGISTRY, NOT StakeNFT",
+         note="Approve target is AWP_REGISTRY, NOT veAWP",
          amount=f"{amount} AWP")
     wallet_approve(token, awp_token, awp_registry, amount)
 

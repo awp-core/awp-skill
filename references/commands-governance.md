@@ -12,9 +12,9 @@
 # Contract addresses (same on all chains)
 AWP_REGISTRY="0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A"
 AWP_TOKEN="0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1"
-STAKE_NFT="0x4E119560632698Bab67cFAB5d8EC0A373363ba2d"
-WORKNET_NFT="0xB9F03539BE496d09c4d7964921d674B8763f5233"
-DAO_ADDR="0x6a074aC9823c47f86EE4Fc7F62e4217Bc9C76004"
+STAKE_NFT="0x0000b534C63D78212f1BDCc315165852793A00A8"
+WORKNET_NFT="0x00000bfbdEf8533E5F3228c9C846522D906100A7"
+DAO_ADDR="0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0"
 TREASURY="0x82562023a053025F3201785160CaE6051efD759e"
 
 WALLET_ADDR=$(awp-wallet receive | jq -r '.eoaAddress')
@@ -145,7 +145,7 @@ function balanceOf(address account) view returns (uint256)   // on AWPToken
 ### Alpha Token Info
 
 ```json
-{"jsonrpc": "2.0", "method": "tokens.getAlphaInfo", "params": {"worknetId": "1"}, "id": 1}
+{"jsonrpc": "2.0", "method": "tokens.getWorknetTokenInfo", "params": {"worknetId": "1"}, "id": 1}
 
 // Response
 {"jsonrpc": "2.0", "result": {"worknetId": "1", "name": "My Worknet Alpha", "symbol": "MWALPHA", "alphaToken": "0x..."}, "id": 1}
@@ -154,7 +154,7 @@ function balanceOf(address account) view returns (uint256)   // on AWPToken
 ### Alpha Token Price
 
 ```json
-{"jsonrpc": "2.0", "method": "tokens.getAlphaPrice", "params": {"worknetId": "1"}, "id": 1}
+{"jsonrpc": "2.0", "method": "tokens.getWorknetTokenPrice", "params": {"worknetId": "1"}, "id": 1}
 
 // Response (cached 10min)
 {"jsonrpc": "2.0", "result": {"priceInAWP": "0.015", "reserve0": "...", "reserve1": "...", "updatedAt": "..."}, "id": 1}

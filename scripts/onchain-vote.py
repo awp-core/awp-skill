@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """On-chain voting — AWP DAO proposal voting
 castVoteWithReasonAndParams(uint256,uint8,string,bytes)
-params = abi.encode(uint256[] tokenIds) — eligible stakeNFT positions only
+params = abi.encode(uint256[] tokenIds) — eligible veAWP positions only
 Requires ETH for gas.
 """
 import json
@@ -114,7 +114,7 @@ def main() -> None:
     if not eligible_ids:
         die(
             f"No eligible positions: all positions were created at or after proposal creation "
-            f"timestamp ({proposal_created_at}). You need stakeNFT positions created before the proposal."
+            f"timestamp ({proposal_created_at}). You need veAWP positions created before the proposal."
         )
 
     step("eligibleTokenIds", tokenIds=eligible_ids)
