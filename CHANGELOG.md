@@ -1,5 +1,72 @@
 # Changelog
 
+## v1.1.4
+
+### Critical — revert wrong signature format for relay endpoints
+
+v1.0.2 changed `relay-start.py` and `relay-register-subnet.py` to send split
+`v`/`r`/`s` signature fields, based on what `skill-reference.md` §5 documented.
+That change was wrong: the live relay API does NOT accept split v/r/s — sending
+them produces `{"error":"missing signature"}` because the relay only reads a
+combined `signature` field (or `permitSignature` + `registerSignature` for the
+dual-sig worknet-registration endpoint). The v/r/s fields are silently ignored.
+
+Every `relay-start` and `relay-register-subnet` invocation since v1.0.2 would
+have failed before even reaching EIP-712 validation, producing the misleading
+"missing signature" error that users reported.
+
+Verified by probing all 8 relay endpoints on `api.awp.sh`:
+
+| Endpoint | Required field |
+|---|---|
+| `/relay/bind` | `signature` |
+| `/relay/unbind` | `signature` |
+| `/relay/set-recipient` | `signature` |
+| `/relay/grant-delegate` | `signature` |
+| `/relay/revoke-delegate` | `signature` |
+| `/relay/allocate` | `signature` |
+| `/relay/deallocate` | `signature` |
+| `/relay/register-worknet` | `permitSignature` + `registerSignature` |
+
+Each endpoint returns `{"error":"missing signature"}` (or `"both permitSignature
+and registerSignature are required"`) when sent the split-component shape, and
+advances to EIP-712 validation when sent the combined-hex shape.
+
+**Fixes:**
+
+- `scripts/relay-start.py`: reverted to `{"signature": <65-byte-hex>}` in the
+  relay body; removed the `split_sig` + `v/r/s` assignment. Added a comment
+  block explaining why the split-sig shape is wrong so future agents don't
+  "re-fix" it.
+- `scripts/relay-register-subnet.py`: reverted to
+  `{"permitSignature": ..., "registerSignature": ...}` (65-byte hex each);
+  removed the `split_sig` calls. Same warning comment.
+- `scripts/awp_lib.py`: removed the now-unused `split_sig()` helper.
+- `SKILL.md`: the Gasless Relay section header said "Relay request format uses
+  **v, r, s** signature components (not a combined signature hex)" — exactly
+  backwards. Rewritten to describe the combined-signature requirement and to
+  call out the dual-sig exception for worknet registration.
+- `references/api-reference.md`, `references/commands-subnet.md`,
+  `references/commands-staking.md`: every `"v":27, "r":..., "s":...` example
+  rewritten to `"signature":"0x...(65 bytes hex)..."`. The dual-sig worknet
+  registration example rewritten to
+  `"permitSignature":..., "registerSignature":...`. Bash heredoc examples with
+  `'$V'`/`'$R'`/`'$S'` substitution updated to use `'$SIGNATURE'`.
+- `references/commands-staking.md`: the stray "Split components" footnote
+  rewritten to explicitly document the combined-hex format and the
+  dual-signature exception, and to warn that sending split v/r/s produces
+  `{"error":"missing signature"}`.
+
+**End-to-end verified:** a minimal POST matching the body shape
+`relay-start.py` now produces against `/relay/bind` clears the "missing
+signature" check and reaches EIP-712 validation. The remaining
+`"invalid signature S value"` is expected for a dummy signature and will
+resolve once a real wallet-signed payload is sent.
+
+The "invalid EIP-712 signature" error some users reported after this fix is
+almost certainly an indexer-lag issue (on-chain nonce hasn't propagated to the
+relay's cache yet) and is separate from this bug.
+
 ## v1.1.3
 
 ### README regression fixes from v1.1.2

@@ -222,9 +222,7 @@ POST /api/relay/register
   "chainId": 8453,
   "user": "0xUserAddress...",
   "deadline": 1712345678,
-  "v": 27,
-  "r": "0x...(32 bytes hex)...",
-  "s": "0x...(32 bytes hex)..."
+  "signature": "0x...(65 bytes hex)..."
 }
 ```
 
@@ -236,7 +234,7 @@ POST /api/relay/bind
   "agent": "0xAgentAddress...",
   "target": "0xOwnerAddress...",
   "deadline": 1712345678,
-  "v": 27, "r": "0x...", "s": "0x..."
+  "signature": "0x...(65 bytes hex)..."
 }
 ```
 
@@ -250,7 +248,7 @@ POST /api/relay/allocate
   "worknetId": "845300000001",
   "amount": "1000000000000000000000",
   "deadline": 1712345678,
-  "v": 27, "r": "0x...", "s": "0x..."
+  "signature": "0x...(65 bytes hex)..."
 }
 ```
 

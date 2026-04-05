@@ -17,7 +17,6 @@ from awp_lib import (
     get_wallet_address,
     info,
     rpc,
-    split_sig,
     step,
     validate_address,
     wallet_sign_typed_data,
@@ -136,11 +135,16 @@ def main() -> None:
             "deadline": deadline,
         }
 
-    # Step 7: Sign and split signature into v/r/s
+    # Step 7: Sign and send the compact 65-byte signature.
+    # The relay API expects the full `signature` field, NOT split v/r/s.
+    # We probed /relay/set-recipient and /relay/bind with both shapes:
+    #   - split v/r/s → {"error":"missing signature"}  (fields ignored)
+    #   - combined signature → reaches EIP-712 verification (expected behaviour)
+    # skill-reference.md §5 incorrectly documents the v/r/s shape — the live API
+    # only accepts the combined form. Do not "fix" this back to v/r/s.
     step("sign_eip712")
     signature = wallet_sign_typed_data(token, eip712_data)
-    sig_v, sig_r, sig_s = split_sig(signature)
-    relay_body: dict = {**relay_body_base, "v": sig_v, "r": sig_r, "s": sig_s}
+    relay_body: dict = {**relay_body_base, "signature": signature}
 
     # Step 8: Submit to relay
     step("submit_relay", endpoint=relay_endpoint)

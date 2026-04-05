@@ -22,7 +22,6 @@ from awp_lib import (
     require_contract,
     rpc,
     rpc_call_batch,
-    split_sig,
     step,
     validate_address,
     validate_bytes32,
@@ -184,10 +183,14 @@ def main() -> None:
     )
     register_signature = wallet_sign_typed_data(token, register_data)
 
-    # Step 8: Submit to relay — split compact 65-byte signatures into (v, r, s)
-    permit_v, permit_r, permit_s = split_sig(permit_signature)
-    register_v, register_r, register_s = split_sig(register_signature)
-
+    # Step 8: Submit to relay.
+    # The live relay API expects the full 65-byte compact signatures as
+    # `permitSignature` + `registerSignature`, NOT split v/r/s. We probed the
+    # endpoint with both shapes:
+    #   - permitV/R/S + registerV/R/S → {"error":"both permitSignature and registerSignature are required"}
+    #   - permitSignature + registerSignature → reaches EIP-712 verification
+    # skill-reference.md §5 incorrectly documents the v/r/s shape. Do not "fix"
+    # this back to v/r/s.
     step("submit_relay")
     relay_body = {
         "chainId": chain_id,
@@ -199,12 +202,8 @@ def main() -> None:
         "minStake": str(min_stake),
         "skillsURI": skills_uri,
         "deadline": deadline,
-        "permitV": permit_v,
-        "permitR": permit_r,
-        "permitS": permit_s,
-        "registerV": register_v,
-        "registerR": register_r,
-        "registerS": register_s,
+        "permitSignature": permit_signature,
+        "registerSignature": register_signature,
     }
 
     relay_url = f"{RELAY_BASE}/relay/register-worknet"

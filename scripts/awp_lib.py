@@ -177,22 +177,6 @@ def rpc_call_batch(calls: list[tuple[str, str]]) -> list[str]:
     return out
 
 
-def split_sig(sig: str) -> tuple[int, str, str]:
-    """Split a 0x<r><s><v> 65-byte compact signature into (v, r, s).
-
-    The wallet returns EIP-712 signatures as a single concatenated hex string;
-    relay endpoints and on-chain EIP-712 functions expect the v/r/s components
-    as separate fields.
-    """
-    raw = sig[2:] if sig.startswith("0x") else sig
-    if len(raw) != 130:
-        die(f"Invalid signature length: expected 130 hex chars, got {len(raw)}")
-    r = "0x" + raw[0:64]
-    s = "0x" + raw[64:128]
-    v = int(raw[128:130], 16)
-    return v, r, s
-
-
 def hex_to_int(val: str) -> int:
     """Convert hex string to int, die on failure"""
     if not val or val in ("null", "0x"):

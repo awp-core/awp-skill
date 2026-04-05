@@ -268,8 +268,7 @@ curl -X POST https://api.awp.sh/api/relay/register-worknet \
     "salt": "'$SALT'", "minStake": "{minStakeWei}",
     "skillsURI": "{skillsURI}",
     "deadline": '$DEADLINE',
-    "permitV": 27, "permitR": "0x...(32 bytes hex)...", "permitS": "0x...(32 bytes hex)...",
-    "registerV": 27, "registerR": "0x...(32 bytes hex)...", "registerS": "0x...(32 bytes hex)..."
+    "permitSignature": "0x...(65 bytes hex)...", "registerSignature": "0x...(65 bytes hex)..."
   }'
 
 # Check relay status:
@@ -356,7 +355,7 @@ awp-wallet sign-typed-data --token {T} --data '{
 
 curl -X POST https://api.awp.sh/api/relay/activate-subnet \
   -H "Content-Type: application/json" \
-  -d '{"chainId": 8453, "user": "'$WALLET_ADDR'", "worknetId": "'$WORKNET_ID'", "deadline": '$DEADLINE', "v": 27, "r": "0x...(32 bytes hex)...", "s": "0x...(32 bytes hex)..."}'
+  -d '{"chainId": 8453, "user": "'$WALLET_ADDR'", "worknetId": "'$WORKNET_ID'", "deadline": '$DEADLINE', "signature": "0x...(65 bytes hex)..."}'
 ```
 
 ### Complete Command Templates

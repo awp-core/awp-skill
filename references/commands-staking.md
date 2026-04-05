@@ -54,7 +54,7 @@ awp-wallet balance --token {T} --asset {awpTokenAddr}
 ```bash
 # Sign typed data for gasless binding, unbinding, set-recipient, allocate, deallocate
 awp-wallet sign-typed-data --token {T} --data '{...EIP712 JSON...}'
-# -> {"signature": "0x...", "v": 28, "r": "0x...", "s": "0x..."}
+# -> {"signature": "0x...(65 bytes hex, compact r||s||v form)"}
 ```
 
 ---
@@ -135,7 +135,7 @@ GET  /api/relay/status/{txHash}
 
 **Bind request:**
 ```json
-{"chainId": 8453, "agent": "0xAgent...", "target": "0xTarget...", "deadline": 1742400000, "v": 27, "r": "0x...", "s": "0x..."}
+{"chainId": 8453, "agent": "0xAgent...", "target": "0xTarget...", "deadline": 1742400000, "signature": "0x...(65 bytes hex)..."}
 ```
 **Response:**
 ```json
@@ -144,22 +144,22 @@ GET  /api/relay/status/{txHash}
 
 **Unbind request:**
 ```json
-{"chainId": 8453, "user": "0x1234...", "deadline": 1742400000, "v": 27, "r": "0x...", "s": "0x..."}
+{"chainId": 8453, "user": "0x1234...", "deadline": 1742400000, "signature": "0x...(65 bytes hex)..."}
 ```
 
 **Set-recipient request:**
 ```json
-{"chainId": 8453, "user": "0x1234...", "recipient": "0x5678...", "deadline": 1742400000, "v": 27, "r": "0x...", "s": "0x..."}
+{"chainId": 8453, "user": "0x1234...", "recipient": "0x5678...", "deadline": 1742400000, "signature": "0x...(65 bytes hex)..."}
 ```
 
 **Grant-delegate request:**
 ```json
-{"chainId": 8453, "user": "0x1234...", "delegate": "0x5678...", "deadline": 1742400000, "v": 27, "r": "0x...", "s": "0x..."}
+{"chainId": 8453, "user": "0x1234...", "delegate": "0x5678...", "deadline": 1742400000, "signature": "0x...(65 bytes hex)..."}
 ```
 
 **Revoke-delegate request:**
 ```json
-{"chainId": 8453, "user": "0x1234...", "delegate": "0x5678...", "deadline": 1742400000, "v": 27, "r": "0x...", "s": "0x..."}
+{"chainId": 8453, "user": "0x1234...", "delegate": "0x5678...", "deadline": 1742400000, "signature": "0x...(65 bytes hex)..."}
 ```
 
 **Relay status check:**
@@ -168,7 +168,7 @@ GET /api/relay/status/{txHash}
 ```
 
 > Rate limit: 100 requests per IP per 1 hour (shared across all relay endpoints).
-> Signature format: Split components — `"v": 27, "r": "0x...(32 bytes hex)...", "s": "0x...(32 bytes hex)..."`. All relay endpoints require `chainId` in the request body.
+> Signature format: combined 65-byte hex (`r || s || v`) sent as a single `"signature"` field on the request body. The dual-signature `/relay/register-worknet` endpoint uses `"permitSignature"` and `"registerSignature"` instead. All relay endpoints require `chainId` in the request body. Sending split `v/r/s` fields does not work — the relay returns `{"error":"missing signature"}` and the fields are ignored.
 
 **Error responses:**
 
@@ -240,7 +240,7 @@ awp-wallet sign-typed-data --token {T} --data '{
 # 3. Submit to relay:
 curl -X POST https://api.awp.sh/api/relay/bind \
   -H "Content-Type: application/json" \
-  -d '{"chainId": 8453, "agent": "'$WALLET_ADDR'", "target": "'$TARGET'", "deadline": '$DEADLINE', "v": '$V', "r": "'$R'", "s": "'$S'"}'
+  -d '{"chainId": 8453, "agent": "'$WALLET_ADDR'", "target": "'$TARGET'", "deadline": '$DEADLINE', "signature": "'$SIGNATURE'"}'
 
 # 4. Check relay status:
 curl -s https://api.awp.sh/api/relay/status/{txHash}
@@ -282,7 +282,7 @@ awp-wallet sign-typed-data --token {T} --data '{
 
 curl -X POST https://api.awp.sh/api/relay/unbind \
   -H "Content-Type: application/json" \
-  -d '{"chainId": 8453, "user": "'$WALLET_ADDR'", "deadline": '$DEADLINE', "v": '$V', "r": "'$R'", "s": "'$S'"}'
+  -d '{"chainId": 8453, "user": "'$WALLET_ADDR'", "deadline": '$DEADLINE', "signature": "'$SIGNATURE'"}'
 ```
 
 **Gasless set-recipient (no ETH) — EIP-712 template:**
@@ -322,7 +322,7 @@ awp-wallet sign-typed-data --token {T} --data '{
 
 curl -X POST https://api.awp.sh/api/relay/set-recipient \
   -H "Content-Type: application/json" \
-  -d '{"chainId": 8453, "user": "'$WALLET_ADDR'", "recipient": "'$RECIPIENT'", "deadline": '$DEADLINE', "v": '$V', "r": "'$R'", "s": "'$S'"}'
+  -d '{"chainId": 8453, "user": "'$WALLET_ADDR'", "recipient": "'$RECIPIENT'", "deadline": '$DEADLINE', "signature": "'$SIGNATURE'"}'
 ```
 
 **Delegation management** (use bundled scripts — `awp-wallet send` does NOT support raw calldata):
@@ -467,7 +467,7 @@ awp-wallet sign-typed-data --token {T} --data '{
 
 curl -X POST https://api.awp.sh/api/relay/allocate \
   -H "Content-Type: application/json" \
-  -d '{"chainId": 8453, "staker": "'$WALLET_ADDR'", "agent": "'$AGENT'", "worknetId": "'$WORKNET_ID'", "amount": "'$AMOUNT_WEI'", "deadline": '$DEADLINE', "v": '$V', "r": "'$R'", "s": "'$S'"}'
+  -d '{"chainId": 8453, "staker": "'$WALLET_ADDR'", "agent": "'$AGENT'", "worknetId": "'$WORKNET_ID'", "amount": "'$AMOUNT_WEI'", "deadline": '$DEADLINE', "signature": "'$SIGNATURE'"}'
 ```
 
 **EIP-712 Deallocate** follows the same pattern with `"Deallocate"` primaryType and `POST /api/relay/deallocate`.

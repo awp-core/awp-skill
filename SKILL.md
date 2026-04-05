@@ -664,9 +664,7 @@ Relay request format uses **v, r, s** signature components (not a combined signa
   "chainId": 8453,
   "user": "0xUserAddress...",
   "deadline": 1712345678,
-  "v": 27,
-  "r": "0x...(32 bytes hex)...",
-  "s": "0x...(32 bytes hex)..."
+  "signature": "0x...(65 bytes hex)..."
 }
 ```
 Response: `{"txHash": "0x..."}` | Error: `{"error": "invalid EIP-712 signature"}`
