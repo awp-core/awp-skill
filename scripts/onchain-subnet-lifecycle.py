@@ -17,7 +17,7 @@ ACTION_CONFIG: dict[str, tuple[str, str]] = {
 
 def main() -> None:
     # ── Parse arguments ──
-    parser = base_parser("Subnet lifecycle: activate / pause / resume")
+    parser = base_parser("Worknet lifecycle: activate / pause / resume / cancel")
     parser.add_argument("--subnet", required=True, help="Subnet ID")
     parser.add_argument("--action", required=True, choices=["activate", "pause", "resume", "cancel"],
                         help="action type")

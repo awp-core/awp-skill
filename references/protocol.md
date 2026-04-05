@@ -410,5 +410,5 @@ All amounts in API responses and contract calls are **string-type wei** (18 deci
 
 - Process with `BigInt`, never `Number` (precision loss above 2^53)
 - Display as human-readable: `amount / 10^18`, show 4 decimal places
-- Format helper: `{formatAWP(amount)}` -> e.g. "15,800,000.0000 AWP"
+- Format helper: `{formatAWP(amount)}` -> e.g. "31,600,000.0000 AWP"
 - Short address: `{shortAddr(addr)}` -> e.g. "0x1234...abcd"

@@ -44,7 +44,7 @@
 
 AWP is a decentralized **Agent Working** protocol deployed on 4 EVM chains (Base, Ethereum, Arbitrum, BSC). Users bind to a tree-based hierarchy, stake AWP via veAWP position NFTs, allocate to agents on worknets, and earn emissions. Each worknet auto-deploys a **WorknetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
-This repository is a single skill with **20 actions**, **14 bundled scripts**, and **19 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
+This repository is a single skill with **20 actions**, **15 bundled scripts** (plus shared `awp_lib.py` + Node bridge), and **19 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
 
 ## Quick Install
 
@@ -102,9 +102,9 @@ The skill installs the [AWP Wallet](https://github.com/awp-core/awp-wallet) depe
 |--------|--------|-------|
 | `staking` | Deposited, Withdrawn, Allocated, Deallocated, Reallocated | 5 |
 | `worknets` | WorknetRegistered, WorknetActivated, WorknetCancelled | 3 |
-| `emission` | EpochSettled | 1 |
+| `emission` | EpochSettled, RecipientAWPDistributed, AllocationsSubmitted | 3 |
 | `users` | UserRegistered, Bound, Unbound, RecipientSet, DelegateGranted, DelegateRevoked | 6 |
-| `protocol` | WorknetCancelled, and admin events | 2 |
+| `protocol` | LPManagerUpdated, DefaultWorknetManagerImplUpdated | 2 |
 | `all` | All of the above | 19 |
 
 ## Architecture
@@ -132,7 +132,6 @@ awp-skill/
 │   ├── onchain-reallocate.py               # Reallocate stake (6-param safety)
 │   ├── onchain-withdraw.py                 # Withdraw from expired position
 │   ├── onchain-add-position.py             # Add AWP to existing position
-│   ├── onchain-register-and-stake.py       # One-click register+deposit+allocate
 │   ├── onchain-vote.py                     # Cast DAO vote (nested ABI encode)
 │   ├── onchain-subnet-lifecycle.py         # Activate/pause/resume/cancel with state check
 │   └── onchain-subnet-update.py            # Set skillsURI or minStake on AWPWorkNet
@@ -142,7 +141,7 @@ awp-skill/
 
 **Progressive loading**: The agent loads only what it needs per action. Query and Monitor actions use SKILL.md alone. Write actions load the specific command reference file, and all on-chain operations use bundled scripts — preventing manual calldata construction errors.
 
-**14 bundled Python scripts** (+ shared `awp_lib.py` library) cover every write operation. Each script handles:
+**15 bundled scripts** (+ shared `awp_lib.py` library + `wallet-raw-call.mjs` Node bridge) cover every read and write operation. Each script handles:
 
 - Input validation (address regex, numeric bounds, uint128 range checks)
 - Correct contract targeting (AWPRegistry vs veAWP vs AWPWorkNet vs AWPAllocator vs AWPDAO)

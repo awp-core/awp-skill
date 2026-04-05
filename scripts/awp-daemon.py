@@ -71,6 +71,20 @@ def short_addr(addr: str) -> str:
     return f"{addr[:8]}...{addr[-4:]}" if len(addr) >= 12 else addr
 
 
+def _field(obj: dict[str, Any], *names: str, default: Any = "") -> Any:
+    """Return the first present field from `obj`, checking each name in order.
+
+    The AWP API has historically exposed worknet fields in snake_case
+    (`subnet_id`, `min_stake`, `skills_uri`, `created_at`) while the spec
+    documents camelCase. Accept either shape so the daemon works across server
+    conventions without silent "(none found)" failures.
+    """
+    for n in names:
+        if n in obj and obj[n] is not None:
+            return obj[n]
+    return default
+
+
 def _get_openclaw_config() -> Tuple[str, str]:
     """Read OpenClaw channel and target from ~/.awp/openclaw.json.
 
@@ -307,15 +321,15 @@ def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
         lines.append("│" + "  (none found)".ljust(W) + "│")
     else:
         for i, s in enumerate(subnets):
-            sid = s.get("subnet_id", "?")
-            name = s.get("name", "Unknown")
-            symbol = s.get("symbol", "")
-            min_stake = s.get("min_stake", 0)
-            status = s.get("status", "")
-            owner_raw = s.get("owner", "") or ""
+            sid = _field(s, "worknetId", "subnet_id", "subnetId", default="?")
+            name = _field(s, "name", default="Unknown")
+            symbol = _field(s, "symbol", default="")
+            min_stake = _field(s, "minStake", "min_stake", default=0)
+            status = _field(s, "status", default="")
+            owner_raw = _field(s, "owner", default="") or ""
             owner = (owner_raw[:6] + "..." + owner_raw[-4:]) if len(owner_raw) > 14 else owner_raw
-            skills_uri = s.get("skills_uri", "")
-            created_raw = s.get("created_at", "")
+            skills_uri = _field(s, "skillsURI", "skills_uri", default="")
+            created_raw = _field(s, "createdAt", "created_at", default="")
             created = str(created_raw) if created_raw else ""
             if len(created) >= 10:
                 created = created[:10]  # YYYY-MM-DD
@@ -354,8 +368,8 @@ def format_subnet_list(subnets: list[dict[str, Any]]) -> str:
 
         lines.append("├" + "─" * W + "┤")
         total = len(subnets)
-        free = sum(1 for s in subnets if s.get("min_stake", 0) == 0)
-        with_skills = sum(1 for s in subnets if s.get("skills_uri"))
+        free = sum(1 for s in subnets if _field(s, "minStake", "min_stake", default=0) == 0)
+        with_skills = sum(1 for s in subnets if _field(s, "skillsURI", "skills_uri", default=""))
         summary = f"  {total} subnets · {free} free · {with_skills} with skills"
         lines.append("│" + summary.ljust(W) + "│")
     lines.append("└" + "─" * W + "┘")
@@ -415,12 +429,16 @@ def detect_new_subnets(
     current: list[dict[str, Any]],
     known_ids: set[int],
 ) -> list[dict[str, Any]]:
-    """Compare current subnets against known IDs and return any newly discovered subnets."""
+    """Compare current worknets against known IDs and return any newly discovered ones."""
     new_subnets = []
     for s in current:
-        sid = s.get("subnet_id")
-        if sid is not None and int(sid) not in known_ids:
-            new_subnets.append(s)
+        sid = _field(s, "worknetId", "subnet_id", "subnetId", default=None)
+        if sid is not None:
+            try:
+                if int(sid) not in known_ids:
+                    new_subnets.append(s)
+            except (ValueError, TypeError):
+                continue
     return new_subnets
 
 
@@ -525,23 +543,22 @@ def check_and_notify(wallet_addr: str) -> bool:
     print()
     log("── available subnets ─────────────────")
 
-    result = rpc("subnets.list", {"status": "Active", "limit": 10})
-    subnets = result if isinstance(result, list) else (result.get("items") or result.get("subnets") or result.get("data") or []) if isinstance(result, dict) else []
+    subnets = fetch_active_subnets()
     if subnets:
         for s in subnets:
-            sid = s.get("subnet_id", "?")
-            name = s.get("name", "Unknown")
-            min_stake = s.get("min_stake", 0)
-            skills = "✓" if s.get("skills_uri") else "—"
-            log(f"  #{sid}  {name:<30s} min: {min_stake} AWP  skills: {skills}")
+            sid = _field(s, "worknetId", "subnet_id", "subnetId", default="?")
+            name = _field(s, "name", default="Unknown")
+            min_stake = _field(s, "minStake", "min_stake", default=0)
+            skills = "✓" if _field(s, "skillsURI", "skills_uri", default="") else "—"
+            log(f"  #{sid}  {str(name):<30s} min: {min_stake} AWP  skills: {skills}")
 
         total = len(subnets)
-        free = sum(1 for s in subnets if s.get("min_stake", 0) == 0)
-        with_skills = sum(1 for s in subnets if s.get("skills_uri"))
+        free = sum(1 for s in subnets if _field(s, "minStake", "min_stake", default=0) == 0)
+        with_skills = sum(1 for s in subnets if _field(s, "skillsURI", "skills_uri", default=""))
         log("")
-        log(f"{total} subnets. {free} free (no staking). {with_skills} with skills.")
+        log(f"{total} worknets. {free} free (no staking). {with_skills} with skills.")
     else:
-        log("  No active subnets found (or API unavailable)")
+        log("  No active worknets found (or API unavailable)")
 
     log("──────────────────────────────────────")
 
@@ -687,9 +704,14 @@ def _run_daemon(interval: int) -> None:
     log("Phase 1: Welcome...")
     initial_subnets = fetch_active_subnets()
     send_welcome(initial_subnets)
-    known_subnet_ids: set[int] = {
-        int(s["subnet_id"]) for s in initial_subnets if s.get("subnet_id") is not None
-    }
+    known_subnet_ids: set[int] = set()
+    for s in initial_subnets:
+        sid = _field(s, "worknetId", "subnet_id", "subnetId", default=None)
+        if sid is not None:
+            try:
+                known_subnet_ids.add(int(sid))
+            except (ValueError, TypeError):
+                continue
 
     # 初始化公告跟踪集合 — 预填充已有公告 ID，避免首次启动时发送重复通知
     seen_announcement_ids: set[int] = set()
@@ -821,18 +843,18 @@ def _run_daemon(interval: int) -> None:
 
                     last_registered = is_registered
 
-                # New subnet detection
+                # New worknet detection
                 current_subnets = fetch_active_subnets()
                 new_subnets = detect_new_subnets(current_subnets, known_subnet_ids)
                 if new_subnets:
                     for s in new_subnets:
-                        sid = s.get("subnet_id", "?")
-                        name = s.get("name", "Unknown")
-                        symbol = s.get("symbol", "")
-                        owner_raw = s.get("owner", "") or ""
+                        sid = _field(s, "worknetId", "subnet_id", "subnetId", default="?")
+                        name = _field(s, "name", default="Unknown")
+                        symbol = _field(s, "symbol", default="")
+                        owner_raw = _field(s, "owner", default="") or ""
                         owner = (owner_raw[:10] + "...") if len(owner_raw) > 10 else owner_raw
-                        min_stake = s.get("min_stake", 0)
-                        skills = s.get("skills_uri", "")
+                        min_stake = _field(s, "minStake", "min_stake", default=0)
+                        skills = _field(s, "skillsURI", "skills_uri", default="")
                         msg = f"#{sid} \"{name}\" ({symbol}) by {owner}"
                         if min_stake == 0:
                             msg += " | FREE (no staking required)"
@@ -840,11 +862,15 @@ def _run_daemon(interval: int) -> None:
                             msg += f" | min stake: {min_stake} AWP"
                         if skills:
                             msg += " | has skills"
-                        notify("New Subnet", msg)
-                    # Update known subnet set
-                    known_subnet_ids.update(
-                        int(s["subnet_id"]) for s in new_subnets if s.get("subnet_id") is not None
-                    )
+                        notify("New Worknet", msg)
+                    # Update known worknet set
+                    for s in new_subnets:
+                        sid = _field(s, "worknetId", "subnet_id", "subnetId", default=None)
+                        if sid is not None:
+                            try:
+                                known_subnet_ids.add(int(sid))
+                            except (ValueError, TypeError):
+                                continue
 
                 # 公告轮询 — 检查新公告并发送通知
                 announcements = fetch_announcements()

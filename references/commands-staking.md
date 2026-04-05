@@ -75,15 +75,16 @@ awp-wallet sign-typed-data --token {T} --data '{...EIP712 JSON...}'
 ### Contract Calls — Registration (Optional)
 
 ```solidity
-// register() is optional — equivalent to setRecipient(msg.sender)
-function register()
-
-// One-click: register + deposit + allocate
-function registerAndStake(uint256 depositAmount, uint64 lockDuration, address agent, uint256 worknetId, uint256 allocateAmount)
-// lockDuration is in SECONDS (not epochs)
-// IMPORTANT: approve target for registerAndStake is AWPRegistry, NOT veAWP
-// AWPToken.approve(awpRegistry, depositAmount) -> then registerAndStake(...)
+// Registration happens implicitly the first time an address calls setRecipient().
+// Passing msg.sender as the recipient registers without changing reward routing.
+// AWPRegistry has no standalone register() or registerAndStake() entrypoint.
+function setRecipient(address recipient)
 ```
+
+To combine register + deposit + allocate in a single user intent, invoke each
+primitive in sequence: `setRecipient(self)` → `veAWP.deposit(amount, lockSeconds)`
+→ `AWPAllocator.allocate(staker, agent, worknetId, amount)`. The bundled scripts
+cover all three steps.
 
 ### Contract Calls — Tree-Based Binding
 

@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
-"""On-chain register() — explicit registration on AWPRegistry.
-register() is equivalent to setRecipient(msg.sender). Each address is implicitly a root;
-calling register() simply sets recipient to itself explicitly.
+"""On-chain registration on AWPRegistry.
+
+AWPRegistry has no standalone `register()` function; registration happens implicitly
+the first time an address calls `setRecipient(address)`. Setting the recipient to the
+caller's own address is the canonical way to mark an address as active without
+changing the reward recipient from its default (self).
+
+If the agent is already registered, this script is a no-op.
 """
 import json
 
 from awp_lib import (
     base_parser,
+    encode_calldata,
     get_registry,
     get_wallet_address,
+    pad_address,
     require_contract,
     rpc,
     step,
@@ -17,7 +24,7 @@ from awp_lib import (
 
 
 def main() -> None:
-    parser = base_parser("On-chain register")
+    parser = base_parser("On-chain register (setRecipient to self)")
     args = parser.parse_args()
     token: str = args.token
 
@@ -38,9 +45,11 @@ def main() -> None:
         }))
         return
 
-    # register() selector = 0x1aa3a008
-    step("register", address=wallet_addr)
-    result = wallet_send(token, awp_registry, "0x1aa3a008")
+    # setRecipient(address) selector = 0x3bbed4a0
+    # Passing the caller's own address registers without changing reward routing.
+    calldata = encode_calldata("0x3bbed4a0", pad_address(wallet_addr))
+    step("register", address=wallet_addr, method="setRecipient(self)")
+    result = wallet_send(token, awp_registry, calldata)
     print(result)
 
 

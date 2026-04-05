@@ -1,5 +1,95 @@
 # Changelog
 
+## v1.1.2
+
+### Critical — dead contract functions removed, field-casing drift hardened
+
+**On-chain function hallucinations removed (verified by fetching the AWPRegistry
+implementation bytecode and grepping for the 4-byte selectors):**
+
+- `onchain-register.py` was calling `register()` with selector `0x1aa3a008`. This
+  function does **not** exist in the AWPRegistry implementation at
+  `0x00000d52427c825d4ae72195535ca5e210c8001a`. Every invocation would have
+  reverted. The docstring already stated "register() is equivalent to
+  setRecipient(msg.sender)" — the script now calls `setRecipient(self)` with the
+  correct selector `0x3bbed4a0` (verified present in bytecode). Registration
+  happens implicitly the first time an address calls `setRecipient`.
+- `onchain-register-and-stake.py` was calling
+  `registerAndStake(uint256,uint64,address,uint256,uint256)` with selector
+  `0x34426564`. Also **not** in the AWPRegistry implementation bytecode. The
+  script has been **deleted**. SKILL.md and `references/commands-staking.md`
+  updated to direct users through the three-step flow (`relay-start` →
+  `onchain-deposit` → `onchain-allocate`) instead. No replacement helper
+  contract exists.
+
+**Field-casing drift hardening:**
+
+The AWP API historically exposes worknet fields in snake_case (`subnet_id`,
+`min_stake`, `skills_uri`, `created_at`, `token_id`) while `skill-reference.md`
+documents camelCase (`worknetId`, `minStake`, etc.). Scripts that hard-coded one
+convention would silently return empty results if the server switched.
+
+- `awp-daemon.py`: added a `_field(obj, *names)` helper and routed every
+  worknet/position field access through it. Both snake_case and camelCase are
+  accepted across `format_subnet_list`, `detect_new_subnets`, `check_and_notify`,
+  and `_run_daemon`. The daemon will no longer display "#?" for every worknet or
+  silently fail to detect new ones when the server uses camelCase.
+- `onchain-vote.py`: same pattern applied to `staking.getPositions` response
+  parsing. The eligibility filter now finds positions under either
+  `tokenId`/`createdAt` or `token_id`/`created_at`. This was the most serious
+  drift risk — it would have made the vote script `die("No eligible positions")`
+  for users who actually held positions.
+- `awp-daemon.py`: `check_and_notify` no longer reimplements the
+  list-or-dict-with-items extraction; it now calls the shared
+  `fetch_active_subnets()` helper that already handled the polymorphic shape.
+
+**Documentation fixes:**
+
+- `SKILL.md` frontmatter: removed `EVM_RPC_URL` from `optional_env` (v1.1.1
+  hardcoded this to match the wallet-raw-call.mjs hardening — continuing to
+  advertise it as an override is misleading). `EVM_CHAIN` retained — it is still
+  read by `awp_lib.get_registry()` to pick a chain from the registry array.
+- `SKILL.md` version bumped `1.1.0` → `1.1.2` (v1.1.1 forgot to bump the in-file
+  version string, which tripped the daemon's built-in update checker).
+- `references/commands-subnet.md`: the ERC-2612 permit nonce lookup example
+  used a stale `$RPC_URL` placeholder in a user-runnable curl/Python snippet.
+  Replaced with the hardcoded `https://mainnet.base.org` and a User-Agent
+  header so the example actually works when copy-pasted.
+- `references/commands-staking.md`: removed the documented `register()` and
+  `registerAndStake()` functions (both non-existent on-chain). The registration
+  section now points to `setRecipient(recipient)` as the canonical primitive.
+- `README.md`: fixed the event preset table — `emission` row had 1 event listed
+  (should be 3: `EpochSettled, RecipientAWPDistributed, AllocationsSubmitted`);
+  `protocol` row said "`WorknetCancelled, and admin events`" (wrong — should be
+  `LPManagerUpdated, DefaultWorknetManagerImplUpdated`). The event counts now
+  sum to 19, matching the `all` row and SKILL.md. Also updated the stale "14
+  bundled scripts" count to 15 after removing the dead
+  `onchain-register-and-stake.py`.
+- `references/protocol.md`: format-helper example `"15,800,000.0000 AWP"` →
+  `"31,600,000.0000 AWP"` (the v1.1.1 rewrite corrected README.md and SKILL.md
+  but missed this file).
+- `references/api-reference.md`: removed `staking.getPending` row (the method
+  is documented as "always empty" — dead weight). Allocate relay example
+  `worknetId: "36364510078353408001"` → `"845300000001"` (the old value used
+  the retired `(chainId << 64) | localId` format; new format is
+  `chainId * 100_000_000 + localId`).
+- `scripts/onchain-subnet-lifecycle.py`: argparse description said
+  "activate / pause / resume"; the script actually supports all four of
+  activate/pause/resume/cancel. Description updated. Also relabeled from
+  "Subnet lifecycle" to "Worknet lifecycle".
+
+**Verified no-ops (checked but no fix needed):**
+
+- All 22 on-chain function selectors in the scripts recomputed via keccak256
+  and cross-verified against the AWPRegistry / AWPAllocator / veAWP / AWPWorkNet
+  / AWPDAO implementation bytecodes. All match (except the two hallucinated
+  selectors removed above).
+- All EIP-712 type definitions verified against `skill-reference.md` §5 and the
+  live `registry.get` domain.
+- ABI encoding for dynamic types (`encode_set_skills_uri` in
+  `onchain-subnet-update.py`, reason/params head-tail layout in
+  `onchain-vote.py`) re-verified by hand.
+
 ## v1.1.1
 
 ### Critical bug fixes and deep-review cleanup

@@ -159,11 +159,12 @@ For fully gasless registration via `POST /api/relay/register-worknet`, the user 
 ```bash
 # Get permit nonce from AWPToken contract via RPC (NOT from nonce.get — that returns the registry nonce)
 # nonces(address) selector = 0x7ecebe00
+# Reference uses the hardcoded Base RPC URL — scripts/relay-register-subnet.py wraps this in awp_lib.rpc_call().
 PERMIT_NONCE=$(python3 -c "
 import json, urllib.request
 addr = '$WALLET_ADDR'.lower().replace('0x','').zfill(64)
 payload = json.dumps({'jsonrpc':'2.0','method':'eth_call','params':[{'to':'$AWP_TOKEN','data':'0x7ecebe00'+addr},'latest'],'id':1}).encode()
-req = urllib.request.Request('$RPC_URL', data=payload, headers={'Content-Type':'application/json'})
+req = urllib.request.Request('https://mainnet.base.org', data=payload, headers={'Content-Type':'application/json','User-Agent':'awp-skill/1.1'})
 r = json.loads(urllib.request.urlopen(req).read())
 print(int(r['result'],16))
 ")

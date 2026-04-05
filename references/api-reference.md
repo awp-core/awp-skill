@@ -140,7 +140,6 @@ Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, s
 | `staking.getAgentSubnets` | `agent` (required) | All worknets agent participates in |
 | `staking.getSubnetTotalStake` | `worknetId` (required) | Total stake in worknet |
 | `staking.getFrozen` | `address` (required), `chainId?` | Frozen allocations |
-| `staking.getPending` | — | Pending allocation changes (always empty) |
 
 ### Worknets (subnets.*)
 
@@ -248,7 +247,7 @@ POST /api/relay/allocate
   "chainId": 8453,
   "staker": "0x...",
   "agent": "0x...",
-  "worknetId": "36364510078353408001",
+  "worknetId": "845300000001",
   "amount": "1000000000000000000000",
   "deadline": 1712345678,
   "v": 27, "r": "0x...", "s": "0x..."

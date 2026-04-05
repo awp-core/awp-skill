@@ -99,17 +99,29 @@ def main() -> None:
     if not isinstance(positions, list):
         die("Unexpected positions response")
 
-    # ── Step 3: filter eligible positions (created_at < proposalCreatedAt, strictly less than) ──
+    # ── Step 3: filter eligible positions (createdAt < proposalCreatedAt, strictly less than) ──
+    # The API is camelCase per skill-reference.md (tokenId, createdAt), but historical
+    # deployments have exposed snake_case (token_id, created_at). Accept either shape
+    # so votes don't silently fail if the server switches conventions.
+    def _field(p: dict, *names: str) -> object | None:
+        for n in names:
+            if n in p:
+                return p[n]
+        return None
+
     eligible_ids: list[int] = []
     for p in positions:
-        if "token_id" not in p or "created_at" not in p:
+        tok = _field(p, "tokenId", "token_id")
+        created_raw = _field(p, "createdAt", "created_at")
+        if tok is None or created_raw is None:
             continue
         try:
-            created = int(p["created_at"])
+            created = int(created_raw)
+            token_id_int = int(tok)
         except (ValueError, TypeError):
             continue
         if created < proposal_created_at:
-            eligible_ids.append(int(p["token_id"]))
+            eligible_ids.append(token_id_int)
 
     if not eligible_ids:
         die(

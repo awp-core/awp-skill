@@ -19,7 +19,6 @@ metadata:
   openclaw:
     requires:
       optional_env:
-        - EVM_RPC_URL          # EVM chain RPC (default: https://mainnet.base.org)
         - EVM_CHAIN            # Chain name or ID (base, ethereum, arbitrum, bsc). Default: base
       skills:
         - AWP Wallet           # awp-wallet CLI — install from https://github.com/awp-core/awp-wallet
@@ -30,7 +29,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 1.1.0**
+**Skill version: 1.1.2**
 
 ## API — JSON-RPC 2.0
 
@@ -547,7 +546,6 @@ scripts/
 ├── onchain-reallocate.py             Move stake between agents/worknets
 ├── onchain-withdraw.py               Withdraw from expired position
 ├── onchain-add-position.py           Add AWP to existing position
-├── onchain-register-and-stake.py     One-click register+deposit+allocate
 ├── onchain-vote.py                   Cast DAO vote
 ├── onchain-subnet-lifecycle.py       Activate/pause/resume worknet
 └── onchain-subnet-update.py          Set skillsURI or minStake
@@ -938,10 +936,10 @@ python3 scripts/onchain-deallocate.py --token $TOKEN --agent <addr> --subnet 1 -
 python3 scripts/onchain-reallocate.py --token $TOKEN --from-agent <addr> --from-subnet 1 --to-agent <addr> --to-subnet 2 --amount 5000
 ```
 
-**One-click register+stake (advanced):**
-```bash
-python3 scripts/onchain-register-and-stake.py --token $TOKEN --amount 5000 --lock-days 90 --agent <addr> --subnet 1 --allocate-amount 5000
-```
+To combine register + deposit + allocate in a single user intent, run the three
+individual scripts in order (S1 relay-start → S2 onchain-deposit → S3 onchain-allocate).
+There is no one-call contract function for this flow — a single bundled transaction
+would require a helper contract that AWPRegistry does not expose.
 
 ---
 
