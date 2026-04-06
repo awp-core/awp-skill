@@ -627,8 +627,17 @@ scripts/
 ├── onchain-withdraw.py               Withdraw from expired position
 ├── onchain-add-position.py           Add AWP to existing position
 ├── onchain-vote.py                   Cast DAO vote
-├── onchain-worknet-lifecycle.py       Activate/pause/resume worknet
-└── onchain-worknet-update.py          Set skillsURI or minStake
+├── onchain-worknet-lifecycle.py       Pause/resume/cancel worknet (NFT owner)
+├── onchain-worknet-update.py          Set skillsURI or minStake
+├── onchain-worknet-metadata.py        Set metadataURI or imageURI on AWPWorkNet
+├── onchain-partial-withdraw.py        Partial withdraw from expired veAWP position
+├── onchain-batch-withdraw.py          Batch withdraw multiple expired positions
+├── onchain-deallocate-all.py          Remove entire allocation for an agent+worknet
+├── onchain-propose.py                 Create governance proposal (executable or signal)
+├── onchain-claim.py                   Claim WorknetToken rewards via Merkle proof
+├── relay-unbind.py                    Gasless unbind from binding target
+├── relay-delegate.py                  Gasless grant/revoke delegate
+└── relay-allocate.py                  Gasless allocate/deallocate stake
 ```
 
 ## Security Controls
@@ -1079,7 +1088,7 @@ python3 scripts/onchain-worknet-update.py --token $TOKEN --worknet 1 --min-stake
 ## Governance (wallet + veAWP positions — load commands-governance.md for G1/G2)
 
 ### G1 · Create Proposal
-Load commands-governance.md. Needs >= 1M AWP voting power.
+Load commands-governance.md. Needs >= 200,000 AWP voting power (on-chain proposalThreshold).
 
 ### G2 · Vote
 ```bash

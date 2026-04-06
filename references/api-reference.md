@@ -332,8 +332,8 @@ struct WorknetParams {
     string skillsURI;         // Skills description URI
 }
 
-registerWorknet(WorknetParams params) returns (uint256 worknetId)  // Costs 100,000 AWP
-activateWorknet(uint256 worknetId)    // Pending -> Active, AWPWorkNet owner only
+registerWorknet(WorknetParams params) returns (uint256 worknetId)  // Costs ~1,000,000 AWP (dynamic)
+activateWorknet(uint256 worknetId)    // Pending -> Active, Guardian only
 pauseWorknet(uint256 worknetId)       // Active -> Paused, AWPWorkNet owner only
 resumeWorknet(uint256 worknetId)      // Paused -> Active, AWPWorkNet owner only
 cancelWorknet(uint256 worknetId)      // Pending -> None (full AWP refund), AWPWorkNet owner only
@@ -403,27 +403,35 @@ Events pushed as JSON messages with envelope:
 {"type": "EventName", "blockNumber": 12345, "txHash": "0x...", "data": {...}}
 ```
 
-| Event | Fields | Description |
-|-------|--------|-------------|
-| `UserRegistered` | `user`, `chainId` | New user registration |
-| `Bound` | `user`, `target`, `chainId` | User bound to target |
-| `Unbound` | `user`, `chainId` | User unbound |
-| `RecipientSet` | `user`, `recipient`, `chainId` | Recipient changed |
-| `DelegateGranted` | `user`, `delegate`, `chainId` | Delegate granted |
-| `DelegateRevoked` | `user`, `delegate`, `chainId` | Delegate revoked |
-| `Deposited` | `user`, `tokenId`, `amount`, `lockEndTime`, `chainId` | AWP staked |
-| `Withdrawn` | `user`, `tokenId`, `amount`, `chainId` | AWP withdrawn |
-| `Allocated` | `staker`, `agent`, `worknetId`, `amount`, `chainId` | Stake allocated |
-| `Deallocated` | `staker`, `agent`, `worknetId`, `amount`, `chainId` | Stake deallocated |
-| `Reallocated` | `staker`, `fromAgent`, `fromWorknetId`, `toAgent`, `toWorknetId`, `amount`, `chainId` | Reallocation |
-| `WorknetRegistered` | `worknetId`, `owner`, `name`, `symbol`, `chainId` | New worknet |
-| `WorknetActivated` | `worknetId`, `chainId` | Worknet activated |
-| `WorknetCancelled` | `worknetId`, `chainId` | Worknet cancelled |
-| `EpochSettled` | `epoch`, `totalEmission`, `recipientCount`, `chainId` | Epoch settled |
-| `RecipientAWPDistributed` | `epoch`, `recipient`, `amount`, `chainId` | AWP distributed |
-| `AllocationsSubmitted` | `epoch`, `totalWeight`, `recipients`, `weights`, `chainId` | Allocation weights submitted |
-| `LPManagerUpdated` | `newLPManager`, `chainId` | LP manager updated |
-| `DefaultWorknetManagerImplUpdated` | `newImpl`, `chainId` | Default worknet manager implementation updated |
+| Event | Source | Key Fields | Description |
+|-------|--------|------------|-------------|
+| `Bound` | AWPRegistry | `addr`, `target` | Agent bound to target |
+| `Unbound` | AWPRegistry | `addr` | Agent unbound |
+| `RecipientSet` | AWPRegistry | `addr`, `recipient` | Recipient changed |
+| `DelegateGranted` | AWPRegistry | `staker`, `delegate` | Delegate granted |
+| `DelegateRevoked` | AWPRegistry | `staker`, `delegate` | Delegate revoked |
+| `StakePositionCreated` | veAWP | `user`, `tokenId`, `amount`, `lockEndTime` | AWP staked (new position) |
+| `StakePositionIncreased` | veAWP | `tokenId`, `addedAmount`, `newLockEndTime` | AWP added to position |
+| `StakePositionClosed` | veAWP | `user`, `tokenId`, `amount` | Position withdrawn |
+| `Allocated` | AWPAllocator | `staker`, `agent`, `worknetId`, `amount`, `operator` | Stake allocated |
+| `Deallocated` | AWPAllocator | `staker`, `agent`, `worknetId`, `amount`, `operator` | Stake deallocated |
+| `Reallocated` | AWPAllocator | `staker`, `fromAgent`, `fromWorknetId`, `toAgent`, `toWorknetId`, `amount` | Reallocation |
+| `WorknetRegistered` | AWPRegistry | `worknetId`, `owner`, `name`, `symbol` | New worknet |
+| `WorknetActivated` | AWPRegistry | `worknetId` | Worknet activated |
+| `WorknetPaused` | AWPRegistry | `worknetId` | Worknet paused |
+| `WorknetResumed` | AWPRegistry | `worknetId` | Worknet resumed |
+| `WorknetBanned` | AWPRegistry | `worknetId` | Worknet banned |
+| `WorknetUnbanned` | AWPRegistry | `worknetId` | Worknet unbanned |
+| `WorknetRejected` | AWPRegistry | `worknetId` | Worknet rejected |
+| `WorknetCancelled` | AWPRegistry | `worknetId` | Worknet cancelled |
+| `WorknetNFTTransfer` | AWPWorkNet | `from`, `to`, `tokenId` | Worknet NFT transferred |
+| `EpochSettled` | AWPEmission | `epoch`, `totalEmission`, `recipientCount` | Epoch settled |
+| `AllocationsSubmitted` | AWPEmission | `epoch`, `totalWeight`, `recipients[]`, `weights[]` | Weights submitted |
+| `GuardianUpdated` | AWPRegistry | `newGuardian` | Guardian changed |
+| `InitialAlphaPriceUpdated` | AWPRegistry | `newPrice` | Initial price changed |
+| `WorknetTokenFactoryUpdated` | AWPRegistry | `newFactory` | Factory changed |
+
+All 25 events include `chainId`, `blockNumber`, `txHash` alongside their event-specific fields.
 
 For data structures, events, and constants, see **protocol.md**.
 
@@ -450,8 +458,8 @@ For offline mining of vanity Alpha token CREATE2 addresses:
 | Initial Daily Emission | 31,600,000 AWP | Per chain per epoch. Subject to decay. |
 | Decay Factor | 996844 / 1,000,000 | ~0.3156% reduction per epoch. Formula: `emission *= 996844 / 1000000` |
 | Epoch Duration | 1 day (86,400 seconds) | Each epoch = 1 calendar day |
-| Worknet Registration Cost | 100,000 AWP | `initialAlphaMint (100M) * initialAlphaPrice (0.001)`. Escrowed until activation or refunded on cancel. |
-| Alpha Tokens per Worknet | 100,000,000 (100M) | Minted to LP pool on activation |
+| Worknet Registration Cost | ~1,000,000 AWP | `initialAlphaMint (1B) × initialAlphaPrice (0.001) ÷ 1e18`. Guardian-adjustable. Escrowed until activation or refunded on cancel. |
+| WorknetTokens per Worknet | 1,000,000,000 (1B) | Minted to LP pool on activation (Guardian-adjustable via setInitialAlphaMint) |
 | Initial Alpha Price | 0.001 AWP per Alpha | `1e15 wei`. Determines AWP escrow and LP ratio. |
 | Min Lock Duration (veAWP) | 1 day (86,400 seconds) | Minimum lock when depositing |
 | Max Voting Weight Duration | 54 weeks | Voting power formula: `amount * sqrt(min(remainingTime, 54 weeks) / 7 days)` |

@@ -32,7 +32,7 @@ function proposeWithTokens(
     address[] targets, uint256[] values, bytes[] calldatas,
     string description, uint256[] tokenIds
 ) returns (uint256 proposalId)
-// Requires >= 1,000,000 AWP voting power across tokenIds
+// Requires >= 200,000 AWP voting power across tokenIds
 
 // Signal-only proposal (no execution, no Timelock)
 function signalPropose(string description, uint256[] tokenIds) returns (uint256 proposalId)
@@ -104,7 +104,7 @@ function proposalVotes(uint256 proposalId) view returns (uint256 againstVotes, u
 function isSignalProposal(uint256 proposalId) view returns (bool)
 function proposalCreatedAt(uint256 proposalId) view returns (uint64)
 function quorum(uint256) view returns (uint256)
-function proposalThreshold() view returns (uint256)   // 1,000,000 AWP
+function proposalThreshold() view returns (uint256)   // 200,000 AWP
 ```
 
 ---

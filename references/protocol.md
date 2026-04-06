@@ -28,6 +28,7 @@ LPManager (proxy):  0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2
 WorknetTokenFactory:  0x000058EF25751Bb3687eB314185B46b942bE00AF
 Treasury:           0x82562023a053025F3201785160CaE6051efD759e
 AWPDAO:             0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0
+Guardian (Safe 3/5): 0x000002bEfa6A1C99A710862Feb6dB50525dF00A3
 ```
 
 ### WorknetManager Implementations (differ per chain)
@@ -36,10 +37,10 @@ Default implementation contracts for auto-deployed WorknetManagers. Each worknet
 
 | Chain | WorknetManager Impl | DEX |
 |-------|-------------------|-----|
-| Base (8453) | `0x00945e7fd4110b9c56ab4a3c2f53b6fabe6485e5` | Uniswap V4 |
-| Ethereum (1) | `0x0029aABD49BF9ec7a34CDbcf75486B19CFAC3Ea8` | Uniswap V4 |
-| Arbitrum (42161) | `0x00c428DCa1678e41Ed17Cc5AE3cF14430e2085A0` | Uniswap V4 |
-| BSC (56) | `0x00D87f2f81E20cB1583F46d94BC7a7ad8f2DAC78` | PancakeSwap V4 |
+| Base (8453) | `0x000011EE4117c52dC0Eb146cBC844cb155B200A9` | Uniswap V4 |
+| Ethereum (1) | `0x0000DD4841bB4e66AF61A5E35204C1606b4a00A9` | Uniswap V4 |
+| Arbitrum (42161) | `0x000055Ca7d29e8dC7eDEF3892849347214a300A9` | Uniswap V4 |
+| BSC (56) | `0x0000269C10feF9B603A228b075F8C99BAE5b00A9` | PancakeSwap V4 |
 
 ---
 
@@ -380,16 +381,16 @@ Check registration status for any address.
 | Epoch Duration | 1 day (86,400 seconds) |
 | Initial Daily Emission | 31,600,000 AWP per chain |
 | Decay Factor | 0.996844 per epoch (~0.3156% daily decay) |
-| Emission Split | 50% recipients / 50% DAO |
+| Emission Split | 100% to recipients (Guardian includes treasury as a recipient for DAO share) |
 | Max Active Worknets | 10,000 |
 | Max Recipients | 10,000 |
 | Max Weight Seconds | 54 weeks (32,659,200 seconds) — voting power sqrt cap |
 | AWP Max Supply | 10,000,000,000 AWP (10^28 wei) |
 | Alpha Max Supply | 10,000,000,000 per worknet (10^28 wei) |
 | Token Decimals | 18 (all tokens) |
-| Proposal Threshold | 1,000,000 AWP voting power |
-| Worknet Registration Cost | 100,000 AWP (initialAlphaMint x initialAlphaPrice) |
-| Alpha Mint per Worknet | 100,000,000 |
+| Proposal Threshold | 200,000 AWP voting power |
+| Worknet Registration Cost | ~1,000,000 AWP (initialAlphaMint × initialAlphaPrice ÷ 1e18, dynamic) |
+| Alpha Mint per Worknet | 1,000,000,000 (1e27 wei) |
 | WorknetId Format | `chainId * 100_000_000 + localCounter` — globally unique |
 | Min Lock Duration (veAWP) | 1 day |
 | Immunity Period | 30 days |

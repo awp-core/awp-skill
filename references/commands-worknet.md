@@ -20,10 +20,10 @@ LP_MANAGER="0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2"
 WALLET_ADDR=$(awp-wallet receive | jq -r '.eoaAddress')
 
 # WorknetManager implementation addresses (differ per chain due to DEX integration):
-# Base (8453):    0x00945e7fd4110b9c56ab4a3c2f53b6fabe6485e5  (Uniswap V4)
-# Ethereum (1):   0x0029aABD49BF9ec7a34CDbcf75486B19CFAC3Ea8  (Uniswap V4)
-# Arbitrum (42161): 0x00c428DCa1678e41Ed17Cc5AE3cF14430e2085A0  (Uniswap V4)
-# BSC (56):       0x00D87f2f81E20cB1583F46d94BC7a7ad8f2DAC78  (PancakeSwap V4)
+# Base (8453):    0x000011EE4117c52dC0Eb146cBC844cb155B200A9  (Uniswap V4)
+# Ethereum (1):   0x0000DD4841bB4e66AF61A5E35204C1606b4a00A9  (Uniswap V4)
+# Arbitrum (42161): 0x000055Ca7d29e8dC7eDEF3892849347214a300A9  (Uniswap V4)
+# BSC (56):       0x0000269C10feF9B603A228b075F8C99BAE5b00A9  (PancakeSwap V4)
 # These are the default implementations used when worknetManager = address(0).
 # Each worknet gets its own ERC1967Proxy pointing to the chain's implementation.
 ```
