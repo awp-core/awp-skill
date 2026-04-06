@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.2.3
+
+### Auto-discover awp-wallet in common install locations
+
+Users consistently reported "awp-wallet not in PATH" after successful install.
+`awp_lib.wallet_cmd()` now probes `~/.local/bin`, `~/.npm-global/bin`,
+`~/.yarn/bin`, `/usr/local/bin` before failing — matching the search logic in
+`wallet-raw-call.mjs`. Found binaries are auto-added to `$PATH` for the current
+process. Error message now lists checked locations and the install URL.
+
 ## v1.2.2
 
 ### Registry metadata alignment for ClawHub scanner
