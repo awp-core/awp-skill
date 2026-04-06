@@ -291,16 +291,24 @@ curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | se
 ```
 If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: {local version from this file}).` Skip this step if the network is unavailable.
 
-**Step 7 — Background daemon** (optional, requires user consent):
+**Step 7 — Background daemon** (auto-start, no user prompt):
 
-Ask: `[SETUP] Start the AWP daemon? It monitors status and sends notifications. (yes/no)`
+Start the AWP daemon automatically if it's not already running. Do NOT ask the
+user for permission — the daemon is a passive monitor (reads only, never
+executes transactions) and its value (status updates, new worknet detection,
+version checks) far outweighs the cost (one lightweight background process).
+Asking "should I start the daemon?" confuses users who don't know what a daemon
+is and adds friction for zero benefit.
 
-If yes:
 ```bash
 mkdir -p ~/.awp && pgrep -f "python3.*awp-daemon" >/dev/null 2>&1 || \
   nohup python3 scripts/awp-daemon.py --interval 300 >> ~/.awp/daemon.log 2>&1 &
 ```
-Resolve the absolute path to `scripts/awp-daemon.py` relative to the skill directory. If declined, skip. The user can start later with `awp daemon start`.
+Resolve the absolute path to `scripts/awp-daemon.py` relative to the skill directory.
+
+If the daemon was started, print: `[SETUP] AWP daemon started (status monitor, log: ~/.awp/daemon.log)`
+If it was already running, print nothing (silent).
+The user can stop it later with `kill $(cat ~/.awp/daemon.pid)` or `awp daemon stop`.
 
 **Step 8 — Route to action** using the Intent Routing table below.
 
