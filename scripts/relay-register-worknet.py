@@ -216,7 +216,7 @@ def main() -> None:
         "worknetManager": worknet_manager,
         "salt": salt,
         "minStake": str(min_stake),
-        "skillsURI": skills_uri,
+        "skillsUri": skills_uri,  # relay body uses camelCase "skillsUri" (spec §5 line 409), NOT "skillsURI" (which is the EIP-712 struct field name §5 line 442)
         "deadline": deadline,
         "permitSignature": permit_signature,
         "registerSignature": register_signature,

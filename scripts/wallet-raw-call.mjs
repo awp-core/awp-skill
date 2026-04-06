@@ -56,12 +56,15 @@ const REGISTRY_URL = "https://api.awp.sh/v2"
 const CHAIN_IDS = { ethereum: 1, bsc: 56, base: 8453, arbitrum: 42161 }
 
 async function fetchAllowedContracts(chainName) {
+  // Use registry.list (returns array of all chains) instead of registry.get
+  // (which may return a single dict depending on API version). This matches
+  // the approach in awp_lib.py's get_registry() which also handles both shapes.
   const resp = await fetch(REGISTRY_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       jsonrpc: "2.0",
-      method: "registry.get",
+      method: "registry.list",
       params: {},
       id: 1,
     }),
@@ -74,14 +77,18 @@ async function fetchAllowedContracts(chainName) {
   if (json.error) {
     throw new Error(`RPC error: ${json.error.message || JSON.stringify(json.error)}`)
   }
-  // API returns an array of per-chain registry objects
-  const registryList = json.result
-  if (!Array.isArray(registryList) || registryList.length === 0) {
-    throw new Error("Registry response is not a non-empty array")
+  // registry.list returns an array; registry.get may return a single dict.
+  // Handle both shapes defensively.
+  const result = json.result
+  let entry
+  if (Array.isArray(result) && result.length > 0) {
+    const chainId = CHAIN_IDS[chainName.toLowerCase()]
+    entry = (chainId != null && result.find(r => r.chainId === chainId)) || result[0]
+  } else if (result && typeof result === "object" && !Array.isArray(result)) {
+    entry = result
+  } else {
+    throw new Error("Registry response is neither a non-empty array nor an object")
   }
-  const chainId = CHAIN_IDS[chainName.toLowerCase()]
-  // Find the entry for the requested chain; fall back to the first entry if not found
-  const entry = (chainId != null && registryList.find(r => r.chainId === chainId)) || registryList[0]
   // Collect all address values from the chain entry
   const allowed = new Set()
   for (const value of Object.values(entry)) {
