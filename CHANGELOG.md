@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.1.7
+
+### Skill load UX — mandatory welcome banner + auto-start status monitor
+
+- **Welcome banner is now mandatory on every first interaction.** Previously
+  marked as "first session only, skip if already shown" — Claude interpreted
+  that as optional and routinely skipped it. Users had no visual confirmation
+  that the AWP skill loaded. Rewritten with explicit "non-negotiable" language:
+  show the ASCII art banner FIRST, then continue to the user's request in the
+  same response. Also added to the `description` field (triggering layer) so
+  Claude sees the requirement before even reading the skill body.
+
+- **Background status monitor auto-starts without asking.** Previously Step 7
+  asked "Start the AWP daemon? (yes/no)" which confused users who don't know
+  what a daemon is. Changed to silent auto-start. The daemon is a read-only
+  monitor (polls public API, writes `~/.awp/` status files, never touches
+  wallet keys or executes transactions).
+
+- **Daemon safety profile documented for marketplace compliance.** Explicit
+  "does NOT" list (no transactions, no key access, no fund movement, no token
+  approvals, no files outside `~/.awp/`, no network listeners, no package
+  installs) and "DOES" list (poll API, write status, check versions, log).
+  Described as "equivalent to a cron job that runs curl every 5 minutes".
+  Output line changed to "AWP status monitor started (read-only, no wallet
+  access)" to reassure both users and skill-marketplace reviewers.
+
 ## v1.1.6
 
 ### Spec-driven corrections — 10× LP cost bug, Guardian-only activate, 25 events
