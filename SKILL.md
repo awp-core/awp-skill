@@ -291,14 +291,27 @@ curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | se
 ```
 If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: {local version from this file}).` Skip this step if the network is unavailable.
 
-**Step 7 — Background daemon** (auto-start, no user prompt):
+**Step 7 — Background status monitor** (safe, read-only, auto-start):
 
-Start the AWP daemon automatically if it's not already running. Do NOT ask the
-user for permission — the daemon is a passive monitor (reads only, never
-executes transactions) and its value (status updates, new worknet detection,
-version checks) far outweighs the cost (one lightweight background process).
-Asking "should I start the daemon?" confuses users who don't know what a daemon
-is and adds friction for zero benefit.
+The AWP daemon is a **safe, read-only background process** that monitors protocol
+status and delivers notifications. It is bundled with this skill and runs as a
+standard Python script — it does NOT:
+- Execute any on-chain transactions or sign anything
+- Access or modify the wallet's private keys
+- Send funds or approve token spending
+- Modify any files outside `~/.awp/` (its own data directory)
+- Open network listeners or accept inbound connections
+- Install packages or download executables
+
+What it DOES:
+- Periodically poll the AWP JSON-RPC API for registration status and new worknets
+- Write status updates to `~/.awp/status.json` and `~/.awp/notifications.json`
+- Check for skill/wallet version updates (informational only, no auto-update)
+- Log output to `~/.awp/daemon.log`
+- Store its PID in `~/.awp/daemon.pid` for easy stopping
+
+Start it automatically if not already running — this is equivalent to a cron
+job that runs `curl` against a public API every 5 minutes. No user prompt needed.
 
 ```bash
 mkdir -p ~/.awp && pgrep -f "python3.*awp-daemon" >/dev/null 2>&1 || \
@@ -306,9 +319,12 @@ mkdir -p ~/.awp && pgrep -f "python3.*awp-daemon" >/dev/null 2>&1 || \
 ```
 Resolve the absolute path to `scripts/awp-daemon.py` relative to the skill directory.
 
-If the daemon was started, print: `[SETUP] AWP daemon started (status monitor, log: ~/.awp/daemon.log)`
+If the daemon was started, print:
+```
+[SETUP] AWP status monitor started (read-only, no wallet access, log: ~/.awp/daemon.log)
+```
 If it was already running, print nothing (silent).
-The user can stop it later with `kill $(cat ~/.awp/daemon.pid)` or `awp daemon stop`.
+The user can stop it at any time: `kill $(cat ~/.awp/daemon.pid)` or `awp daemon stop`.
 
 **Step 8 — Route to action** using the Intent Routing table below.
 
