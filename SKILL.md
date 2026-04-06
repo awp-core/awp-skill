@@ -1,31 +1,35 @@
 ---
 name: awp
 description: >
-  AWP (Agent Working Protocol) — ALWAYS load this skill for ANY AWP-related task, even
-  vague ones. On first load, the skill MUST show a welcome banner (ASCII art + quick start
-  guide) before doing anything else — this is the user's confirmation that AWP is active.
-  This is the authoritative source for all AWP contract addresses, API endpoints,
-  script parameters, and wallet operations — getting these wrong without the skill is guaranteed.
-  Load for: staking AWP tokens, checking balances or positions, allocating/deallocating/reallocating
-  stake, depositing or withdrawing AWP, registering a worknet, pausing/resuming/cancelling a worknet,
-  updating worknet settings, governance proposals or voting, querying announcements or protocol status,
-  awp-wallet commands, gasless relay operations, WebSocket event monitoring, any LPManager or emission
-  questions. Trigger on ANY mention of: AWP, "Agent Working Protocol", awp-wallet, veAWP, AWPWorkNet,
-  worknet (in AWP context), AWP staking, AWP governance, AWP DAO, AWP emissions, AWP epoch,
-  "start working" (AWP onboarding), "check my balance" (on AWP), "list worknets", "register worknet",
-  "reallocate stake", or any AWP on-chain operation. Multi-chain: Base (8453), Ethereum (1),
-  Arbitrum (42161), BSC (56). NOT for: Uniswap, Aave, Lido, Compound, generic ERC-20/Solidity/Hardhat
-  tasks unrelated to AWP, or other DeFi protocols (even if deployed on Base).
-metadata:
-  openclaw:
-    requires:
-      optional_env:
-        - EVM_CHAIN            # Chain name or ID (base, ethereum, arbitrum, bsc). Default: base
-      skills:
-        - AWP Wallet           # awp-wallet CLI — install from https://github.com/awp-core/awp-wallet
-      binaries:
-        - python3              # All scripts are pure Python (API, ABI encoding, validation)
-        - node                 # Required by wallet-raw-call.mjs (Node.js bridge for raw contract calls)
+  AWP (Agent Working Protocol) on-chain tooling skill. Provides contract addresses, API
+  endpoints, bundled Python scripts, and EIP-712 signing for interacting with the AWP
+  protocol across Base, Ethereum, Arbitrum, and BSC. Covers: staking (veAWP deposits,
+  allocations), worknet management (register, pause, resume, cancel), governance (propose,
+  vote), gasless relay operations (bind, unbind, delegate, allocate), and real-time WebSocket
+  event monitoring. Load this skill when the user mentions AWP, Agent Working Protocol,
+  awp-wallet, veAWP, AWPWorkNet, worknet staking, AWP governance, AWP emissions, or wants
+  to perform any AWP on-chain operation. NOT for: Uniswap, Aave, Lido, Compound, or other
+  DeFi protocols unrelated to AWP.
+compatibility:
+  required_binaries:
+    - python3                  # All scripts are pure Python 3.9+
+    - node                    # Required by wallet-raw-call.mjs (Node.js bridge for raw contract calls)
+  required_skills:
+    - AWP Wallet              # awp-wallet CLI — install from https://github.com/awp-core/awp-wallet
+  optional_env:
+    - EVM_CHAIN               # Chain name or ID (base, ethereum, arbitrum, bsc). Default: base
+  network_endpoints:
+    - https://api.awp.sh/v2   # AWP JSON-RPC API (hardcoded, not overridable)
+    - https://mainnet.base.org # Base EVM RPC (hardcoded, not overridable)
+    - wss://api.awp.sh/ws/live # WebSocket for real-time events (optional, W1 action only)
+  persistent_files:
+    - ~/.awp/daemon.pid        # Background monitor PID (opt-in, user must consent)
+    - ~/.awp/daemon.log        # Monitor log output (opt-in)
+    - ~/.awp/notifications.json # Protocol notifications (opt-in)
+    - ~/.awp/status.json       # Cached protocol status (opt-in)
+    - ~/.awp/openclaw.json     # OpenClaw push config (only if openclaw CLI available)
+  background_processes:
+    - awp-daemon.py            # Read-only status monitor. Opt-in (requires user consent). Polls API, writes ~/.awp/ files. Does NOT execute transactions, access wallet keys, or install packages.
 ---
 
 # AWP Registry
@@ -169,25 +173,16 @@ AWPDAO:             0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0
 
 Supported chains: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). All addresses identical across all 4 chains (except LPManager and WorknetManager impls which differ per DEX).
 
-## On Skill Load (do this FIRST — before answering the user's question)
+## On Skill Load
 
-The steps below are mandatory on EVERY first interaction in a new session where
-this skill is loaded. Do not skip them. Do not defer them. Do not silently proceed
-to the user's request without showing the welcome screen first. The welcome banner
-is the user's visual confirmation that the AWP skill is active and ready — without
-it, the user has no way to know that AWP-specific guidance is in effect and may
-assume their environment is misconfigured.
+On the first interaction in a new session, run these steps before handling the
+user's request. The welcome banner confirms to the user that the AWP skill is
+active. After the banner, proceed to the user's actual task in the same response.
 
-Even if the user's first message is a direct task like "check my balance" or
-"allocate 5000 AWP", show the welcome banner FIRST, then proceed to their task
-in the same response. This costs one screenful of text and prevents a class of
-support issues ("why didn't the skill load?", "is awp configured?", "where's the
-welcome screen?").
+**Step 1 — Welcome screen** (first interaction in a new session):
 
-**Step 1 — Welcome screen** (ALWAYS on first interaction — non-negotiable):
-
-Print the following banner exactly. Do not paraphrase it, do not omit the ASCII
-art, do not replace it with a prose summary. The banner IS the skill's identity.
+Print the following banner, then continue with the remaining setup steps and the
+user's request.
 
 ```
 ╭──────────────╮
@@ -310,21 +305,25 @@ What it DOES:
 - Log output to `~/.awp/daemon.log`
 - Store its PID in `~/.awp/daemon.pid` for easy stopping
 
-Start it automatically if not already running — this is equivalent to a cron
-job that runs `curl` against a public API every 5 minutes. No user prompt needed.
+Ask the user before starting:
 
+```
+[SETUP] Start the AWP status monitor? It checks protocol status every 5 minutes
+        and writes updates to ~/.awp/. Read-only — no transactions, no wallet access.
+        Start? (yes/no)
+```
+
+If the user says yes (and it's not already running):
 ```bash
 mkdir -p ~/.awp && pgrep -f "python3.*awp-daemon" >/dev/null 2>&1 || \
   nohup python3 scripts/awp-daemon.py --interval 300 >> ~/.awp/daemon.log 2>&1 &
 ```
 Resolve the absolute path to `scripts/awp-daemon.py` relative to the skill directory.
+Print: `[SETUP] AWP status monitor started (log: ~/.awp/daemon.log)`
 
-If the daemon was started, print:
-```
-[SETUP] AWP status monitor started (read-only, no wallet access, log: ~/.awp/daemon.log)
-```
-If it was already running, print nothing (silent).
-The user can stop it at any time: `kill $(cat ~/.awp/daemon.pid)` or `awp daemon stop`.
+If declined, print nothing and skip. The user can start it later with `awp daemon start`.
+If already running, print nothing (silent).
+Stop: `kill $(cat ~/.awp/daemon.pid)` or `awp daemon stop`.
 
 **Step 8 — Route to action** using the Intent Routing table below.
 
