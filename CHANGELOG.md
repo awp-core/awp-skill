@@ -1,5 +1,49 @@
 # Changelog
 
+## v1.2.0
+
+### Full spec coverage — 9 new scripts, 7 doc corrections, 3 bug fixes
+
+**9 new scripts (14 → 23 bundled scripts):**
+
+On-chain:
+- `onchain-partial-withdraw.py` — veAWP.partialWithdraw (uint128 amount)
+- `onchain-batch-withdraw.py` — veAWP.batchWithdraw (multiple positions)
+- `onchain-deallocate-all.py` — AWPAllocator.deallocateAll
+- `onchain-worknet-metadata.py` — AWPWorkNet.setMetadataURI / setImageURI
+- `onchain-propose.py` — AWPDAO.proposeWithTokens / signalPropose
+- `onchain-claim.py` — WorknetManager.claim (Merkle proof rewards)
+
+Gasless relay:
+- `relay-unbind.py` — POST /api/relay/unbind
+- `relay-delegate.py` — POST /api/relay/grant-delegate / revoke-delegate
+- `relay-allocate.py` — POST /api/relay/allocate / deallocate (AWPAllocator domain)
+
+**7 documentation corrections (verified on-chain):**
+
+- Proposal threshold: 1,000,000 → **200,000 AWP** (verified via eth_call)
+- Emission model: "50% recipients / 50% DAO" → "100% to recipients (Guardian
+  includes treasury as a recipient)"
+- Registration cost: 100,000 → **~1,000,000 AWP** in references/protocol.md
+  and api-reference.md
+- WorknetTokens per worknet: 100M → **1B** (initialAlphaMint = 1e27 on-chain)
+- activateWorknet access: "NFT owner" → **Guardian only** in api-reference.md
+- WorknetManager impl addresses updated to match spec §2
+- api-reference.md event table: old 19-event list replaced with authoritative
+  25-event list from spec §7
+- Guardian address `0x000002bEfa...` added to protocol.md
+
+**3 bug fixes found during code review:**
+
+- `relay-register-worknet.py`: relay body sent `"skillsURI"` (Solidity struct
+  field) but the relay API expects `"skillsUri"` (camelCase). Worknets
+  registered via gasless relay would have had empty skills URIs.
+- `wallet-raw-call.mjs`: called `registry.get` with empty params and required
+  an Array result, but the API now returns a single dict. Changed to
+  `registry.list` with defensive fallback for both shapes. Without this fix,
+  ALL on-chain scripts via wallet_send() were blocked.
+- `relay-allocate.py`: relay body sent `worknetId` as int; API expects string.
+
 ## v1.1.7
 
 ### Skill load UX — mandatory welcome banner + auto-start status monitor
