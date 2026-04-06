@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.2
+
+### Registry metadata alignment for ClawHub scanner
+
+- Replaced non-standard `compatibility:` YAML block with standard `requires:`
+  format that ClawHub's scanner actually reads. Scanner was reporting "lists no
+  required binaries/env" because it only parses `requires.binaries`, not custom
+  fields.
+- Added `requires.credentials` declaring the awp-wallet session token. Addresses
+  "declares no required secrets yet scripts expect token" review finding.
+- Step 3 (openclaw.json) changed from auto-create to opt-in with explicit user
+  consent prompt. Addresses "egress point" concern.
+
 ## v1.2.1
 
 ### ClawHub marketplace compliance + contract allowlist security hardening
