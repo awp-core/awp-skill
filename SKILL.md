@@ -286,7 +286,7 @@ curl -sf https://raw.githubusercontent.com/awp-core/awp-skill/main/SKILL.md | se
 ```
 If a newer version exists, notify the user: `[UPDATE] AWP Skill X.Y.Z available (current: {local version from this file}).` Skip this step if the network is unavailable.
 
-**Step 7 — Background status monitor** (safe, read-only, auto-start):
+**Step 7 — Background status monitor** (safe, read-only, opt-in — requires user consent):
 
 The AWP daemon is a **safe, read-only background process** that monitors protocol
 status and delivers notifications. It is bundled with this skill and runs as a

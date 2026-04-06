@@ -48,55 +48,109 @@ if (!/^0x(?:[0-9a-fA-F]{2}){4,}$/.test(args.data)) {
   process.exit(1)
 }
 
-// ── Contract allowlist — only AWP protocol contracts are permitted ────────
-// Hardcoded registry URL — not overridable via env vars to prevent allowlist bypass
+// ── Contract allowlist — defense-in-depth with static + remote verification ────────
+//
+// Security model: the allowlist uses a TWO-LAYER approach to prevent a compromised
+// API from injecting malicious contract addresses:
+//
+//   Layer 1 (static): Hardcoded set of known AWP protocol contract addresses.
+//   These are the CREATE2-deployed contracts identical across all 4 chains.
+//   This list can only change when the skill itself is updated.
+//
+//   Layer 2 (remote): Fetch the latest registry from api.awp.sh and INTERSECT
+//   with the static set. Only addresses present in BOTH lists are allowed.
+//   If the remote call fails, fall back to the static list alone.
+//
+// Attack scenario mitigated: if api.awp.sh is compromised and returns extra
+// addresses (e.g., an attacker's drain contract), the intersection ensures those
+// addresses are rejected because they're not in the hardcoded static set.
+
+// Hardcoded registry URL — not overridable via env vars
 const REGISTRY_URL = "https://api.awp.sh/v2"
 
 // Chain name → chainId mapping
 const CHAIN_IDS = { ethereum: 1, bsc: 56, base: 8453, arbitrum: 42161 }
 
+// Static allowlist: known AWP protocol contracts (identical on all 4 chains via CREATE2).
+// Source: verified against live registry.get + eth_getCode on Base mainnet.
+// Update this list when new protocol contracts are deployed.
+const STATIC_ALLOWED = new Set([
+  "0x0000f34ed3594f54faabbcb2ec45738ddd1c001a", // AWPRegistry
+  "0x0000a1050acf9dea8af9c2e74f0d7cf43f1000a1", // AWPToken
+  "0x3c9cb73f8b81083882c5308cce4f31f93600eaa9", // AWPEmission
+  "0x0000d6bb5e040e35081b3aaf59dd71b21c9800aa", // AWPAllocator
+  "0x0000b534c63d78212f1bdcc315165852793a00a8", // veAWP
+  "0x00000bfbdef8533e5f3228c9c846522d906100a7", // AWPWorkNet
+  "0x00001961b9accd86b72de19be24fad6f7c5b00a2", // LPManager
+  "0x000058ef25751bb3687eb314185b46b942be00af", // WorknetTokenFactory (live)
+  "0x0000d4996bdbb99c772e3fa9f0e94ab52aaffac7", // WorknetTokenFactory (spec)
+  "0x00006879f79f3da189b5d0ff6e58ad0127cc0da0", // AWPDAO
+  "0x82562023a053025f3201785160cae6051efd759e", // Treasury
+])
+
 async function fetchAllowedContracts(chainName) {
-  // Use registry.list (returns array of all chains) instead of registry.get
-  // (which may return a single dict depending on API version). This matches
-  // the approach in awp_lib.py's get_registry() which also handles both shapes.
-  const resp = await fetch(REGISTRY_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      method: "registry.list",
-      params: {},
-      id: 1,
-    }),
-    signal: AbortSignal.timeout(10_000),
-  })
-  if (!resp.ok) {
-    throw new Error(`Failed to fetch registry: HTTP ${resp.status}`)
-  }
-  const json = await resp.json()
-  if (json.error) {
-    throw new Error(`RPC error: ${json.error.message || JSON.stringify(json.error)}`)
-  }
-  // registry.list returns an array; registry.get may return a single dict.
-  // Handle both shapes defensively.
-  const result = json.result
-  let entry
-  if (Array.isArray(result) && result.length > 0) {
-    const chainId = CHAIN_IDS[chainName.toLowerCase()]
-    entry = (chainId != null && result.find(r => r.chainId === chainId)) || result[0]
-  } else if (result && typeof result === "object" && !Array.isArray(result)) {
-    entry = result
-  } else {
-    throw new Error("Registry response is neither a non-empty array nor an object")
-  }
-  // Collect all address values from the chain entry
-  const allowed = new Set()
-  for (const value of Object.values(entry)) {
-    if (typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value)) {
-      allowed.add(value.toLowerCase())
+  // Try to fetch the latest registry to get any new addresses the protocol added.
+  // On success, INTERSECT remote addresses with the static set (defense-in-depth).
+  // On failure, fall back to the static set alone.
+  let remoteAddresses = null
+  try {
+    const resp = await fetch(REGISTRY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "registry.list",
+        params: {},
+        id: 1,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (resp.ok) {
+      const json = await resp.json()
+      if (!json.error) {
+        const result = json.result
+        let entry
+        if (Array.isArray(result) && result.length > 0) {
+          const chainId = CHAIN_IDS[chainName.toLowerCase()]
+          entry = (chainId != null && result.find(r => r.chainId === chainId)) || result[0]
+        } else if (result && typeof result === "object" && !Array.isArray(result)) {
+          entry = result
+        }
+        if (entry) {
+          remoteAddresses = new Set()
+          for (const value of Object.values(entry)) {
+            if (typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value)) {
+              remoteAddresses.add(value.toLowerCase())
+            }
+          }
+        }
+      }
     }
+  } catch {
+    // Network failure — fall back to static allowlist (logged below)
   }
-  return allowed
+
+  if (remoteAddresses && remoteAddresses.size > 0) {
+    // INTERSECT: only allow addresses in BOTH static and remote sets.
+    // This prevents a compromised API from adding unknown contracts.
+    const intersection = new Set()
+    for (const addr of remoteAddresses) {
+      if (STATIC_ALLOWED.has(addr)) {
+        intersection.add(addr)
+      }
+    }
+    if (intersection.size > 0) {
+      return intersection
+    }
+    // If intersection is empty (API returned completely unrecognized addresses),
+    // fall back to static — something is very wrong with the API response.
+    console.error(JSON.stringify({
+      error: "Registry returned no recognized addresses — using static allowlist only",
+    }))
+  }
+
+  // Fallback: static allowlist (API unreachable or returned unrecognized data)
+  return new Set(STATIC_ALLOWED)
 }
 
 // ── Locate the awp-wallet installation directory ──────────────────────────
