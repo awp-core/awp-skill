@@ -114,7 +114,7 @@ def main() -> None:
         "chainId": chain_id,
         "staker": wallet_addr,
         "agent": agent,
-        "worknetId": worknet_id,
+        "worknetId": str(worknet_id),
         "amount": str(amount_wei),
         "deadline": deadline,
     }
