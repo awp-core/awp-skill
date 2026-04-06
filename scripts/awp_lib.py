@@ -186,11 +186,56 @@ def hex_to_int(val: str) -> int:
 
 # ── Wallet commands ─────────────────────────────────────
 
+def _find_awp_wallet() -> str:
+    """Find the awp-wallet binary, checking PATH + common install locations.
+
+    npm/pip/yarn often install to directories NOT in $PATH on fresh shells
+    (~/.local/bin, ~/.npm-global/bin, ~/.yarn/bin). This function mirrors
+    the search logic in wallet-raw-call.mjs's findAwpWalletDir() so that
+    Python scripts work even when Claude's Step 2 PATH export didn't stick.
+    """
+    import shutil
+    # 1. Check PATH first (fast path)
+    found = shutil.which("awp-wallet")
+    if found:
+        return found
+    # 2. Check well-known install directories
+    home = Path.home()
+    candidates = [
+        home / ".local" / "bin" / "awp-wallet",
+        home / ".npm-global" / "bin" / "awp-wallet",
+        home / ".yarn" / "bin" / "awp-wallet",
+        Path("/usr/local/bin/awp-wallet"),
+        Path("/usr/bin/awp-wallet"),
+    ]
+    for candidate in candidates:
+        if candidate.exists() and os.access(candidate, os.X_OK):
+            # Auto-add to PATH for the rest of this process so subsequent
+            # calls (wallet_cmd, wallet_send) also find it.
+            parent = str(candidate.parent)
+            os.environ["PATH"] = f"{parent}:{os.environ.get('PATH', '')}"
+            info(f"awp-wallet found at {candidate}, added {parent} to PATH")
+            return str(candidate)
+    die(
+        "awp-wallet not found in PATH or common install locations "
+        "(~/.local/bin, ~/.npm-global/bin, ~/.yarn/bin, /usr/local/bin). "
+        "Install it: https://github.com/awp-core/awp-wallet"
+    )
+    return ""  # unreachable
+
+
+# Cache the resolved path so we only search once per process
+_AWP_WALLET_BIN: str = ""
+
+
 def wallet_cmd(args: list[str]) -> str:
     """Execute awp-wallet command, return stdout"""
+    global _AWP_WALLET_BIN
+    if not _AWP_WALLET_BIN:
+        _AWP_WALLET_BIN = _find_awp_wallet()
     try:
         result = subprocess.run(
-            ["awp-wallet"] + args,
+            [_AWP_WALLET_BIN] + args,
             capture_output=True, text=True, timeout=60,
         )
     except subprocess.TimeoutExpired:
