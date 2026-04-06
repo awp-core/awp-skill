@@ -34,7 +34,7 @@ compatibility:
 
 # AWP Registry
 
-**Skill version: 1.2.0**
+**Skill version: 1.2.1**
 
 ## API — JSON-RPC 2.0
 

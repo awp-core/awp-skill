@@ -1,5 +1,32 @@
 # Changelog
 
+## v1.2.1
+
+### ClawHub marketplace compliance + contract allowlist security hardening
+
+**Static contract allowlist (defense-in-depth):** `wallet-raw-call.mjs` previously
+fetched the entire contract allowlist from `api.awp.sh` at runtime. A compromised
+API could inject malicious contract addresses. Now uses a two-layer model:
+hardcoded static set of 11 known AWP contracts (Layer 1) intersected with the
+remote registry response (Layer 2). Only addresses present in BOTH lists are
+allowed. API compromise cannot add unknown contracts; API failure falls back to
+the static list.
+
+**Daemon reverted to opt-in:** Auto-start was flagged as "scope creep and
+persistent behavior not declared in metadata." Step 7 now asks the user before
+starting. Heading changed from "(auto-start)" to "(opt-in — requires user
+consent)."
+
+**Metadata declared in frontmatter:** New `compatibility` section replaces the
+informal `metadata.openclaw.requires` block. Explicitly declares:
+`required_binaries`, `required_skills`, `optional_env`, `network_endpoints`,
+`persistent_files`, `background_processes` — all visible from the YAML
+frontmatter without reading the skill body.
+
+**Trigger language de-escalated:** Description no longer uses "ALWAYS", "MUST",
+"non-negotiable", or commands the agent to override its own judgment. Welcome
+banner instruction uses normal imperative tone.
+
 ## v1.2.0
 
 ### Full spec coverage — 9 new scripts, 7 doc corrections, 3 bug fixes
