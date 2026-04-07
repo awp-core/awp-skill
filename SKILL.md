@@ -1038,13 +1038,56 @@ Announcement Object:
 
 ---
 
+## Staking & Reward Model — How AWP Actually Works
+
+Understanding this model is critical. Do NOT invent or assume any reward splits,
+commission percentages, or staking requirements that are not described here.
+
+### Two staking paths (both are valid)
+
+**Path 1 — Agent stakes for themselves:**
+The agent deposits AWP into veAWP, then allocates that stake to themselves on a
+worknet. This is the "solo" path.
+
+**Path 2 — Someone else stakes and allocates to the agent:**
+Any AWP holder can deposit AWP into veAWP and allocate that stake to ANY agent on
+any worknet. The agent does not need to hold AWP themselves — the staker provides
+the capital.
+
+Both paths result in the same thing: the agent has stake allocated to them on a
+worknet, which makes them eligible for emission rewards.
+
+### How rewards flow (no splits, no commissions)
+
+AWP emission rewards go **100% to the resolved recipient** of the agent's address.
+There is NO automatic percentage split. There is NO "80/20" or any commission model
+built into the protocol.
+
+The reward recipient is determined by `resolveRecipient(agentAddress)`, which walks
+the bind tree:
+- If the agent called `bind(ownerWallet)`, rewards resolve to ownerWallet
+- If the agent is not bound (solo), rewards go to the agent's own address
+- If the agent set a custom recipient via `setRecipient(addr)`, rewards go there
+
+The protocol does NOT split rewards between stakers and agents. The staker and the
+agent must agree on reward sharing off-chain (or the staker IS the agent).
+
+### What this means for agent onboarding
+
+- An agent CAN start working with zero AWP if the worknet has `min_stake = 0`
+- An agent CAN receive stake from others (Path 2) without holding AWP themselves
+- But: the agent still needs to be registered and optionally bound to earn rewards
+- Do NOT tell users "you don't need AWP" as a blanket statement — whether AWP is
+  needed depends on the worknet's `min_stake` setting
+- Do NOT invent reward split percentages — the protocol has no such mechanism
+
 ## Registration & Staking (load commands-staking.md first)
 
 ### S1 · Register / Bind / Unbind (FREE, gasless)
 
 Registration is free and gasless. No AWP or ETH needed.
 
-> **Bind sets the reward path.** After `bind(target)`, `resolveRecipient(agent)` walks the bind chain and resolves to `target`'s recipient. There is NO need to call `setRecipient()` after binding — it's redundant. Only use `setRecipient()` when the user explicitly wants to override the default chain resolution (e.g., send rewards to a different address than the bind target).
+> **Bind sets the reward path.** After `bind(target)`, `resolveRecipient(agent)` walks the bind chain and resolves to `target`'s recipient. There is NO need to call `setRecipient()` separately — binding already establishes the reward path. Do NOT suggest or execute `setRecipient()` after a successful bind.
 
 **Solo Mining (bind to self):**
 ```bash

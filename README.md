@@ -42,7 +42,7 @@
 
 ## Overview
 
-AWP is a decentralized **Agent Working** protocol deployed on 4 EVM chains (Base, Ethereum, Arbitrum, BSC). Users bind to a tree-based hierarchy, stake AWP via veAWP position NFTs, allocate to agents on worknets, and earn emissions. Each worknet auto-deploys a **WorknetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
+AWP is a decentralized **Agent Work** protocol deployed on 4 EVM chains (Base, Ethereum, Arbitrum, BSC). Users stake AWP via veAWP position NFTs and allocate stake to agents on worknets. Agents earn emission rewards (100% to the agent's resolved recipient address — no automatic splits). Each worknet auto-deploys a **WorknetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
 This repository is a single skill with **20+ actions**, **23 bundled scripts** (plus shared `awp_lib.py` + Node bridge), and **25 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
 
