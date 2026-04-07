@@ -22,6 +22,7 @@ def main() -> None:
     validate_address(agent, "agent")
     validate_positive_number(amount, "amount")
     worknet_id: int = validate_positive_int(worknet, "worknet")
+    worknet_id = expand_worknet_id(worknet_id)
 
     # Pre-check: fetch wallet address
     wallet_addr = get_wallet_address()

@@ -38,7 +38,7 @@
 
 ---
 
-> **Testnet.** AWP is currently in testnet on Base. Multi-chain EVM deployment (Ethereum, Base, BSC, Arbitrum, etc.) is planned. Protocol parameters may change before the official mainnet launch.
+> **Mainnet.** AWP is live on 4 EVM chains: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). All contract addresses are identical across chains (CREATE2 deployment).
 
 ## Overview
 

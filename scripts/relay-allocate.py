@@ -12,6 +12,7 @@ from awp_lib import (
     base_parser,
     build_eip712,
     die,
+    expand_worknet_id,
     get_eip712_domain,
     get_registry,
     get_wallet_address,
@@ -60,13 +61,14 @@ def main() -> None:
     # Step 3: Convert amount to wei
     amount_wei = to_wei(amount_str)
 
-    # Step 4: Parse worknet ID
+    # Step 4: Parse worknet ID and expand short IDs (e.g. 2 → 845300000002)
     step("parse_worknet_id")
     try:
         worknet_id = int(worknet)
     except ValueError:
         die(f"Invalid --worknet: must be a numeric ID, got: {worknet}")
         return  # unreachable
+    worknet_id = expand_worknet_id(worknet_id)
 
     # Step 5: Get staking nonce (AWPAllocator nonce, NOT nonce.get)
     step("get_nonce")

@@ -371,6 +371,31 @@ def pad_uint256(val: int) -> str:
     return format(val, "064x")
 
 
+def expand_worknet_id(raw_id: int) -> int:
+    """Expand a short local worknet ID to the full chainId-prefixed format.
+
+    The AWP API requires worknetId in the format `chainId * 100_000_000 + localId`
+    (e.g., 845300000002 for worknet #2 on Base). Users naturally type short IDs
+    like `--worknet 2` which the API rejects with "subnet not found".
+
+    If the input is < 100_000_000 (i.e., clearly a local ID without a chain prefix),
+    auto-prepend the current chain's prefix using the EVM_CHAIN env var (default Base).
+    If the input is >= 100_000_000 (already has a chain prefix), pass through unchanged.
+    """
+    if raw_id < 100_000_000:
+        chain_env = os.environ.get("EVM_CHAIN", "base").lower()
+        chain_id = _CHAIN_IDS.get(chain_env)
+        if chain_id is None:
+            try:
+                chain_id = int(chain_env)
+            except ValueError:
+                chain_id = _DEFAULT_CHAIN_ID
+        full_id = chain_id * 100_000_000 + raw_id
+        info(f"Expanded worknet ID {raw_id} → {full_id} (chain {chain_id})")
+        return full_id
+    return raw_id
+
+
 def validate_uint128(val: int, name: str = "value") -> int:
     """Enforce that val fits in a Solidity uint128 (0 .. 2^128-1).
 

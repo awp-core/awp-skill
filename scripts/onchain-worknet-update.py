@@ -41,6 +41,7 @@ def main() -> None:
     args = parser.parse_args()
 
     worknet_id = validate_positive_int(args.worknet, "worknet")
+    worknet_id = expand_worknet_id(worknet_id)
     skills_uri: str = args.skills_uri
     min_stake_str: str = args.min_stake
 

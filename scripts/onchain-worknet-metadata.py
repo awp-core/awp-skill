@@ -35,6 +35,7 @@ def main() -> None:
     args = parser.parse_args()
 
     worknet_id = validate_positive_int(args.worknet, "worknet")
+    worknet_id = expand_worknet_id(worknet_id)
     metadata_uri: str = args.metadata_uri
     image_uri: str = args.image_uri
 

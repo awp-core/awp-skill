@@ -33,6 +33,7 @@ def main() -> None:
     args = parser.parse_args()
 
     worknet_id = validate_positive_int(args.worknet, "worknet")
+    worknet_id = expand_worknet_id(worknet_id)
     action: str = args.action
 
     # ── Pre-checks ──

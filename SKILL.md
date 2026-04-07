@@ -489,7 +489,7 @@ curl -s -X POST https://api.awp.sh/v2 \
 Filter for worknets with `min_stake = 0` AND `skills_uri` not empty. These worknets are FREE to join — no staking needed.
 
 **If the result is an empty array** (no active worknets exist on any chain), this is
-normal on a fresh testnet — the protocol is live but no one has registered a worknet
+normal on a newly launched chain — the protocol is live but no one has registered a worknet
 yet. Do NOT treat this as an error. Print:
 
 ```
