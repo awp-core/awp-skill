@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.6
+
+### Worknet skill trust org: awp-core → awp-worknet
+
+Official worknet skill source changed from `github.com/awp-core` to
+`github.com/awp-worknet`. Q6 install flow, Rule 11, and security controls
+updated. Skills from `awp-worknet/*` install directly; all other sources
+require user confirmation.
+
 ## v1.2.5
 
 ### Security — block private key phishing in wallet init flow
