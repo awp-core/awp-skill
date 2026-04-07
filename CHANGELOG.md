@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.2.4
+
+### Mainnet launch fixes — protocol name, worknet ID expansion, empty-state UX
+
+- **Protocol name corrected**: "Agent Working Protocol" / "agent mining protocol"
+  → **"Agent Work Protocol"** throughout all files.
+- **Testnet → Mainnet**: All "testnet" references removed. AWP is live on 4 chains.
+- **Short worknet IDs auto-expanded**: `--worknet 2` now auto-expands to
+  `845300000002` (Base). Previously the API rejected short IDs with "subnet not
+  found". New `awp_lib.expand_worknet_id()` added to all 8 scripts that take
+  `--worknet`.
+- **Graceful empty-state**: When no worknets exist yet, the onboarding flow and
+  daemon now show "your agent is registered and ready — waiting for worknets"
+  instead of error-like messages.
+
 ## v1.2.3
 
 ### Auto-discover awp-wallet in common install locations
