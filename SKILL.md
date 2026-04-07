@@ -1,15 +1,21 @@
 ---
 name: awp
 description: >
-  AWP (Agent Work Protocol) on-chain tooling skill. Provides contract addresses, API
-  endpoints, bundled Python scripts, and EIP-712 signing for interacting with the AWP
-  protocol across Base, Ethereum, Arbitrum, and BSC. Covers: staking (veAWP deposits,
-  allocations), worknet management (register, pause, resume, cancel), governance (propose,
-  vote), gasless relay operations (bind, unbind, delegate, allocate), and real-time WebSocket
-  event monitoring. Load this skill when the user mentions AWP, Agent Work Protocol,
-  awp-wallet, veAWP, AWPWorkNet, worknet staking, AWP governance, AWP emissions, or wants
-  to perform any AWP on-chain operation. NOT for: Uniswap, Aave, Lido, Compound, or other
-  DeFi protocols unrelated to AWP.
+  Use this skill for ANYTHING related to AWP (Agent Work Protocol). AWP is a multi-chain
+  DeFi protocol for agent mining — if the user mentions AWP, worknets, agent staking, or
+  wants to start working/earning on AWP, this skill has all the contracts, scripts, and API
+  endpoints needed. Specifically use this skill when the user wants to: check their AWP
+  balance or staking positions, deposit or withdraw AWP (veAWP), allocate or deallocate
+  stake to agents on worknets, register/pause/resume/cancel a worknet, bind an agent to an
+  owner wallet, set a reward recipient, grant or revoke delegates, create governance
+  proposals or vote, monitor real-time on-chain events via WebSocket, check AWP emission
+  rates or epoch schedules, use gasless relay operations (no ETH needed), manage
+  awp-wallet, or look up any AWP contract address or API method. Also trigger on: "start
+  working" (AWP onboarding), "check my balance" (AWP context), "list worknets", "register
+  worknet", "allocate AWP", "bind my agent", "claim rewards", "AWP emission", "AWP epoch",
+  "awp-wallet", "veAWP", "AWPWorkNet", "worknet skill". Multi-chain: Base, Ethereum,
+  Arbitrum, BSC. NOT for: Uniswap, Aave, Lido, Compound, generic Solidity/Hardhat tasks,
+  token swaps, bridging, or other DeFi protocols unrelated to AWP.
 requires:
   binaries:
     - python3                  # All bundled scripts are Python 3.9+
