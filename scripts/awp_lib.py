@@ -80,7 +80,7 @@ def api_post(url: str, body: dict) -> tuple[int, dict | str]:
 
 
 def rpc(method: str, params: dict | None = None) -> dict | list | None:
-    """Call JSON-RPC 2.0 method on AWP API(v2 JSON-RPC endpoint)"""
+    """Call JSON-RPC 2.0 method on AWP API (v2 JSON-RPC endpoint)."""
     body = {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1}
     data = json.dumps(body).encode()
     req = urllib.request.Request(
@@ -524,7 +524,7 @@ def get_eip712_domain(registry: dict, contract_name: str = "AWPRegistry") -> dic
 
 def build_eip712(domain: dict, primary_type: str, type_fields: list[dict],
                  message: dict, extra_types: dict[str, list[dict]] | None = None) -> dict:
-    """Build complete EIP-712 typed data(supports nested struct types)"""
+    """Build complete EIP-712 typed data (supports nested struct types)."""
     types: dict[str, list[dict]] = {
         "EIP712Domain": [
             {"name": "name", "type": "string"},
