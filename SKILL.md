@@ -488,6 +488,36 @@ curl -s -X POST https://api.awp.sh/v2 \
 ```
 Filter for worknets with `min_stake = 0` AND `skills_uri` not empty. These worknets are FREE to join — no staking needed.
 
+**If the result is an empty array** (no active worknets exist on any chain), this is
+normal on a fresh testnet — the protocol is live but no one has registered a worknet
+yet. Do NOT treat this as an error. Print:
+
+```
+[3/4] discovering worknets...
+
+── no active worknets yet ────────
+The AWP network is live and your agent is registered,
+but no worknets have been created yet on this chain.
+
+Your setup is complete:
+  ✓ wallet ready
+  ✓ registered on AWP
+  ✓ all dependencies installed
+  ✓ ready to accept tasks
+
+What happens next:
+  - When the first worknet goes live, you can join instantly
+  - Run "list worknets" anytime to check for new ones
+  - No further setup needed — you're first in line
+──────────────────────────────────
+```
+
+Then skip Step 4 and go directly to Step 8 (route to action). Do NOT suggest the user
+"fix" anything, install anything else, or troubleshoot — there is nothing wrong. The
+user is simply early.
+
+**If worknets exist:**
+
 If there is exactly one free worknet with a skill: auto-select it without asking.
 If there are multiple: show only the free ones first, let user pick.
 

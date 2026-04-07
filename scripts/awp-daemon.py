@@ -318,7 +318,11 @@ def format_worknet_list(worknets: list[dict[str, Any]]) -> str:
     lines.append("│" + "ACTIVE WORKNETS".center(W) + "│")
     lines.append("├" + "─" * W + "┤")
     if not worknets:
-        lines.append("│" + "  (none found)".ljust(W) + "│")
+        lines.append("│" + "  No active worknets yet.".ljust(W) + "│")
+        lines.append("│" + "  Your agent is registered".ljust(W) + "│")
+        lines.append("│" + "  and ready — waiting for".ljust(W) + "│")
+        lines.append("│" + "  the first worknet to go".ljust(W) + "│")
+        lines.append("│" + "  live. Check back soon!".ljust(W) + "│")
     else:
         for i, s in enumerate(worknets):
             sid = _field(s, "worknetId", "subnet_id", "subnetId", default="?")
@@ -558,7 +562,8 @@ def check_and_notify(wallet_addr: str) -> bool:
         log("")
         log(f"{total} worknets. {free} free (no staking). {with_skills} with skills.")
     else:
-        log("  No active worknets found (or API unavailable)")
+        log("  No active worknets yet — your agent is registered and ready.")
+        log("  Waiting for the first worknet to go live. No action needed.")
 
     log("──────────────────────────────────────")
 
@@ -566,7 +571,11 @@ def check_and_notify(wallet_addr: str) -> bool:
     if not is_registered:
         log('→ Next: say "start working" to register for free')
     else:
-        log('→ Next: say "list worknets" to browse, or "install skill for worknet #1" to start')
+        if worknets:
+            log('→ Next: say "list worknets" to browse, or "install skill for worknet #1" to start')
+        else:
+            log('→ All set! Your agent will start working as soon as worknets go live.')
+            log('  Run "list worknets" anytime to check for new ones.')
     print()
 
     return is_registered
