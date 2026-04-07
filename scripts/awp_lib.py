@@ -440,6 +440,59 @@ def encode_calldata(selector: str, *params: str) -> str:
     return selector + "".join(params)
 
 
+# ── Dynamic ABI encoding helpers ─────────────────────────
+# Building blocks for encoding Solidity dynamic types (string, uint256[], address[],
+# bytes[]). These return raw hex WITHOUT a leading offset or 0x prefix, so callers
+# can compose them into larger calldata structures.
+
+
+def encode_dynamic_string(s: str) -> str:
+    """ABI-encode a dynamic string: length(32 bytes) + right-padded UTF-8 data."""
+    raw = s.encode("utf-8")
+    padded_len = ((len(raw) + 31) // 32) * 32
+    return format(len(raw), "064x") + raw.hex().ljust(padded_len * 2, "0")
+
+
+def encode_uint256_array(values: list[int]) -> str:
+    """ABI-encode a uint256[]: length(32 bytes) + each element(32 bytes)."""
+    parts = [format(len(values), "064x")]
+    for v in values:
+        parts.append(pad_uint256(v))
+    return "".join(parts)
+
+
+def encode_address_array(addrs: list[str]) -> str:
+    """ABI-encode an address[]: length(32 bytes) + each element(32 bytes, left-padded)."""
+    parts = [format(len(addrs), "064x")]
+    for a in addrs:
+        parts.append(pad_address(a))
+    return "".join(parts)
+
+
+def encode_bytes_array(items: list[bytes]) -> str:
+    """ABI-encode a bytes[]: length + per-element offsets + each element (length + padded data).
+
+    Offsets are relative to the start of the array data area (after the length word).
+    """
+    n = len(items)
+    encoded_elements: list[str] = []
+    for item in items:
+        padded_len = ((len(item) + 31) // 32) * 32
+        elem = format(len(item), "064x") + item.hex().ljust(padded_len * 2, "0")
+        encoded_elements.append(elem)
+
+    offsets: list[str] = []
+    current_offset = n * 32  # first element starts after all offset slots
+    for elem_hex in encoded_elements:
+        offsets.append(format(current_offset, "064x"))
+        current_offset += len(elem_hex) // 2  # hex chars / 2 = bytes
+
+    parts = [format(n, "064x")]
+    parts.extend(offsets)
+    parts.extend(encoded_elements)
+    return "".join(parts)
+
+
 # ── Input validation ─────────────────────────────────────
 
 ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")

@@ -12,16 +12,13 @@ SUPPORT_LABELS = {0: "Against", 1: "For", 2: "Abstain"}
 
 
 def abi_encode_uint256_array(values: list[int]) -> str:
-    """ABI-encode uint256[] — offset + length + elements"""
-    parts: list[str] = []
-    # offset points to the start of the array data (32 bytes)
-    parts.append(format(32, "064x"))
-    # array length
-    parts.append(format(len(values), "064x"))
-    # each element
-    for v in values:
-        parts.append(format(v, "064x"))
-    return "0x" + "".join(parts)
+    """ABI-encode uint256[] as a standalone tuple: 0x + offset(32) + length + elements.
+
+    Uses awp_lib.encode_uint256_array (length + elements) as the building block,
+    then wraps with offset header and 0x prefix.
+    """
+    inner = encode_uint256_array(values)  # length + elements (no offset, no 0x)
+    return "0x" + pad_uint256(32) + inner
 
 
 def encode_vote_calldata(proposal_id: int, support: int, reason: str, params_hex: str) -> str:

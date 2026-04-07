@@ -11,65 +11,8 @@ Requires ETH for gas.
 from awp_lib import *
 
 
-# ── ABI encoding helpers ──
-
-
-def encode_dynamic_string(s: str) -> str:
-    """ABI-encode a dynamic string: length(32) + padded UTF-8 bytes"""
-    raw = s.encode("utf-8")
-    padded_len = ((len(raw) + 31) // 32) * 32
-    enc = format(len(raw), "064x")
-    enc += raw.hex().ljust(padded_len * 2, "0")
-    return enc
-
-
-def encode_uint256_array(values: list[int]) -> str:
-    """ABI-encode a uint256[] (without leading offset): length + elements"""
-    parts: list[str] = []
-    parts.append(format(len(values), "064x"))
-    for v in values:
-        parts.append(pad_uint256(v))
-    return "".join(parts)
-
-
-def encode_address_array(addrs: list[str]) -> str:
-    """ABI-encode an address[] (without leading offset): length + elements"""
-    parts: list[str] = []
-    parts.append(format(len(addrs), "064x"))
-    for a in addrs:
-        parts.append(pad_address(a))
-    return "".join(parts)
-
-
-def encode_bytes_array(items: list[bytes]) -> str:
-    """ABI-encode a bytes[] (without leading offset): length + offsets + each bytes element
-
-    Each element is itself a dynamic type (length + padded data).
-    The offsets are relative to the start of the array data area (after length word).
-    """
-    n = len(items)
-    # Each element's offset occupies n slots
-    # Calculate each element's encoded size
-    encoded_elements: list[str] = []
-    for item in items:
-        padded_len = ((len(item) + 31) // 32) * 32
-        elem = format(len(item), "064x")
-        elem += item.hex().ljust(padded_len * 2, "0")
-        encoded_elements.append(elem)
-
-    # Offset area: n 32-byte slots pointing to each element
-    # First element offset = n * 32 (skip all offset slots)
-    offsets: list[str] = []
-    current_offset = n * 32
-    for elem_hex in encoded_elements:
-        offsets.append(format(current_offset, "064x"))
-        current_offset += len(elem_hex) // 2  # hex chars / 2 = bytes
-
-    parts: list[str] = []
-    parts.append(format(n, "064x"))  # array length
-    parts.extend(offsets)
-    parts.extend(encoded_elements)
-    return "".join(parts)
+# ABI encoding helpers imported from awp_lib:
+# encode_dynamic_string, encode_uint256_array, encode_address_array, encode_bytes_array
 
 
 def build_signal_propose_calldata(description: str, token_ids: list[int]) -> str:
