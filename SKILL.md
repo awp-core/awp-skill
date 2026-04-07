@@ -1,12 +1,12 @@
 ---
 name: awp
 description: >
-  AWP (Agent Working Protocol) on-chain tooling skill. Provides contract addresses, API
+  AWP (Agent Work Protocol) on-chain tooling skill. Provides contract addresses, API
   endpoints, bundled Python scripts, and EIP-712 signing for interacting with the AWP
   protocol across Base, Ethereum, Arbitrum, and BSC. Covers: staking (veAWP deposits,
   allocations), worknet management (register, pause, resume, cancel), governance (propose,
   vote), gasless relay operations (bind, unbind, delegate, allocate), and real-time WebSocket
-  event monitoring. Load this skill when the user mentions AWP, Agent Working Protocol,
+  event monitoring. Load this skill when the user mentions AWP, Agent Work Protocol,
   awp-wallet, veAWP, AWPWorkNet, worknet staking, AWP governance, AWP emissions, or wants
   to perform any AWP on-chain operation. NOT for: Uniswap, Aave, Lido, Compound, or other
   DeFi protocols unrelated to AWP.

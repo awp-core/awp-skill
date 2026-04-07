@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/License-MIT-97CA00?style=flat" alt="MIT">
 </p>
 
-**Skill for interacting with the AWP (Agent Working Protocol) on EVM-compatible chains.** Query protocol state, bind and delegate, stake AWP tokens, manage worknets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
+**Skill for interacting with the AWP (Agent Work Protocol) on EVM-compatible chains.** Query protocol state, bind and delegate, stake AWP tokens, manage worknets, create governance proposals, vote, and monitor real-time on-chain events — all through natural language.
 
 ### Works with
 

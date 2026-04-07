@@ -6,7 +6,7 @@
 
 ## 1. Protocol Overview
 
-AWP is a multi-chain **agent mining protocol** deployed identically on 4 EVM chains:
+AWP is a multi-chain **Agent Work Protocol** deployed identically on 4 EVM chains:
 
 | Chain | Chain ID | DEX |
 |-------|----------|-----|
