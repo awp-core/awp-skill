@@ -535,9 +535,9 @@ Only show worknets with min_stake > 0 if the user explicitly asks, or if no free
 
 **Step 4: Install worknet skill and start working**
 
-Check the worknet's `skills_uri` source. If it is from `github.com/awp-core/*`, install directly. If it is from a third-party source, show a warning and ask for confirmation before installing (see Q6 for the exact flow). If the user declines, return to the worknet list from Step 3.
+Check the worknet's `skills_uri` source. If it is from `github.com/awp-worknet/*`, install directly. If it is from a third-party source, show a warning and ask for confirmation before installing (see Q6 for the exact flow). If the user declines, return to the worknet list from Step 3.
 
-Install example (awp-core source):
+Install example (awp-worknet source):
 ```
 [4/4] installing Benchmark skill...
 [4/4] ready ✓
@@ -661,7 +661,7 @@ After confirmation and completion:
    ```
    If a downstream worknet skill needs the agent's address, read it from `awp-wallet receive` — do not ask the user for it.
 10. **This is an agent work wallet.** Always confirm with the user before executing any on-chain transaction — show the action, target contract, chain, and estimated cost, then wait for explicit approval. Exception: gasless registration via relay (free, no gas cost) does not require confirmation. Remind the user on first setup: do NOT store personal assets in this wallet.
-11. **Worknet skill install (Q6):** Install `awp-core` skills directly. For third-party sources (not `github.com/awp-core/*`), show a warning and require user confirmation before installing.
+11. **Worknet skill install (Q6):** Install `awp-worknet` skills directly. For third-party sources (not `github.com/awp-worknet/*`), show a warning and require user confirmation before installing.
 12. **Onboarding requires user choice.** Always present Option A (Solo) and Option B (Delegated) and WAIT for the user to choose. Never auto-select an option.
 13. **Bind already sets the reward path.** After `bind(target)`, rewards resolve to the target via the bind chain. Do NOT call `setRecipient()` after a successful bind — it's redundant.
 14. **Multi-chain awareness.** Use chain-appropriate explorer links. Include `chainId` in API params when the user specifies a chain. Default to Base (8453) when unspecified.
@@ -709,7 +709,7 @@ scripts/
 
 **Local files** (`~/.awp/`): `openclaw.json`, `daemon.pid`, `daemon.log`, `notifications.json`, `status.json` — all written only with user consent or explicit actions.
 
-**Third-party skill installs**: Worknet skills from non-`awp-core` sources require explicit user confirmation.
+**Third-party skill installs**: Worknet skills from non-`awp-worknet` sources require explicit user confirmation.
 
 ## Vanity Salt Endpoints
 
@@ -958,7 +958,7 @@ curl -s -X POST https://api.awp.sh/v2 \
   -d '{"jsonrpc":"2.0","method":"subnets.getSkills","params":{"worknetId":"ID"},"id":1}'
 ```
 
-For `awp-core` sources (`github.com/awp-core/*`), install directly:
+For `awp-worknet` sources (`github.com/awp-worknet/*`), install directly:
 ```
 [SETUP] Installing worknet #1 skill ...
 [SETUP] Installed ✓
@@ -967,7 +967,7 @@ For `awp-core` sources (`github.com/awp-core/*`), install directly:
 For third-party sources, show a warning and ask for confirmation before installing:
 ```
 [SETUP] Worknet #5 skill source: https://github.com/other/repo
-        ⚠ Third-party source — not maintained by awp-core.
+        ⚠ Third-party source — not maintained by awp-worknet.
         Install? (yes/no)
 ```
 If the user confirms, install to `skills/awp-worknet-{id}/`. If the user declines, print `[SETUP] Cancelled.` and return to the worknet list.
