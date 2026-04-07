@@ -29,7 +29,7 @@ RPC_URL = "https://mainnet.base.org"
 # Python-urllib User-Agent with 403. Send a benign identifier instead.
 _USER_AGENT = "awp-skill/1.1 (+https://github.com/awp-core/awp-skill)"
 
-# 链名称 → chainId 映射
+# Chain name → chainId mapping
 _CHAIN_IDS: dict[str, int] = {"ethereum": 1, "eth": 1, "bsc": 56, "bnb": 56, "base": 8453, "arbitrum": 42161, "arb": 42161}
 _DEFAULT_CHAIN_ID = 8453  # Base
 
@@ -80,7 +80,7 @@ def api_post(url: str, body: dict) -> tuple[int, dict | str]:
 
 
 def rpc(method: str, params: dict | None = None) -> dict | list | None:
-    """Call JSON-RPC 2.0 method on AWP API（新版 v2 接口）"""
+    """Call JSON-RPC 2.0 method on AWP API(v2 JSON-RPC endpoint)"""
     body = {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1}
     data = json.dumps(body).encode()
     req = urllib.request.Request(
@@ -482,12 +482,12 @@ def validate_positive_int(val: str, name: str = "id") -> int:
 # ── EIP-712 construction ─────────────────────────────────
 
 def get_eip712_domain(registry: dict, contract_name: str = "AWPRegistry") -> dict:
-    """获取 EIP-712 domain 信息，支持 AWPRegistry 和 AWPAllocator"""
+    """Get EIP-712 domain info for AWPRegistry or AWPAllocator."""
     domain = registry.get("eip712Domain", {})
     chain_id = domain.get("chainId") or registry.get("chainId")
 
     if contract_name == "AWPAllocator":
-        # AWPAllocator 使用 registry 中的专用 domain 字段 allocatorEip712Domain
+        # AWPAllocator uses the dedicated allocatorEip712Domain field from registry
         alloc_domain = registry.get("allocatorEip712Domain", {})
         return {
             "name": alloc_domain.get("name", "AWPAllocator"),
@@ -496,7 +496,7 @@ def get_eip712_domain(registry: dict, contract_name: str = "AWPRegistry") -> dic
             "verifyingContract": alloc_domain.get("verifyingContract") or registry.get("awpAllocator", ""),
         }
 
-    # AWPRegistry domain（默认）
+    # AWPRegistry domain (default)
     name = domain.get("name")
     version = domain.get("version")
     contract = domain.get("verifyingContract")
@@ -524,7 +524,7 @@ def get_eip712_domain(registry: dict, contract_name: str = "AWPRegistry") -> dic
 
 def build_eip712(domain: dict, primary_type: str, type_fields: list[dict],
                  message: dict, extra_types: dict[str, list[dict]] | None = None) -> dict:
-    """Build complete EIP-712 typed data（支持嵌套 struct 类型）"""
+    """Build complete EIP-712 typed data(supports nested struct types)"""
     types: dict[str, list[dict]] = {
         "EIP712Domain": [
             {"name": "name", "type": "string"},

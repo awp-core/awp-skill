@@ -27,7 +27,7 @@ from awp_lib import (
 
 
 def parse_args() -> tuple[str, str, str, str, str]:
-    """解析命令行参数，返回 (token, mode, agent, worknet, amount)"""
+    """Parse CLI arguments, return (token, mode, agent, worknet, amount)."""
     parser = base_parser("AWP gasless allocate — allocate or deallocate stake via relay")
     parser.add_argument(
         "--mode", required=True, choices=["allocate", "deallocate"],

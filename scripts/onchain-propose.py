@@ -11,7 +11,7 @@ Requires ETH for gas.
 from awp_lib import *
 
 
-# ── ABI 编码辅助函数 ──
+# ── ABI encoding helpers ──
 
 
 def encode_dynamic_string(s: str) -> str:
@@ -48,8 +48,8 @@ def encode_bytes_array(items: list[bytes]) -> str:
     The offsets are relative to the start of the array data area (after length word).
     """
     n = len(items)
-    # 每个元素的 offset 区占 n 个 slot
-    # 计算每个元素编码后的大小
+    # Each element's offset occupies n slots
+    # Calculate each element's encoded size
     encoded_elements: list[str] = []
     for item in items:
         padded_len = ((len(item) + 31) // 32) * 32
@@ -57,13 +57,13 @@ def encode_bytes_array(items: list[bytes]) -> str:
         elem += item.hex().ljust(padded_len * 2, "0")
         encoded_elements.append(elem)
 
-    # offset 区: n 个 32-byte slots 指向各元素
-    # 第一个元素的 offset = n * 32 (跳过所有 offset slots)
+    # Offset area: n 32-byte slots pointing to each element
+    # First element offset = n * 32 (skip all offset slots)
     offsets: list[str] = []
     current_offset = n * 32
     for elem_hex in encoded_elements:
         offsets.append(format(current_offset, "064x"))
-        current_offset += len(elem_hex) // 2  # hex 字符数 / 2 = 字节数
+        current_offset += len(elem_hex) // 2  # hex chars / 2 = bytes
 
     parts: list[str] = []
     parts.append(format(n, "064x"))  # array length
@@ -79,7 +79,7 @@ def build_signal_propose_calldata(description: str, token_ids: list[int]) -> str
     """
     selector = "b1b5d01d"
 
-    # 2 个动态参数，各有一个 offset slot
+    # 2 dynamic params, each with one offset slot
     # offset_description = 2 * 32 = 64
     desc_encoded = encode_dynamic_string(description)
     token_ids_encoded = encode_uint256_array(token_ids)
@@ -105,17 +105,17 @@ def build_executable_propose_calldata(
     """
     selector = "b407dd87"
 
-    # 编码各动态段
+    # Encode each dynamic segment
     targets_enc = encode_address_array(targets)
     values_enc = encode_uint256_array(values)
     calldatas_enc = encode_bytes_array(calldatas)
     desc_enc = encode_dynamic_string(description)
     token_ids_enc = encode_uint256_array(token_ids)
 
-    # 5 个 offset slots，各 32 字节
+    # 5 offset slots, 32 bytes each
     header_size = 5 * 32  # 160 bytes
 
-    # 计算各段的 offset（相对于参数区起始位置）
+    # Calculate each segment's offset (relative to params area start)
     offset_targets = header_size
     offset_values = offset_targets + len(targets_enc) // 2
     offset_calldatas = offset_values + len(values_enc) // 2
@@ -134,14 +134,14 @@ def build_executable_propose_calldata(
 
 
 def main() -> None:
-    # ── 参数解析 ──
+    # ── Parse arguments ──
     parser = base_parser("Create AWP DAO proposal")
     parser.add_argument("--mode", required=True, choices=["executable", "signal"],
                         help="Proposal mode: executable (on-chain actions) or signal (advisory)")
     parser.add_argument("--description", required=True, help="Proposal description text")
     parser.add_argument("--token-ids", required=True,
                         help="Comma-separated veAWP position IDs for voting power threshold")
-    # executable 模式专用参数
+    # Executable-mode-only arguments
     parser.add_argument("--targets", default="",
                         help="Comma-separated target addresses (executable mode only)")
     parser.add_argument("--values", default="",
@@ -156,13 +156,13 @@ def main() -> None:
     if not description.strip():
         die("--description must not be empty")
 
-    # 解析 token IDs
+    # Parse token IDs
     token_id_strs = [s.strip() for s in args.token_ids.split(",") if s.strip()]
     if not token_id_strs:
         die("--token-ids must contain at least one position ID")
     token_ids = [validate_positive_int(tid, "token-ids") for tid in token_id_strs]
 
-    # executable 模式需要额外参数
+    # Executable mode requires additional arguments
     targets: list[str] = []
     values_wei: list[int] = []
     calldatas_bytes: list[bytes] = []
@@ -195,21 +195,21 @@ def main() -> None:
             except ValueError:
                 die(f"Invalid --calldatas entry: {cd} (invalid hex)")
 
-    # ── 预检查 ──
+    # ── Pre-checks ──
     wallet_addr = get_wallet_address()
     validate_address(wallet_addr, "wallet")
 
     registry = get_registry()
     dao_addr = require_contract(registry, "dao")
 
-    # 读取 proposalThreshold — selector 0xb58131b0（无参数）
+    # Read proposalThreshold — selector 0xb58131b0 (no params)
     threshold_hex = rpc_call(dao_addr, "0xb58131b0")
     if not threshold_hex or threshold_hex in ("null", "0x"):
         die("Could not read proposalThreshold from DAO contract")
     proposal_threshold = hex_to_int(threshold_hex)
     step("proposalThreshold", threshold=proposal_threshold)
 
-    # 获取用户 veAWP 仓位，确认指定的 token IDs 存在
+    # Fetch user veAWP positions, verify the specified token IDs exist
     positions = rpc("staking.getPositions", {"address": wallet_addr})
     if not isinstance(positions, list):
         die("Unexpected positions response")
@@ -235,7 +235,7 @@ def main() -> None:
 
     step("eligibleTokenIds", tokenIds=token_ids)
 
-    # ── 构建 calldata ──
+    # ── Build calldata ──
     if mode == "signal":
         calldata = build_signal_propose_calldata(description, token_ids)
         step("signalPropose", dao=dao_addr, description=description[:80])

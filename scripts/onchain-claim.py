@@ -17,9 +17,9 @@ def build_claim_calldata(epoch: int, amount_wei: int, proof: list[str]) -> str:
     """
     selector = "5e4b62ab"
 
-    # epoch — 静态 uint32（ABI 编码仍占 32 字节）
+    # epoch — static uint32 (ABI-encoded as 32 bytes)
     slot0 = pad_uint256(epoch)
-    # amount — 静态 uint256
+    # amount — static uint256
     slot1 = pad_uint256(amount_wei)
     # offset to proof array — 3 static slots * 32 = 96
     slot2 = pad_uint256(3 * 32)
@@ -28,14 +28,14 @@ def build_claim_calldata(epoch: int, amount_wei: int, proof: list[str]) -> str:
     proof_parts: list[str] = []
     proof_parts.append(format(len(proof), "064x"))
     for p in proof:
-        # 去掉 0x 前缀，已经是 64 hex 字符
+        # Strip 0x prefix, already 64 hex chars
         proof_parts.append(p[2:].lower())
 
     return "0x" + selector + slot0 + slot1 + slot2 + "".join(proof_parts)
 
 
 def main() -> None:
-    # ── 参数解析 ──
+    # ── Parse arguments ──
     parser = base_parser("Claim WorknetManager epoch rewards")
     parser.add_argument("--manager", required=True, help="WorknetManager contract address")
     parser.add_argument("--epoch", required=True, help="Epoch number (uint32)")
@@ -44,11 +44,11 @@ def main() -> None:
                         help="Comma-separated Merkle proof bytes32 values (0x-prefixed)")
     args = parser.parse_args()
 
-    # ── 验证输入 ──
+    # ── Validate inputs ──
     manager: str = args.manager
     validate_address(manager, "manager")
 
-    # epoch 必须是正整数且在 uint32 范围内
+    # epoch must be a positive integer within uint32 range
     epoch_str: str = args.epoch
     if not re.match(r"^[0-9]+$", epoch_str):
         die("Invalid --epoch: must be a positive integer")
@@ -60,14 +60,14 @@ def main() -> None:
     validate_positive_number(amount_str, "amount")
     amount_wei = to_wei(amount_str)
 
-    # 解析并验证 proof
+    # Parse and validate proof
     proof_strs = [s.strip() for s in args.proof.split(",") if s.strip()]
     if not proof_strs:
         die("--proof must contain at least one bytes32 value")
     for p in proof_strs:
         validate_bytes32(p, "proof")
 
-    # ── 预检查 ──
+    # ── Pre-checks ──
     wallet_addr = get_wallet_address()
     validate_address(wallet_addr, "wallet")
 
@@ -77,7 +77,7 @@ def main() -> None:
          amount=f"{amount_str} tokens",
          proofLength=len(proof_strs))
 
-    # ── 构建 calldata 并发送 ──
+    # ── Build calldata and send ──
     calldata = build_claim_calldata(epoch, amount_wei, proof_strs)
     result = wallet_send(args.token, manager, calldata)
     print(result)

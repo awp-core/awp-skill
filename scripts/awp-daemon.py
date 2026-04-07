@@ -303,7 +303,7 @@ def fetch_active_worknets() -> list[dict[str, Any]]:
     if isinstance(result, list):
         return result
     if isinstance(result, dict):
-        # 分页响应：提取 items/worknets/data 字段
+        # Paginated response: extract items/worknets/data field
         for key in ("items", "worknets", "data"):
             if isinstance(result.get(key), list):
                 return result[key]
@@ -600,29 +600,29 @@ def get_remote_version(url: str) -> str:
     return match.group(1) if match else ""
 
 def fetch_changelog(version: str) -> str:
-    """从远程 CHANGELOG.md 提取指定版本的更新日志摘要（标题 + 前几个要点）。"""
+    """Extract changelog summary for a specific version from remote CHANGELOG.md."""
     text = fetch_text(
         "https://raw.githubusercontent.com/awp-core/awp-skill/main/CHANGELOG.md"
     )
     if not text:
         return ""
-    # 查找目标版本段落：## vX.Y.Z
+    # Find the target version section: ## vX.Y.Z
     pattern = rf"(?m)^## v{re.escape(version)}\s*\n"
     match = re.search(pattern, text)
     if not match:
         return ""
     start = match.end()
-    # 截取到下一个 ## 或文件末尾
+    # Extract until next ## or end of file
     next_section = re.search(r"(?m)^## ", text[start:])
     section = text[start:start + next_section.start()] if next_section else text[start:]
-    # 提取标题行和前 8 个要点
+    # Extract heading lines and first 8 bullet points
     lines: list[str] = []
     for line in section.strip().splitlines():
         stripped = line.strip()
         if not stripped:
             continue
         if stripped.startswith("#"):
-            # 子标题（### ...）
+            # Sub-heading (### ...)
             lines.append(stripped.lstrip("# "))
         elif stripped.startswith("- "):
             lines.append(stripped)
@@ -708,7 +708,7 @@ def main() -> None:
 
 
 def _run_daemon(interval: int) -> None:
-    """守护进程主逻辑（由 main 包裹在 try/finally 中以确保 PID 文件清理）。"""
+    """Main daemon logic (wrapped by main() in try/finally for PID file cleanup)."""
     # Phase 1: Fetch worknets + send welcome message
     log("Phase 1: Welcome...")
     initial_worknets = fetch_active_worknets()
@@ -722,7 +722,7 @@ def _run_daemon(interval: int) -> None:
             except (ValueError, TypeError):
                 continue
 
-    # 初始化公告跟踪集合 — 预填充已有公告 ID，避免首次启动时发送重复通知
+    # Initialize announcement tracking set — pre-populate with existing IDs to avoid duplicate notifications on first start
     seen_announcement_ids: set[int] = set()
     initial_announcements = fetch_announcements()
     for ann in initial_announcements:
@@ -730,7 +730,7 @@ def _run_daemon(interval: int) -> None:
         if ann_id is not None:
             seen_announcement_ids.add(int(ann_id))
     if initial_announcements:
-        log(f"已记录 {len(seen_announcement_ids)} 条现有公告（不发送通知）")
+        log(f"Recorded {len(seen_announcement_ids)} existing announcements (no notifications sent)")
 
     # Phase 2: Check dependencies (no auto-install; notify and continue if missing)
     log("Phase 2: Checking awp-wallet dependency...")
@@ -881,7 +881,7 @@ def _run_daemon(interval: int) -> None:
                             except (ValueError, TypeError):
                                 continue
 
-                # 公告轮询 — 检查新公告并发送通知
+                # Poll announcements — check for new ones and send notifications
                 announcements = fetch_announcements()
                 priority_map: dict[int, str] = {0: "info", 1: "warning", 2: "critical"}
                 for ann in announcements:
@@ -895,7 +895,7 @@ def _run_daemon(interval: int) -> None:
                         notify(f"[{category.upper()}] {title}", content, level)
                         seen_announcement_ids.add(int(ann_id))
 
-                # 防止 seen_announcement_ids 无限增长（保留最新 500 条）
+                # Prevent seen_announcement_ids from growing unbounded (keep latest 500)
                 if len(seen_announcement_ids) > 500:
                     sorted_ids = sorted(seen_announcement_ids)
                     seen_announcement_ids = set(sorted_ids[-500:])

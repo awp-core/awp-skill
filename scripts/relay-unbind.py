@@ -23,7 +23,7 @@ from awp_lib import (
 
 
 def parse_args() -> str:
-    """解析命令行参数，返回 token"""
+    """Parse CLI arguments, return token."""
     parser = base_parser("AWP gasless unbind — unbind wallet from target via relay")
     args = parser.parse_args()
     return args.token

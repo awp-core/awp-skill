@@ -24,7 +24,7 @@ from awp_lib import (
 
 
 def parse_args() -> tuple[str, str, str]:
-    """解析命令行参数，返回 (token, mode, delegate)"""
+    """Parse CLI arguments, return (token, mode, delegate)."""
     parser = base_parser("AWP gasless delegate — grant or revoke delegate via relay")
     parser.add_argument(
         "--mode", required=True, choices=["grant", "revoke"],
