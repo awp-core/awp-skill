@@ -34,7 +34,7 @@ requires:
 
 # AWP Registry
 
-**Skill version: 1.2.3**
+**Skill version: 1.2.4**
 
 ## API — JSON-RPC 2.0
 
