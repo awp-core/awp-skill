@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.2.8
+
+### Anti-hallucination: explicit staking & reward model
+
+LLMs were fabricating "80/20 reward splits" and "agent doesn't need AWP" because
+the skill didn't describe the actual model. Added a dedicated section covering:
+two staking paths (self-stake vs delegated), 100% reward flow to
+`resolveRecipient(agent)` with no automatic splits, and worknet-specific
+`min_stake` requirements. Three explicit anti-hallucination instructions added.
+
 ## v1.2.7
 
 ### Code quality + description optimization
