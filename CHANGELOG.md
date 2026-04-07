@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.2.7
+
+### Code quality + description optimization
+
+- All Chinese comments/docstrings translated to English (47 lines across 7 files).
+- Description rewritten for better trigger accuracy — includes natural-language
+  user intents ("check my balance", "start working", "bind my agent", etc.)
+  alongside technical keywords.
+- ABI encoding helpers (`encode_dynamic_string`, `encode_uint256_array`,
+  `encode_address_array`, `encode_bytes_array`) extracted from `onchain-propose.py`
+  to `awp_lib.py` for shared use. `onchain-vote.py` now wraps the shared
+  `encode_uint256_array` instead of reimplementing.
+- 2 docstring typos fixed in `awp_lib.py`.
+- Full 25-file code review: 29 selectors verified via keccak256, all ABI
+  encodings verified, all relay body fields correct, zero bugs found.
+
 ## v1.2.6
 
 ### Worknet skill trust org: awp-core → awp-worknet
