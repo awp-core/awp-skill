@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.2.10
+
+### ClawHub metadata compliance + Requirements section
+
+Frontmatter restructured to match ClawHub's `metadata.openclaw` schema so the
+marketplace scanner correctly reads required binaries, credentials, and env vars.
+Previously ClawHub reported "required binaries: none" and "Primary credential: none"
+because our `requires.binaries` / `requires.credentials` fields were not recognized.
+
+Changes:
+- `requires:` → `metadata.openclaw.requires:` with correct field names (`bins` not `binaries`, `anyBins` for awp-wallet, `primaryEnv` for credential)
+- Added top-level `version: 1.2.10` field (ClawHub expects semver at root)
+- Added `emoji`, `homepage` metadata fields
+- New "Requirements & Security" body section consolidates runtime, credential, network endpoint, and file-write documentation that was previously only in frontmatter
+
 ## v1.2.9
 
 ### Fix: pass --chain to all wallet commands
