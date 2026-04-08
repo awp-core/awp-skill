@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.2.13
+
+### Third-pass review fixes
+
+- `relay-register-worknet.py`: relay body field `skillsUri` → `skillsURI` (spec uses
+  uppercase URI; mismatch causes signature verification failure or empty skillsURI)
+- `wallet-raw-call.mjs`: `isWorknetManager` now paginates through ALL worknets and
+  checks both Active + Paused status (was limited to first 100 Active only)
+- `awp_lib.py`: `_get_chain_name` now resolves aliases (`eth`→`ethereum`, `bnb`→`bsc`)
+  to canonical names that `wallet-raw-call.mjs` recognizes
+
 ## v1.2.12
 
 ### Bug fixes from deep code review
