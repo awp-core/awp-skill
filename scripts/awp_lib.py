@@ -186,21 +186,23 @@ def hex_to_int(val: str) -> int:
 
 # ── Chain selection ─────────────────────────────────────
 
-def _get_chain_name() -> str:
-    """Return the chain name for wallet CLI commands.
+_ID_TO_CANONICAL: dict[int, str] = {1: "ethereum", 56: "bsc", 8453: "base", 42161: "arbitrum"}
 
-    Reads EVM_CHAIN env var (same source as get_registry) and maps numeric IDs
-    back to names. awp-wallet CLI expects names like 'base', 'ethereum', etc.
+
+def _get_chain_name() -> str:
+    """Return the canonical chain name for wallet CLI commands.
+
+    Reads EVM_CHAIN env var (same source as get_registry) and resolves aliases
+    (eth→ethereum, bnb→bsc) to canonical names that wallet-raw-call.mjs recognizes.
     """
     chain_env = os.environ.get("EVM_CHAIN", "base").lower()
-    # If it's already a known name, use it directly
+    # Resolve aliases to canonical chain names via chain ID lookup
     if chain_env in _CHAIN_IDS:
-        return chain_env
-    # If it's a numeric chain ID, map back to name
+        return _ID_TO_CANONICAL.get(_CHAIN_IDS[chain_env], chain_env)
+    # If it's a numeric chain ID, map back to canonical name
     try:
         chain_id = int(chain_env)
-        _ID_TO_NAME: dict[int, str] = {1: "ethereum", 56: "bsc", 8453: "base", 42161: "arbitrum"}
-        return _ID_TO_NAME.get(chain_id, "base")
+        return _ID_TO_CANONICAL.get(chain_id, "base")
     except ValueError:
         return "base"
 

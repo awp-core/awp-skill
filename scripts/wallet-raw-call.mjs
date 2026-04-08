@@ -93,34 +93,41 @@ async function isWorknetManager(address) {
   // WorknetManagers are per-worknet contracts deployed by the factory — they are
   // NOT in the static allowlist or the registry. This separate check allows
   // onchain-claim.py to target these contracts safely.
-  try {
-    const resp = await fetch(REGISTRY_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "subnets.list",
-        params: { status: "Active", limit: 100 },
-        id: 2,
-      }),
-      signal: AbortSignal.timeout(10_000),
-    })
-    if (resp.ok) {
-      const json = await resp.json()
-      if (!json.error) {
+  // Checks both Active and Paused worknets (paused managers are still valid claim targets).
+  // Paginates through all results since the protocol supports up to 10,000 worknets.
+  const addr = address.toLowerCase()
+  for (const status of ["Active", "Paused"]) {
+    let page = 1
+    while (true) {
+      try {
+        const resp = await fetch(REGISTRY_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            method: "subnets.list",
+            params: { status, limit: 100, page },
+            id: 2,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        })
+        if (!resp.ok) break
+        const json = await resp.json()
+        if (json.error) break
         const worknets = Array.isArray(json.result)
           ? json.result
           : (json.result?.items || json.result?.data || [])
-        const addr = address.toLowerCase()
+        if (worknets.length === 0) break
         for (const w of worknets) {
-          // Check multiple possible field names for the manager address
           const mgr = (w.worknetManager || w.manager || w.worknet_manager || "").toLowerCase()
           if (mgr === addr) return true
         }
+        if (worknets.length < 100) break  // last page
+        page++
+      } catch {
+        break  // network failure — try next status or deny
       }
     }
-  } catch {
-    // Network failure — cannot verify, deny by default
   }
   return false
 }
