@@ -826,7 +826,7 @@ Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay
 | `POST /api/relay/revoke-delegate` | Revoke a delegate | AWPRegistry |
 | `POST /api/relay/activate-worknet` | Activate a pending worknet | AWPRegistry |
 | `POST /api/relay/register-worknet` | Register worknet (with AWP permit) | AWPRegistry |
-| `POST /api/relay/stake` | Gasless staking (ERC-2612 permit) | VeAWPHelper |
+| `POST /api/relay/stake` | Gasless staking (ERC-2612 permit) | AWP Token (permit domain) |
 | `POST /api/relay/allocate` | Allocate stake to agent | AWPAllocator |
 | `POST /api/relay/deallocate` | Deallocate stake | AWPAllocator |
 | `GET /api/relay/status/{txHash}` | Check relay tx status | -- |

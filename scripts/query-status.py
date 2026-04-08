@@ -31,7 +31,12 @@ from awp_lib import (
     step,
 )
 
-_CHAIN_NAMES: dict[int, str] = {1: "Ethereum", 56: "BSC", 8453: "Base", 42161: "Arbitrum"}
+_CHAIN_NAMES: dict[int, str] = {
+    1: "Ethereum",
+    56: "BSC",
+    8453: "Base",
+    42161: "Arbitrum",
+}
 
 
 def _worknet_chain(worknet_id: int) -> str:
@@ -106,8 +111,18 @@ def main() -> None:
     else:
         output["balance"] = None
 
-    # Positions
+    # Positions — handle both list and paginated dict responses
     now = int(time.time())
+    if not isinstance(positions, list):
+        if isinstance(positions, dict):
+            for key in ("items", "data", "positions"):
+                if isinstance(positions.get(key), list):
+                    positions = positions[key]
+                    break
+            else:
+                positions = []
+        else:
+            positions = []
     if isinstance(positions, list):
         pos_list: list[dict] = []
         for p in positions:
