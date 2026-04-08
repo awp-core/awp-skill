@@ -1,6 +1,6 @@
 ---
 name: awp
-version: 1.2.10
+version: 1.2.11
 description: >
   Use this skill for ANYTHING related to AWP (Agent Work Protocol). AWP is a multi-chain
   DeFi protocol for agent mining — if the user mentions AWP, worknets, agent staking, or
@@ -36,7 +36,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 1.2.10**
+**Skill version: 1.2.11**
 
 ## Requirements & Security
 
@@ -696,7 +696,12 @@ scripts/
 ├── relay-register-worknet.py          Gasless worknet registration (no ETH needed)
 ├── onchain-register.py               On-chain register
 ├── onchain-bind.py                   On-chain bind to target
-├── onchain-deposit.py                Deposit AWP (approve + deposit)
+├── query-status.py                   Read-only status overview (no token needed)
+├── onchain-onboard.py                One-command: register + deposit + allocate
+├── onchain-stake.py                  Deposit + allocate in one step (recommended)
+├── onchain-unstake.py                Deallocate all + withdraw expired positions
+├── onchain-switch-worknet.py         Move all allocations between worknets
+├── onchain-deposit.py                Deposit AWP only (approve + deposit)
 ├── onchain-allocate.py               Allocate stake to agent+worknet
 ├── onchain-deallocate.py             Deallocate stake
 ├── onchain-reallocate.py             Move stake between agents/worknets
@@ -1068,6 +1073,21 @@ the capital.
 Both paths result in the same thing: the agent has stake allocated to them on a
 worknet, which makes them eligible for emission rewards.
 
+### Staking lifecycle
+
+```
+Deposit AWP → veAWP position (locked for N days)
+    ↓
+Allocate → agent + worknet (stake is "allocated", earns rewards)
+    ↓
+Deallocate ← must do BEFORE withdraw (moves stake back to "unallocated")
+    ↓
+Withdraw ← only after lock expires AND stake is unallocated
+```
+
+`staking.getBalance` returns `{totalStaked, totalAllocated, unallocated}`.
+Only `unallocated` balance in expired positions can be withdrawn.
+
 ### How rewards flow (no splits, no commissions)
 
 AWP emission rewards go **100% to the resolved recipient** of the agent's address.
@@ -1094,11 +1114,31 @@ agent must agree on reward sharing off-chain (or the staker IS the agent).
 
 ## Registration & Staking (load commands-staking.md first)
 
+### S0 · Status Overview (read-only, no token needed)
+
+Check registration, balance, positions, allocations, and get actionable hints:
+```bash
+python3 scripts/query-status.py --address 0x1234...
+# Or use awp-wallet to auto-detect address:
+python3 scripts/query-status.py --token $TOKEN
+```
+Returns structured JSON with `hints[]` that suggest next actions (e.g., "has staked but no allocations").
+
 ### S1 · Register / Bind / Unbind (FREE, gasless)
 
 Registration is free and gasless. No AWP or ETH needed.
 
 > **Bind sets the reward path.** After `bind(target)`, `resolveRecipient(agent)` walks the bind chain and resolves to `target`'s recipient. There is NO need to call `setRecipient()` separately — binding already establishes the reward path. Do NOT suggest or execute `setRecipient()` after a successful bind.
+
+**One-command onboarding (register + deposit + allocate):**
+```bash
+# Register only (free):
+python3 scripts/onchain-onboard.py --token $TOKEN
+# Register + deposit + allocate (full onboarding):
+python3 scripts/onchain-onboard.py --token $TOKEN --amount 5000 --lock-days 90 --worknet 1
+# Register as agent bound to owner:
+python3 scripts/onchain-onboard.py --token $TOKEN --target <owner_address>
+```
 
 **Solo Mining (bind to self):**
 ```bash
@@ -1124,7 +1164,13 @@ python3 scripts/onchain-bind.py --token $TOKEN --target <root_address>
 
 Most worknets have min_stake=0 and do not require any deposit. Only run these commands if the user wants to work on a worknet with min_stake > 0, or wants to earn voting power.
 
-**New deposit:**
+**Deposit + Allocate (recommended — one command):**
+```bash
+python3 scripts/onchain-stake.py --token $TOKEN --amount 5000 --lock-days 90 --agent <addr> --worknet 1
+```
+This combines approve → deposit → allocate in one script. The user starts earning rewards immediately.
+
+**Deposit only (no allocate):**
 ```bash
 python3 scripts/onchain-deposit.py --token $TOKEN --amount 5000 --lock-days 90
 ```
@@ -1138,6 +1184,30 @@ python3 scripts/onchain-add-position.py --token $TOKEN --position 1 --amount 100
 ```bash
 python3 scripts/onchain-withdraw.py --token $TOKEN --position 1
 ```
+
+**IMPORTANT — after deposit, remind the user to allocate:**
+Depositing AWP into veAWP does NOT automatically earn rewards. The user MUST also allocate
+their stake to an agent+worknet pair (S3) before rewards start accruing. After a successful
+deposit, always tell the user: "Your AWP is now staked in veAWP. To start earning, you need
+to allocate it to an agent and worknet. Which worknet would you like to allocate to?"
+
+**Unstake (deallocate + withdraw in one command):**
+```bash
+# Deallocate all allocations, then withdraw all expired positions:
+python3 scripts/onchain-unstake.py --token $TOKEN
+# Or withdraw a specific position only:
+python3 scripts/onchain-unstake.py --token $TOKEN --position 1
+```
+
+**IMPORTANT — withdraw requires deallocate first:**
+If the user has allocated stake to any agent+worknet, they MUST deallocate before withdrawing.
+The veAWP contract only allows withdrawing from `unallocated` balance. The `onchain-unstake.py`
+script handles this automatically. For manual flow:
+1. Deallocate: `python3 scripts/onchain-deallocate.py --token $TOKEN --agent <addr> --worknet 1 --amount 5000`
+2. Wait for the position lock to expire (check `lockEnd` timestamp)
+3. Withdraw: `python3 scripts/onchain-withdraw.py --token $TOKEN --position 1`
+
+Use `query-status.py` or `staking.getBalance` to check `unallocated` vs `totalAllocated` before attempting withdrawal.
 
 ### S3 · Allocate / Deallocate / Reallocate (only after S2 deposit)
 
@@ -1153,15 +1223,20 @@ python3 scripts/onchain-allocate.py --token $TOKEN --agent <addr> --worknet 1 --
 python3 scripts/onchain-deallocate.py --token $TOKEN --agent <addr> --worknet 1 --amount 5000
 ```
 
-**Reallocate (move between agents/worknets):**
+**Switch worknet (auto-detects allocations, moves all):**
+```bash
+python3 scripts/onchain-switch-worknet.py --token $TOKEN --from-worknet 1 --to-worknet 2
+# Or move a specific amount:
+python3 scripts/onchain-switch-worknet.py --token $TOKEN --from-worknet 1 --to-worknet 2 --amount 3000
+```
+
+**Reallocate (manual, full control):**
 ```bash
 python3 scripts/onchain-reallocate.py --token $TOKEN --from-agent <addr> --from-worknet 1 --to-agent <addr> --to-worknet 2 --amount 5000
 ```
 
-To combine register + deposit + allocate in a single user intent, run the three
-individual scripts in order (S1 relay-start → S2 onchain-deposit → S3 onchain-allocate).
-There is no one-call contract function for this flow — a single bundled transaction
-would require a helper contract that AWPRegistry does not expose.
+To combine register + deposit + allocate in a single user intent, use `onchain-onboard.py`
+(recommended) or run the individual scripts in order (S1 relay-start → S2 onchain-deposit → S3 onchain-allocate).
 
 ---
 

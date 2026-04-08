@@ -47,6 +47,9 @@ def main() -> None:
     step("deposit", amount_wei=str(amount_wei), lock_seconds=lock_seconds)
     result = wallet_send(token, ve_awp, calldata)
     print(result)
+    # Remind: deposit alone does not earn rewards — user must allocate to agent+worknet
+    info("Deposit complete. NEXT STEP: allocate this stake to an agent+worknet to start earning rewards. "
+         "Run: python3 scripts/onchain-allocate.py --token $TOKEN --agent <addr> --worknet <id> --amount <amount>")
 
 
 if __name__ == "__main__":

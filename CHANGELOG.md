@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.2.11
+
+### Convenience scripts + ClawHub metadata compliance
+
+Added 5 new convenience scripts to reduce multi-step operation errors:
+- `query-status.py` — read-only status overview (registration, balance, positions,
+  allocations) with actionable `hints[]` for LLMs. No wallet token needed.
+- `onchain-onboard.py` — one-command onboarding: register + deposit + allocate.
+  Supports principal and agent modes, with optional staking.
+- `onchain-stake.py` — deposit + allocate in one step (approve → deposit → allocate).
+- `onchain-unstake.py` — exit flow: deallocate all allocations, then withdraw all
+  expired positions. Handles the "must deallocate before withdraw" constraint automatically.
+- `onchain-switch-worknet.py` — move allocations between worknets. Auto-detects
+  current allocations on source worknet and reallocates to destination.
+
+SKILL.md updates:
+- Added S0 (Status Overview) section with query-status.py usage
+- Added one-command onboarding examples to S1
+- Added unstake and switch-worknet examples to S2/S3
+- Added "Staking lifecycle" diagram (Deposit → Allocate → Deallocate → Withdraw)
+- Added "after deposit, remind user to allocate" and "withdraw requires deallocate" warnings
+- `onchain-deposit.py` now outputs reminder to allocate after successful deposit
+
 ## v1.2.10
 
 ### ClawHub metadata compliance + Requirements section
