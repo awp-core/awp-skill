@@ -192,11 +192,10 @@ def main() -> None:
 
     # ── Phase 2: Deposit (optional) ──
     if not do_deposit:
-        if not do_allocate:
-            print(json.dumps({"status": "registered", "address": wallet_addr}))
-            info("Registration complete. No deposit requested.")
-            if not already_registered:
-                info("To start earning: deposit AWP and allocate to a worknet.")
+        print(json.dumps({"status": "registered", "address": wallet_addr}))
+        info("Registration complete. No deposit requested.")
+        if not already_registered:
+            info("To start earning: deposit AWP and allocate to a worknet.")
         return
 
     awp_token = require_contract(registry, "awpToken")

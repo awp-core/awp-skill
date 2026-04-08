@@ -49,6 +49,7 @@ def main() -> None:
             allocations = []
 
     # ── Step 2: Deallocate all allocations ──
+    deallocated = 0
     if allocations:
         info(f"Found {len(allocations)} allocation(s) to deallocate")
         for alloc in allocations:
@@ -70,6 +71,7 @@ def main() -> None:
                 pad_uint256(worknet_id),
             )
             result = wallet_send(token, awp_allocator, calldata)
+            deallocated += 1
             info(
                 f"Deallocated from agent={agent[:10]}... worknet={worknet_id}: {result}"
             )
@@ -80,7 +82,15 @@ def main() -> None:
     step("queryPositions")
     positions = rpc("staking.getPositions", {"address": wallet_addr})
     if not isinstance(positions, list):
-        die("Could not fetch positions")
+        if isinstance(positions, dict):
+            for key in ("items", "data", "positions"):
+                if isinstance(positions.get(key), list):
+                    positions = positions[key]
+                    break
+            else:
+                die("Could not fetch positions")
+        else:
+            die("Could not fetch positions")
 
     # ── Step 4: Withdraw expired positions ──
     withdrawn = 0
@@ -128,7 +138,7 @@ def main() -> None:
     summary = {
         "withdrawn": withdrawn,
         "skipped_locked": skipped,
-        "deallocated": len(allocations),
+        "deallocated": deallocated,
     }
     if withdrawn == 0 and skipped > 0:
         info(f"No positions withdrawn — {skipped} position(s) still locked")

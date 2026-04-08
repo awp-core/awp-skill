@@ -110,7 +110,10 @@ def main() -> None:
             )
             created = p.get("createdAt") or p.get("created_at", 0)
 
-            if tok is None or int(amount) == 0:
+            try:
+                if tok is None or int(amount) == 0:
+                    continue
+            except (ValueError, TypeError):
                 continue
 
             try:
@@ -141,42 +144,32 @@ def main() -> None:
         output["positions"] = []
 
     # Allocations
+    def _parse_allocations(raw_list: list) -> list[dict]:
+        result: list[dict] = []
+        for a in raw_list:
+            agent = a.get("agent", "")
+            wid = a.get("worknetId") or a.get("worknet_id", "")
+            amount = a.get("amount", "0")
+            try:
+                if int(amount) == 0:
+                    continue
+            except (ValueError, TypeError):
+                continue
+            result.append(
+                {
+                    "agent": agent,
+                    "worknetId": int(wid) if wid else 0,
+                    "amount": wei_to_awp(amount),
+                    "amount_wei": str(amount),
+                }
+            )
+        return result
+
     if isinstance(allocations, list):
-        alloc_list: list[dict] = []
-        for a in allocations:
-            agent = a.get("agent", "")
-            wid = a.get("worknetId") or a.get("worknet_id", "")
-            amount = a.get("amount", "0")
-            if int(amount) == 0:
-                continue
-            alloc_list.append(
-                {
-                    "agent": agent,
-                    "worknetId": int(wid) if wid else 0,
-                    "amount": wei_to_awp(amount),
-                    "amount_wei": str(amount),
-                }
-            )
-        output["allocations"] = alloc_list
+        output["allocations"] = _parse_allocations(allocations)
     elif isinstance(allocations, dict):
-        # Paginated
         items = allocations.get("items") or allocations.get("data") or []
-        alloc_list = []
-        for a in items:
-            agent = a.get("agent", "")
-            wid = a.get("worknetId") or a.get("worknet_id", "")
-            amount = a.get("amount", "0")
-            if int(amount) == 0:
-                continue
-            alloc_list.append(
-                {
-                    "agent": agent,
-                    "worknetId": int(wid) if wid else 0,
-                    "amount": wei_to_awp(amount),
-                    "amount_wei": str(amount),
-                }
-            )
-        output["allocations"] = alloc_list
+        output["allocations"] = _parse_allocations(items)
     else:
         output["allocations"] = []
 
