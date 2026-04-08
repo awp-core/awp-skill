@@ -1216,7 +1216,7 @@ python3 scripts/relay-stake.py --token $TOKEN --amount 5000 --lock-days 90
 # Stake + allocate in one command:
 python3 scripts/relay-stake.py --token $TOKEN --amount 5000 --lock-days 90 --agent <addr> --worknet 1
 ```
-Uses ERC-2612 permit — the user signs off-chain, the relayer pays gas. Preferred over on-chain deposit when the user has no ETH.
+Uses ERC-2612 permit — the user signs off-chain, the relayer pays gas. Both staking and allocate steps are fully gasless. Preferred over on-chain deposit when the user has no ETH.
 
 **On-chain deposit + allocate (requires ETH for gas):**
 ```bash

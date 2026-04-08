@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """AWP Gasless staking — deposit AWP into veAWP via ERC-2612 permit relay.
-No ETH needed for the staking step. The user signs a single ERC-2612 permit
-off-chain; the relayer pays gas and executes the deposit via VeAWPHelper.
-Note: if --agent/--worknet are provided, the allocate step IS on-chain and
-requires ETH for gas.
+No ETH needed. The user signs a single ERC-2612 permit off-chain; the relayer
+pays gas and executes the deposit via VeAWPHelper.
+If --agent/--worknet are provided, allocate is also done gasless via relay.
 
 Flow:
   1. Fetch VeAWPHelper address from registry + AWPToken.nonces(user) on-chain
@@ -89,10 +88,6 @@ def main() -> None:
         validate_address(args.agent, "agent")
         worknet_id = validate_positive_int(args.worknet, "worknet")
         worknet_id = expand_worknet_id(worknet_id)
-        info(
-            "Note: staking is gasless, but --agent/--worknet allocate "
-            "step requires ETH for gas."
-        )
 
     # ── Step 1: Fetch registry + permit nonce ──
     step("setup")
@@ -217,22 +212,26 @@ def main() -> None:
             die(
                 f"Staking tx {tx_hash} not confirmed after 90s. "
                 "Allocate skipped — check tx status manually and run "
-                "onchain-allocate.py separately."
+                "relay-allocate.py separately."
             )
 
-        # Now allocate
-        info(f"Now allocating to agent {args.agent} on worknet {worknet_id}...")
+        # Now allocate (gasless via relay — no ETH needed)
+        info(
+            f"Now allocating to agent {args.agent} on worknet {worknet_id} (gasless)..."
+        )
         import subprocess
         import sys
         from pathlib import Path
 
-        allocate_script = str(Path(__file__).parent / "onchain-allocate.py")
+        allocate_script = str(Path(__file__).parent / "relay-allocate.py")
         result = subprocess.run(
             [
                 sys.executable,
                 allocate_script,
                 "--token",
                 token,
+                "--mode",
+                "allocate",
                 "--agent",
                 args.agent,
                 "--worknet",
@@ -251,7 +250,8 @@ def main() -> None:
             )
         print(result.stdout.strip())
         info(
-            f"Staked {args.amount} AWP (gasless) and allocated to worknet {worknet_id}."
+            f"Staked {args.amount} AWP (gasless) and allocated to worknet {worknet_id}. "
+            "Entire flow was gasless — no ETH used."
         )
 
 
