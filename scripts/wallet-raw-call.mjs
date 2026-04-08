@@ -86,6 +86,7 @@ const STATIC_ALLOWED = new Set([
   "0x0000d4996bdbb99c772e3fa9f0e94ab52aaffac7", // WorknetTokenFactory (spec)
   "0x00006879f79f3da189b5d0ff6e58ad0127cc0da0", // AWPDAO
   "0x82562023a053025f3201785160cae6051efd759e", // Treasury
+  "0x0000561ede5c1ba0b81ce585964050beae730001", // VeAWPHelper (gasless staking)
 ])
 
 async function isWorknetManager(address) {

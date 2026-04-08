@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.3.0
+
+### Gasless staking via ERC-2612 permit
+
+New `relay-stake.py` script enables staking AWP into veAWP without ETH. The user
+signs a single ERC-2612 permit off-chain; the relayer pays gas and executes the
+deposit via VeAWPHelper.depositFor(). Supports optional `--agent`/`--worknet` args
+to allocate immediately after staking.
+
+- New script: `relay-stake.py` — gasless staking (deposit only, or deposit + allocate)
+- New contract: VeAWPHelper (`0x0000561EDE5C1Ba0b81cE585964050bEAE730001`) added to
+  wallet-raw-call.mjs static allowlist and SKILL.md contract table
+- New relay endpoint: `POST /api/relay/stake` documented in SKILL.md
+- New EIP-712 domain: AWP Token (for ERC-2612 Permit) added to SKILL.md
+- New EIP-712 type: `Permit(owner, spender, value, nonce, deadline)` documented
+- S2 section updated: gasless staking is now the recommended first option
+- Gas routing updated: staking prefers relay-stake.py, fallback to on-chain
+
 ## v1.2.15
 
 ### Display chain name for worknets + expanded security documentation

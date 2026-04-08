@@ -1,6 +1,6 @@
 ---
 name: awp
-version: 1.2.15
+version: 1.3.0
 description: >
   Use this skill for ANYTHING related to AWP (Agent Work Protocol). AWP is a multi-chain
   DeFi protocol for agent mining — if the user mentions AWP, worknets, agent staking, or
@@ -46,7 +46,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 1.2.15**
+**Skill version: 1.3.0**
 
 ## Requirements & Security
 
@@ -195,6 +195,7 @@ AWPWorkNet:         0x00000bfbdEf8533E5F3228c9C846522D906100A7
 LPManager (proxy):  0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2
 WorknetTokenFactory:  0x000058EF25751Bb3687eB314185B46b942bE00AF
 Treasury:           0x82562023a053025F3201785160CaE6051efD759e
+VeAWPHelper:        0x0000561EDE5C1Ba0b81cE585964050bEAE730001
 AWPDAO:             0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0
 ```
 
@@ -599,7 +600,7 @@ If the user later wants to work on a worknet that requires staking, guide them t
 | Cross-chain balance | Q11 | None |
 | Global stats | Q12 | None |
 | Set recipient / bind / unbind / start mining | S1 | **references/commands-staking.md** |
-| Deposit / stake AWP | S2 | **references/commands-staking.md** |
+| Deposit / stake AWP (gasless or on-chain) | S2 | **references/commands-staking.md** |
 | Allocate / deallocate / reallocate | S3 | **references/commands-staking.md** |
 | Register a new worknet | M1 | **references/commands-worknet.md** |
 | Activate / pause / resume worknet | M2 | **references/commands-worknet.md** |
@@ -728,6 +729,7 @@ scripts/
 ├── onchain-claim.py                   Claim WorknetToken rewards via Merkle proof
 ├── relay-unbind.py                    Gasless unbind from binding target
 ├── relay-delegate.py                  Gasless grant/revoke delegate
+├── relay-stake.py                     Gasless staking via ERC-2612 permit (no ETH needed)
 └── relay-allocate.py                  Gasless allocate/deallocate stake
 ```
 
@@ -809,7 +811,8 @@ awp-wallet balance --token $TOKEN
 ```
 - **Has ETH** → use `onchain-*.py` scripts
 - **No ETH** → use `relay-*.py` scripts (gasless, rate limit: 100/IP/1h)
-- deposit/vote/cancelWorknet always need ETH — no gasless option
+- **Staking** → prefer `relay-stake.py` (gasless via ERC-2612 permit); fallback to `onchain-deposit.py` if relay fails
+- vote/cancelWorknet always need ETH — no gasless option
 
 Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay/*`
 
@@ -823,6 +826,7 @@ Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay
 | `POST /api/relay/revoke-delegate` | Revoke a delegate | AWPRegistry |
 | `POST /api/relay/activate-worknet` | Activate a pending worknet | AWPRegistry |
 | `POST /api/relay/register-worknet` | Register worknet (with AWP permit) | AWPRegistry |
+| `POST /api/relay/stake` | Gasless staking (ERC-2612 permit) | VeAWPHelper |
 | `POST /api/relay/allocate` | Allocate stake to agent | AWPAllocator |
 | `POST /api/relay/deallocate` | Deallocate stake | AWPAllocator |
 | `GET /api/relay/status/{txHash}` | Check relay tx status | -- |
@@ -850,9 +854,15 @@ Response: `{"txHash": "0x..."}` | Error: `{"error": "invalid EIP-712 signature"}
 {"name": "AWPAllocator", "version": "1", "chainId": 8453, "verifyingContract": "0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA"}
 ```
 
+**AWP Token domain** (ERC-2612 permit for gasless staking):
+```json
+{"name": "AWP Token", "version": "1", "chainId": 8453, "verifyingContract": "0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1"}
+```
+
 ### EIP-712 Type Definitions
 
 ```
+Permit(address owner, address spender, uint256 value, uint256 nonce, uint256 deadline)
 Bind(address agent, address target, uint256 nonce, uint256 deadline)
 Unbind(address user, uint256 nonce, uint256 deadline)
 SetRecipient(address user, address recipient, uint256 nonce, uint256 deadline)
@@ -1199,13 +1209,22 @@ python3 scripts/onchain-bind.py --token $TOKEN --target <root_address>
 
 Most worknets have min_stake=0 and do not require any deposit. Only run these commands if the user wants to work on a worknet with min_stake > 0, or wants to earn voting power.
 
-**Deposit + Allocate (recommended — one command):**
+**Gasless staking (recommended — no ETH needed):**
+```bash
+# Stake only (no allocate):
+python3 scripts/relay-stake.py --token $TOKEN --amount 5000 --lock-days 90
+# Stake + allocate in one command:
+python3 scripts/relay-stake.py --token $TOKEN --amount 5000 --lock-days 90 --agent <addr> --worknet 1
+```
+Uses ERC-2612 permit — the user signs off-chain, the relayer pays gas. Preferred over on-chain deposit when the user has no ETH.
+
+**On-chain deposit + allocate (requires ETH for gas):**
 ```bash
 python3 scripts/onchain-stake.py --token $TOKEN --amount 5000 --lock-days 90 --agent <addr> --worknet 1
 ```
 This combines approve → deposit → allocate in one script. The user starts earning rewards immediately.
 
-**Deposit only (no allocate):**
+**On-chain deposit only (no allocate, requires ETH):**
 ```bash
 python3 scripts/onchain-deposit.py --token $TOKEN --amount 5000 --lock-days 90
 ```
