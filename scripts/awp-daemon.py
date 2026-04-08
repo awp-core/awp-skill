@@ -687,12 +687,20 @@ def check_updates() -> None:
 
 def main() -> None:
     import argparse
+    import signal
     parser = argparse.ArgumentParser(description="AWP Daemon")
     parser.add_argument("--interval", type=int, default=CHECK_INTERVAL,
                         help=f"Check interval in seconds (minimum 10, default {CHECK_INTERVAL})")
     args = parser.parse_args()
 
     interval = max(args.interval, 10)
+
+    # Handle SIGTERM so `kill $(cat ~/.awp/daemon.pid)` triggers PID cleanup via finally.
+    # Default SIGTERM terminates at C level, bypassing Python finally blocks.
+    # SystemExit propagates through finally blocks, ensuring PID file is removed.
+    def _sigterm_handler(signum: int, frame: object) -> None:
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM, _sigterm_handler)
 
     # Write PID file so the daemon can be stopped externally (kill $(cat ~/.awp/daemon.pid))
     NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
