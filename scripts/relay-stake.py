@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """AWP Gasless staking — deposit AWP into veAWP via ERC-2612 permit relay.
-No ETH needed. The user signs a single ERC-2612 permit off-chain; the relayer
-pays gas and executes the deposit via VeAWPHelper.depositFor().
+No ETH needed for the staking step. The user signs a single ERC-2612 permit
+off-chain; the relayer pays gas and executes the deposit via VeAWPHelper.
+Note: if --agent/--worknet are provided, the allocate step IS on-chain and
+requires ETH for gas.
 
 Flow:
   1. Fetch VeAWPHelper address from registry + AWPToken.nonces(user) on-chain
@@ -87,6 +89,10 @@ def main() -> None:
         validate_address(args.agent, "agent")
         worknet_id = validate_positive_int(args.worknet, "worknet")
         worknet_id = expand_worknet_id(worknet_id)
+        info(
+            "Note: staking is gasless, but --agent/--worknet allocate "
+            "step requires ETH for gas."
+        )
 
     # ── Step 1: Fetch registry + permit nonce ──
     step("setup")
@@ -170,12 +176,48 @@ def main() -> None:
     else:
         die(f"Relay returned HTTP {http_code}: {body}")
 
-    # ── Optional Step 5: Allocate after staking ──
+    # ── Optional Step 5: Wait for confirmation, then allocate ──
     if do_allocate:
-        info(
-            f"Staking complete. Now allocating to agent {args.agent} on worknet {worknet_id}..."
-        )
-        # Import here to avoid circular dependency at module level
+        tx_hash = body.get("txHash") if isinstance(body, dict) else None
+        if not tx_hash:
+            die("Relay did not return txHash — cannot confirm staking before allocate")
+
+        # Poll relay status until confirmed (max ~90 seconds)
+        step("waitForConfirmation", txHash=tx_hash)
+        import urllib.request
+        import urllib.error
+
+        status_url = f"{RELAY_BASE}/relay/status/{tx_hash}"
+        confirmed = False
+        for _ in range(30):
+            time.sleep(3)
+            try:
+                req = urllib.request.Request(
+                    status_url,
+                    headers={"User-Agent": "awp-skill/1.3"},
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    status_data = json.loads(resp.read().decode())
+                    if isinstance(status_data, dict):
+                        tx_status = status_data.get("status", "")
+                        if tx_status == "confirmed":
+                            info(f"Staking tx confirmed: {tx_hash}")
+                            confirmed = True
+                            break
+                        elif tx_status == "failed":
+                            die(f"Staking tx failed on-chain: {tx_hash}")
+            except (urllib.error.URLError, json.JSONDecodeError, OSError):
+                pass  # Retry on network errors
+
+        if not confirmed:
+            die(
+                f"Staking tx {tx_hash} not confirmed after 90s. "
+                "Allocate skipped — check tx status manually and run "
+                "onchain-allocate.py separately."
+            )
+
+        # Now allocate
+        info(f"Now allocating to agent {args.agent} on worknet {worknet_id}...")
         import subprocess
         import sys
         from pathlib import Path
@@ -200,7 +242,8 @@ def main() -> None:
         )
         if result.returncode != 0:
             die(
-                f"Allocate failed after staking: {result.stderr.strip() or result.stdout.strip()}"
+                f"Allocate failed after staking: "
+                f"{result.stderr.strip() or result.stdout.strip()}"
             )
         print(result.stdout.strip())
         info(
