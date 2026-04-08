@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.3.1
+
+### Fully gasless onboarding + worknet query + bug fixes
+
+New scripts:
+- `relay-onboard.py` — fully gasless one-command onboarding: register + stake +
+  allocate, no ETH needed for any step.
+- `query-worknet.py` — read-only worknet details: name, chain, status, minStake,
+  top agents, recent earnings, actionable hints. Graceful error handling with clean
+  JSON output on API failures.
+
+Bug fixes (reviews 7–11, 7 bugs total):
+- `relay-stake.py`: EIP-712 Permit `value` field was `str` instead of `int` — would
+  cause signature verification failure on-chain.
+- `relay-stake.py`: now calls `relay-allocate.py` (gasless) instead of
+  `onchain-allocate.py` (requires ETH) for the allocate step.
+- `relay-stake.py`: poll tx confirmation before allocating (was racing — allocate ran
+  before staking tx mined). HTTP 4xx errors now fail immediately instead of retrying.
+- `query-status.py`: paginated dict fallback for `staking.getPositions` (was silently
+  returning empty positions).
+- `onchain-unstake.py`: guard bare `int()` in position withdrawal loop.
+- `SKILL.md`: relay domain for `/api/relay/stake` corrected from VeAWPHelper to
+  AWP Token. Added `relay-onboard.py` reference in ONBOARD handler.
+
 ## v1.3.0
 
 ### Gasless staking via ERC-2612 permit

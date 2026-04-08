@@ -1,6 +1,6 @@
 ---
 name: awp
-version: 1.3.0
+version: 1.3.1
 description: >
   Use this skill for ANYTHING related to AWP (Agent Work Protocol). AWP is a multi-chain
   DeFi protocol for agent mining — if the user mentions AWP, worknets, agent staking, or
@@ -46,7 +46,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 1.3.0**
+**Skill version: 1.3.1**
 
 ## Requirements & Security
 
