@@ -708,7 +708,9 @@ scripts/
 ├── onchain-register.py               On-chain register
 ├── onchain-bind.py                   On-chain bind to target
 ├── query-status.py                   Read-only status overview (no token needed)
-├── onchain-onboard.py                One-command: register + deposit + allocate
+├── query-worknet.py                  Read-only worknet details, agents, earnings
+├── relay-onboard.py                  Fully gasless: register + stake + allocate (no ETH)
+├── onchain-onboard.py                One-command: register + deposit + allocate (needs ETH)
 ├── onchain-stake.py                  Deposit + allocate in one step (recommended)
 ├── onchain-unstake.py                Deallocate all + withdraw expired positions
 ├── onchain-switch-worknet.py         Move all allocations between worknets
@@ -1169,20 +1171,31 @@ python3 scripts/query-status.py --token $TOKEN
 ```
 Returns structured JSON with `hints[]` that suggest next actions (e.g., "has staked but no allocations").
 
+**Query worknet details:**
+```bash
+python3 scripts/query-worknet.py --worknet 1
+# Returns: name, symbol, chain, status, minStake, agents, earnings, hints
+```
+
 ### S1 · Register / Bind / Unbind (FREE, gasless)
 
 Registration is free and gasless. No AWP or ETH needed.
 
 > **Bind sets the reward path.** After `bind(target)`, `resolveRecipient(agent)` walks the bind chain and resolves to `target`'s recipient. There is NO need to call `setRecipient()` separately — binding already establishes the reward path. Do NOT suggest or execute `setRecipient()` after a successful bind.
 
-**One-command onboarding (register + deposit + allocate):**
+**Fully gasless onboarding (recommended — no ETH needed):**
 ```bash
 # Register only (free):
-python3 scripts/onchain-onboard.py --token $TOKEN
-# Register + deposit + allocate (full onboarding):
-python3 scripts/onchain-onboard.py --token $TOKEN --amount 5000 --lock-days 90 --worknet 1
+python3 scripts/relay-onboard.py --token $TOKEN
+# Register + stake + allocate (full onboarding, gasless):
+python3 scripts/relay-onboard.py --token $TOKEN --amount 5000 --lock-days 90 --worknet 1
 # Register as agent bound to owner:
-python3 scripts/onchain-onboard.py --token $TOKEN --target <owner_address>
+python3 scripts/relay-onboard.py --token $TOKEN --target <owner_address>
+```
+
+**On-chain onboarding (requires ETH for deposit/allocate):**
+```bash
+python3 scripts/onchain-onboard.py --token $TOKEN --amount 5000 --lock-days 90 --worknet 1
 ```
 
 **Solo Mining (bind to self):**
