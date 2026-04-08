@@ -88,6 +88,43 @@ const STATIC_ALLOWED = new Set([
   "0x82562023a053025f3201785160cae6051efd759e", // Treasury
 ])
 
+async function isWorknetManager(address) {
+  // Verify an address is a known WorknetManager by querying subnets.list.
+  // WorknetManagers are per-worknet contracts deployed by the factory — they are
+  // NOT in the static allowlist or the registry. This separate check allows
+  // onchain-claim.py to target these contracts safely.
+  try {
+    const resp = await fetch(REGISTRY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "subnets.list",
+        params: { status: "Active", limit: 100 },
+        id: 2,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (resp.ok) {
+      const json = await resp.json()
+      if (!json.error) {
+        const worknets = Array.isArray(json.result)
+          ? json.result
+          : (json.result?.items || json.result?.data || [])
+        const addr = address.toLowerCase()
+        for (const w of worknets) {
+          // Check multiple possible field names for the manager address
+          const mgr = (w.worknetManager || w.manager || w.worknet_manager || "").toLowerCase()
+          if (mgr === addr) return true
+        }
+      }
+    }
+  } catch {
+    // Network failure — cannot verify, deny by default
+  }
+  return false
+}
+
 async function fetchAllowedContracts(chainName) {
   // Try to fetch the latest registry to get any new addresses the protocol added.
   // On success, INTERSECT remote addresses with the static set (defense-in-depth).
@@ -216,10 +253,14 @@ try {
 }
 
 if (!allowedContracts.has(args.to.toLowerCase())) {
-  console.error(JSON.stringify({
-    error: `Rejected: ${args.to} is not a known AWP protocol contract. Only calls to contracts listed in /registry are allowed.`
-  }))
-  process.exit(1)
+  // Not in the global registry — check if it's a known WorknetManager
+  const isManager = await isWorknetManager(args.to)
+  if (!isManager) {
+    console.error(JSON.stringify({
+      error: `Rejected: ${args.to} is not a known AWP protocol contract or WorknetManager. Only calls to contracts listed in /registry or active worknet managers are allowed.`
+    }))
+    process.exit(1)
+  }
 }
 
 // ── Build and send transaction ───────────────────────────────────

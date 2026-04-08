@@ -57,10 +57,12 @@ def main() -> None:
             worknet_id_raw = alloc.get("worknetId") or alloc.get("worknet_id")
             amount_raw = alloc.get("amount", "0")
 
-            if not agent or not worknet_id_raw or int(amount_raw) == 0:
+            try:
+                if not agent or not worknet_id_raw or int(amount_raw) == 0:
+                    continue
+                worknet_id = int(worknet_id_raw)
+            except (ValueError, TypeError):
                 continue
-
-            worknet_id = int(worknet_id_raw)
             step("deallocateAll", agent=agent, worknet=worknet_id)
 
             # deallocateAll(address,address,uint256) selector = 0x586ac6b3

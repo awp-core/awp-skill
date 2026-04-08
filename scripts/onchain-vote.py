@@ -4,6 +4,7 @@ castVoteWithReasonAndParams(uint256,uint8,string,bytes)
 params = abi.encode(uint256[] tokenIds) — eligible veAWP positions only
 Requires ETH for gas.
 """
+
 import json
 
 from awp_lib import *
@@ -21,7 +22,9 @@ def abi_encode_uint256_array(values: list[int]) -> str:
     return "0x" + pad_uint256(32) + inner
 
 
-def encode_vote_calldata(proposal_id: int, support: int, reason: str, params_hex: str) -> str:
+def encode_vote_calldata(
+    proposal_id: int, support: int, reason: str, params_hex: str
+) -> str:
     """Build full calldata for castVoteWithReasonAndParams
     selector = 0x5f398a14
     Parameter layout: proposalId(static) + support(static) + offset_reason(dynamic) + offset_params(dynamic)
@@ -94,7 +97,15 @@ def main() -> None:
     # ── Step 2: fetch user positions ──
     positions = rpc("staking.getPositions", {"address": wallet_addr})
     if not isinstance(positions, list):
-        die("Unexpected positions response")
+        if isinstance(positions, dict):
+            for key in ("items", "data", "positions"):
+                if isinstance(positions.get(key), list):
+                    positions = positions[key]
+                    break
+            else:
+                die("Unexpected positions response")
+        else:
+            die("Unexpected positions response")
 
     # ── Step 3: filter eligible positions (createdAt < proposalCreatedAt, strictly less than) ──
     # The API is camelCase per skill-reference.md (tokenId, createdAt), but historical
@@ -135,8 +146,13 @@ def main() -> None:
     calldata = encode_vote_calldata(proposal_id, support, reason, abi_params)
 
     support_label = SUPPORT_LABELS.get(support, "Unknown")
-    step("castVote", proposalId=proposal_id, support=support_label,
-         reason=reason, dao=dao_addr)
+    step(
+        "castVote",
+        proposalId=proposal_id,
+        support=support_label,
+        reason=reason,
+        dao=dao_addr,
+    )
     result = wallet_send(args.token, dao_addr, calldata)
     print(result)
 

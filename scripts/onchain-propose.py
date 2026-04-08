@@ -8,6 +8,7 @@ Supports two modes:
 Both require veAWP positions whose aggregate voting power meets the proposalThreshold.
 Requires ETH for gas.
 """
+
 from awp_lib import *
 
 
@@ -73,24 +74,51 @@ def build_executable_propose_calldata(
         + format(offset_token_ids, "064x")
     )
 
-    return "0x" + selector + head + targets_enc + values_enc + calldatas_enc + desc_enc + token_ids_enc
+    return (
+        "0x"
+        + selector
+        + head
+        + targets_enc
+        + values_enc
+        + calldatas_enc
+        + desc_enc
+        + token_ids_enc
+    )
 
 
 def main() -> None:
     # ── Parse arguments ──
     parser = base_parser("Create AWP DAO proposal")
-    parser.add_argument("--mode", required=True, choices=["executable", "signal"],
-                        help="Proposal mode: executable (on-chain actions) or signal (advisory)")
-    parser.add_argument("--description", required=True, help="Proposal description text")
-    parser.add_argument("--token-ids", required=True,
-                        help="Comma-separated veAWP position IDs for voting power threshold")
+    parser.add_argument(
+        "--mode",
+        required=True,
+        choices=["executable", "signal"],
+        help="Proposal mode: executable (on-chain actions) or signal (advisory)",
+    )
+    parser.add_argument(
+        "--description", required=True, help="Proposal description text"
+    )
+    parser.add_argument(
+        "--token-ids",
+        required=True,
+        help="Comma-separated veAWP position IDs for voting power threshold",
+    )
     # Executable-mode-only arguments
-    parser.add_argument("--targets", default="",
-                        help="Comma-separated target addresses (executable mode only)")
-    parser.add_argument("--values", default="",
-                        help="Comma-separated wei amounts (executable mode only)")
-    parser.add_argument("--calldatas", default="",
-                        help="Comma-separated hex calldata strings (executable mode only)")
+    parser.add_argument(
+        "--targets",
+        default="",
+        help="Comma-separated target addresses (executable mode only)",
+    )
+    parser.add_argument(
+        "--values",
+        default="",
+        help="Comma-separated wei amounts (executable mode only)",
+    )
+    parser.add_argument(
+        "--calldatas",
+        default="",
+        help="Comma-separated hex calldata strings (executable mode only)",
+    )
     args = parser.parse_args()
 
     mode: str = args.mode
@@ -119,15 +147,19 @@ def main() -> None:
         calldata_strs = [s.strip() for s in args.calldatas.split(",") if s.strip()]
 
         if not (len(targets) == len(value_strs) == len(calldata_strs)):
-            die(f"Mismatch: {len(targets)} targets, {len(value_strs)} values, "
-                f"{len(calldata_strs)} calldatas — all must have the same count")
+            die(
+                f"Mismatch: {len(targets)} targets, {len(value_strs)} values, "
+                f"{len(calldata_strs)} calldatas — all must have the same count"
+            )
 
         for t in targets:
             validate_address(t, "targets")
 
         for v in value_strs:
             if not re.match(r"^[0-9]+$", v):
-                die(f"Invalid --values entry: {v} (must be a non-negative integer in wei)")
+                die(
+                    f"Invalid --values entry: {v} (must be a non-negative integer in wei)"
+                )
             values_wei.append(int(v))
 
         for cd in calldata_strs:
@@ -155,7 +187,15 @@ def main() -> None:
     # Fetch user veAWP positions, verify the specified token IDs exist
     positions = rpc("staking.getPositions", {"address": wallet_addr})
     if not isinstance(positions, list):
-        die("Unexpected positions response")
+        if isinstance(positions, dict):
+            for key in ("items", "data", "positions"):
+                if isinstance(positions.get(key), list):
+                    positions = positions[key]
+                    break
+            else:
+                die("Unexpected positions response")
+        else:
+            die("Unexpected positions response")
 
     def _field(p: dict, *names: str) -> object | None:
         for n in names:
@@ -186,8 +226,12 @@ def main() -> None:
         calldata = build_executable_propose_calldata(
             targets, values_wei, calldatas_bytes, description, token_ids
         )
-        step("proposeWithTokens", dao=dao_addr, targets=targets,
-             description=description[:80])
+        step(
+            "proposeWithTokens",
+            dao=dao_addr,
+            targets=targets,
+            description=description[:80],
+        )
 
     result = wallet_send(args.token, dao_addr, calldata)
     print(result)

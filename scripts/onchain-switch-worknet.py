@@ -68,10 +68,14 @@ def main() -> None:
     for alloc in allocations:
         wid_raw = alloc.get("worknetId") or alloc.get("worknet_id")
         agent = alloc.get("agent", "")
-        amount = int(alloc.get("amount", "0"))
-        if wid_raw is None or amount == 0:
+        try:
+            amount = int(alloc.get("amount", "0"))
+            wid_int = int(wid_raw) if wid_raw is not None else None
+        except (ValueError, TypeError):
             continue
-        if int(wid_raw) != from_wid:
+        if wid_int is None or amount == 0:
+            continue
+        if wid_int != from_wid:
             continue
         if specific_agent and agent.lower() != specific_agent.lower():
             continue
