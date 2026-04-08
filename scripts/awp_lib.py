@@ -184,6 +184,27 @@ def hex_to_int(val: str) -> int:
     return int(val, 16)
 
 
+# ── Chain selection ─────────────────────────────────────
+
+def _get_chain_name() -> str:
+    """Return the chain name for wallet CLI commands.
+
+    Reads EVM_CHAIN env var (same source as get_registry) and maps numeric IDs
+    back to names. awp-wallet CLI expects names like 'base', 'ethereum', etc.
+    """
+    chain_env = os.environ.get("EVM_CHAIN", "base").lower()
+    # If it's already a known name, use it directly
+    if chain_env in _CHAIN_IDS:
+        return chain_env
+    # If it's a numeric chain ID, map back to name
+    try:
+        chain_id = int(chain_env)
+        _ID_TO_NAME: dict[int, str] = {1: "ethereum", 56: "bsc", 8453: "base", 42161: "arbitrum"}
+        return _ID_TO_NAME.get(chain_id, "base")
+    except ValueError:
+        return "base"
+
+
 # ── Wallet commands ─────────────────────────────────────
 
 def _find_awp_wallet() -> str:
@@ -229,10 +250,16 @@ _AWP_WALLET_BIN: str = ""
 
 
 def wallet_cmd(args: list[str]) -> str:
-    """Execute awp-wallet command, return stdout"""
+    """Execute awp-wallet command, return stdout.
+
+    Automatically appends --chain based on EVM_CHAIN env var (default: base).
+    """
     global _AWP_WALLET_BIN
     if not _AWP_WALLET_BIN:
         _AWP_WALLET_BIN = _find_awp_wallet()
+    # Append --chain if not already specified by the caller
+    if "--chain" not in args:
+        args = args + ["--chain", _get_chain_name()]
     try:
         result = subprocess.run(
             [_AWP_WALLET_BIN] + args,
@@ -266,9 +293,11 @@ def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
 
     awp-wallet send only supports token transfers, not calldata.
     This function bridges to the awp-wallet internal signing module via wallet-raw-call.mjs.
+    Passes --chain based on EVM_CHAIN env var (default: base).
     """
     bridge = str(Path(__file__).parent / "wallet-raw-call.mjs")
-    args = ["node", bridge, "--token", token, "--to", to, "--data", data, "--value", value]
+    chain = _get_chain_name()
+    args = ["node", bridge, "--token", token, "--to", to, "--data", data, "--value", value, "--chain", chain]
     try:
         result = subprocess.run(args, capture_output=True, text=True, timeout=120)
     except subprocess.TimeoutExpired:

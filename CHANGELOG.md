@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.2.9
+
+### Fix: pass --chain to all wallet commands
+
+All wallet commands (`wallet_cmd`, `wallet_send`, `wallet_approve`, `get_wallet_address`)
+now auto-append `--chain` based on the `EVM_CHAIN` env var (default: base). Previously,
+`awp-wallet` CLI defaulted to Ethereum while the skill defaulted to Base, causing:
+- Gas estimation on Ethereum (~0.017 ETH) instead of Base (~0.00005 ETH)
+- Balance checks on wrong chain (0 ETH on Ethereum vs actual balance on Base)
+- Transactions potentially sent to wrong chain
+
+Added `_get_chain_name()` helper to `awp_lib.py` that maps `EVM_CHAIN` (name or numeric
+chain ID) to the chain name expected by `awp-wallet`. All 20+ scripts inherit the fix
+automatically through the centralized wallet functions.
+
 ## v1.2.8
 
 ### Anti-hallucination: explicit staking & reward model
