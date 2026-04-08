@@ -138,7 +138,7 @@ def main() -> None:
         message={
             "owner": wallet_addr,
             "spender": ve_awp_helper,
-            "value": str(amount_wei),
+            "value": amount_wei,
             "nonce": permit_nonce,
             "deadline": deadline,
         },
@@ -206,8 +206,12 @@ def main() -> None:
                             break
                         elif tx_status == "failed":
                             die(f"Staking tx failed on-chain: {tx_hash}")
+            except urllib.error.HTTPError as e:
+                if e.code < 500:
+                    die(f"Status endpoint returned HTTP {e.code} for tx {tx_hash}")
+                # 5xx — transient server error, retry
             except (urllib.error.URLError, json.JSONDecodeError, OSError):
-                pass  # Retry on network errors
+                pass  # Transient network error, retry
 
         if not confirmed:
             die(
