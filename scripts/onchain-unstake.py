@@ -100,10 +100,12 @@ def main() -> None:
     for p in positions:
         tok = p.get("tokenId") or p.get("token_id")
         amount = p.get("amount", "0")
-        if tok is None or int(amount) == 0:
+        try:
+            if tok is None or int(amount) == 0:
+                continue
+            position_id = int(tok)
+        except (ValueError, TypeError):
             continue
-
-        position_id = int(tok)
 
         # If specific position requested, skip others
         if specific_position is not None and position_id != specific_position:
