@@ -63,11 +63,7 @@ def main() -> None:
 
     # Step 4: Parse worknet ID and expand short IDs (e.g. 2 → 845300000002)
     step("parse_worknet_id")
-    try:
-        worknet_id = int(worknet)
-    except ValueError:
-        die(f"Invalid --worknet: must be a numeric ID, got: {worknet}")
-        return  # unreachable
+    worknet_id = validate_positive_int(worknet, "worknet")
     worknet_id = expand_worknet_id(worknet_id)
 
     # Step 5: Get staking nonce (AWPAllocator nonce, NOT nonce.get)
