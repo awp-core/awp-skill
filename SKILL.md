@@ -580,7 +580,7 @@ Your agent is now working on worknet #1.
 No AWP tokens were needed.
 ```
 
-If the user later wants to work on a worknet that requires staking, guide them to S2 (deposit) and S3 (allocate) at that time — not during initial onboarding.
+If the user later wants to work on a worknet that requires staking, guide them to S2 (deposit) and S3 (allocate) at that time — not during initial onboarding. For a fully gasless flow that combines registration + staking + allocation in one command, use `relay-onboard.py`.
 
 ## Intent Routing
 

@@ -68,9 +68,16 @@ def main() -> None:
     step("queryWorknet", worknetId=wid)
 
     # ── Fetch worknet details ──
-    worknet = rpc("subnets.get", {"worknetId": str(wid)})
+    # rpc() calls die() (sys.exit) on API errors before returning, so catch
+    # SystemExit to produce a clean JSON error for this read-only script.
+    try:
+        worknet = rpc("subnets.get", {"worknetId": str(wid)})
+    except SystemExit:
+        print(json.dumps({"error": f"Worknet {wid} not found or API error"}))
+        sys.exit(1)
     if not isinstance(worknet, dict):
-        die(f"Worknet {wid} not found or API error")
+        print(json.dumps({"error": f"Worknet {wid} not found or API error"}))
+        sys.exit(1)
 
     # ── Build output ──
     output: dict = {"worknetId": wid, "chain": chain_name(wid)}
@@ -106,8 +113,11 @@ def main() -> None:
     if created:
         output["createdAt"] = created
 
-    # ── Fetch skills URI ──
-    skills = rpc("subnets.getSkills", {"worknetId": str(wid)})
+    # ── Fetch skills URI (non-critical — graceful fallback on error) ──
+    try:
+        skills = rpc("subnets.getSkills", {"worknetId": str(wid)})
+    except SystemExit:
+        skills = None
     if isinstance(skills, dict):
         skills_uri = _f(skills, "skillsURI", "skills_uri", default="")
         output["skillsURI"] = skills_uri if skills_uri else "(none)"
@@ -116,11 +126,14 @@ def main() -> None:
     else:
         output["skillsURI"] = "(none)"
 
-    # ── Fetch top agents ──
-    agents_resp = rpc(
-        "subnets.listAgents",
-        {"worknetId": str(wid), "limit": args.agents},
-    )
+    # ── Fetch top agents (non-critical) ──
+    try:
+        agents_resp = rpc(
+            "subnets.listAgents",
+            {"worknetId": str(wid), "limit": args.agents},
+        )
+    except SystemExit:
+        agents_resp = None
     agent_list: list[dict] = []
     raw_agents: list = []
     if isinstance(agents_resp, list):
@@ -150,11 +163,14 @@ def main() -> None:
     output["agentCount"] = len(agent_list)
     output["topAgents"] = agent_list
 
-    # ── Fetch recent earnings ──
-    earnings_resp = rpc(
-        "subnets.getEarnings",
-        {"worknetId": str(wid), "limit": 5},
-    )
+    # ── Fetch recent earnings (non-critical) ──
+    try:
+        earnings_resp = rpc(
+            "subnets.getEarnings",
+            {"worknetId": str(wid), "limit": 5},
+        )
+    except SystemExit:
+        earnings_resp = None
     earnings_list: list[dict] = []
     raw_earnings: list = []
     if isinstance(earnings_resp, list):
