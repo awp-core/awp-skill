@@ -45,6 +45,7 @@ from awp_lib import rpc as _awp_rpc  # noqa: E402
 # ── Config ───────────────────────────────────────
 
 CHECK_INTERVAL = 300  # seconds (5 min default)
+_CHAIN_NAMES: dict[int, str] = {1: "ETH", 56: "BSC", 8453: "Base", 42161: "Arb"}
 WALLET_REPO = "https://github.com/awp-core/awp-wallet.git"
 SCRIPT_DIR = Path(__file__).parent.resolve()
 SKILL_MD = SCRIPT_DIR.parent / "SKILL.md"
@@ -69,6 +70,28 @@ def err(msg: str) -> None:
 def short_addr(addr: str) -> str:
     """Format an Ethereum address as first-8 + last-4 (e.g., 0xAbCdEf12...cdef)."""
     return f"{addr[:8]}...{addr[-4:]}" if len(addr) >= 12 else addr
+
+
+def chain_label(worknet: dict[str, Any]) -> str:
+    """Derive a short chain label from a worknet's chainId field or worknetId format.
+
+    worknetId = chainId * 100_000_000 + localId, so chainId = worknetId // 100_000_000.
+    Falls back to the explicit chainId field if present.
+    """
+    chain_id = _field(worknet, "chainId", "chain_id", default=None)
+    if chain_id is None:
+        wid = _field(worknet, "worknetId", "subnet_id", "subnetId", default=None)
+        if wid is not None:
+            try:
+                chain_id = int(wid) // 100_000_000
+            except (ValueError, TypeError):
+                pass
+    if chain_id is not None:
+        try:
+            return _CHAIN_NAMES.get(int(chain_id), f"#{chain_id}")
+        except (ValueError, TypeError):
+            pass
+    return "?"
 
 
 def _field(obj: dict[str, Any], *names: str, default: Any = "") -> Any:
@@ -338,10 +361,12 @@ def format_worknet_list(worknets: list[dict[str, Any]]) -> str:
             if len(created) >= 10:
                 created = created[:10]  # YYYY-MM-DD
 
-            # Line 1: #id NAME (SYMBOL)
+            # Line 1: #id NAME (SYMBOL) [Chain]
+            chain = chain_label(s)
             header = f"  #{sid} {name}"
             if symbol:
                 header += f" ({symbol})"
+            header += f" [{chain}]"
             lines.append("│" + header.ljust(W) + "│")
 
             # Line 2: owner + status
@@ -554,7 +579,8 @@ def check_and_notify(wallet_addr: str) -> bool:
             name = _field(s, "name", default="Unknown")
             min_stake = _field(s, "minStake", "min_stake", default=0)
             skills = "✓" if _field(s, "skillsURI", "skills_uri", default="") else "—"
-            log(f"  #{sid}  {str(name):<30s} min: {min_stake} AWP  skills: {skills}")
+            chain = chain_label(s)
+            log(f"  #{sid}  {str(name):<26s} [{chain:<4s}] min: {min_stake} AWP  skills: {skills}")
 
         total = len(worknets)
         free = sum(1 for s in worknets if _field(s, "minStake", "min_stake", default=0) == 0)
@@ -872,7 +898,8 @@ def _run_daemon(interval: int) -> None:
                         owner = (owner_raw[:10] + "...") if len(owner_raw) > 10 else owner_raw
                         min_stake = _field(s, "minStake", "min_stake", default=0)
                         skills = _field(s, "skillsURI", "skills_uri", default="")
-                        msg = f"#{sid} \"{name}\" ({symbol}) by {owner}"
+                        chain = chain_label(s)
+                        msg = f"#{sid} \"{name}\" ({symbol}) [{chain}] by {owner}"
                         if min_stake == 0:
                             msg += " | FREE (no staking required)"
                         else:

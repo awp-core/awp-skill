@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.2.15
+
+### Display chain name for worknets + expanded security documentation
+
+- All worknet displays now show the chain name (Base, ETH, BSC, Arb) derived
+  from the worknetId format (`chainId * 100_000_000 + localId`) or the API's
+  `chainId` field. Updated in: daemon welcome banner, daemon status log, new
+  worknet notifications, and `query-status.py` allocation output.
+- Expanded Security Controls section in SKILL.md to address ClawHub scanner
+  concerns: detailed wallet bridge security model (no direct key access,
+  two-layer allowlist, session token only), daemon opt-in/read-only guarantees,
+  hardcoded endpoint rationale, revert detection, anti-phishing rules.
+- Added `metadata.openclaw.security` frontmatter for machine-readable security
+  declarations (daemon opt-in, read-only, scoped files; bridge allowlist, no
+  key access, session token only).
+
 ## v1.2.14
 
 ### Robustness fixes (review passes 4–6)

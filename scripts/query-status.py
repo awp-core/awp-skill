@@ -31,6 +31,14 @@ from awp_lib import (
     step,
 )
 
+_CHAIN_NAMES: dict[int, str] = {1: "Ethereum", 56: "BSC", 8453: "Base", 42161: "Arbitrum"}
+
+
+def _worknet_chain(worknet_id: int) -> str:
+    """Derive chain name from worknetId format (chainId * 100_000_000 + localId)."""
+    chain_id = worknet_id // 100_000_000
+    return _CHAIN_NAMES.get(chain_id, f"chain:{chain_id}")
+
 
 def wei_to_awp(wei_str: str | int) -> str:
     """Convert wei string to human-readable AWP amount."""
@@ -155,10 +163,12 @@ def main() -> None:
                     continue
             except (ValueError, TypeError):
                 continue
+            wid_int = int(wid) if wid else 0
             result.append(
                 {
                     "agent": agent,
-                    "worknetId": int(wid) if wid else 0,
+                    "worknetId": wid_int,
+                    "chain": _worknet_chain(wid_int) if wid_int else "?",
                     "amount": wei_to_awp(amount),
                     "amount_wei": str(amount),
                 }

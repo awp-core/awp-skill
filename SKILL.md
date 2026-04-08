@@ -1,6 +1,6 @@
 ---
 name: awp
-version: 1.2.14
+version: 1.2.15
 description: >
   Use this skill for ANYTHING related to AWP (Agent Work Protocol). AWP is a multi-chain
   DeFi protocol for agent mining — if the user mentions AWP, worknets, agent staking, or
@@ -32,11 +32,21 @@ metadata:
     primaryEnv: AWP_WALLET_TOKEN
     emoji: "🪼"
     homepage: https://github.com/awp-core/awp-skill
+    security:
+      daemon:
+        opt_in: true              # Never auto-starts; requires explicit user consent
+        read_only: true           # Does not sign transactions or access private keys
+        files: ["~/.awp/"]        # Only writes to its own data directory
+        no_network_listeners: true
+      wallet_bridge:
+        no_direct_key_access: true  # Uses awp-wallet's loadSigner(), never sees raw keys
+        contract_allowlist: true    # Two-layer: static hardcoded ∩ remote registry
+        session_token_only: true    # Requires short-lived session token, not private key
 ---
 
 # AWP Registry
 
-**Skill version: 1.2.14**
+**Skill version: 1.2.15**
 
 ## Requirements & Security
 
@@ -723,15 +733,40 @@ scripts/
 
 ## Security Controls
 
-**Contract allowlist**: `wallet-raw-call.mjs` fetches the AWP contract registry (`registry.get`) on every invocation and rejects any `--to` address not present in the registry. This prevents calls to arbitrary contracts — only known AWP protocol contracts (AWPRegistry, veAWP, AWPWorkNet, AWPAllocator, AWPDAO, AWPToken, etc.) are permitted.
+### Wallet bridge (`wallet-raw-call.mjs`)
 
-**Transaction confirmation**: All on-chain operations require explicit user confirmation before execution.
+This skill uses a Node.js bridge to sign and send raw contract calls because `awp-wallet send` only supports simple token transfers, not arbitrary calldata. The bridge:
 
-**Daemon lifecycle**: Opt-in only (Step 7). PID in `~/.awp/daemon.pid`. Stop via `kill $(cat ~/.awp/daemon.pid)`. Never auto-installs, never executes transactions — only monitors and notifies.
+- **Does NOT access private keys directly** — it imports awp-wallet's `loadSigner()` which manages key material internally. The skill never sees, logs, or transmits private keys.
+- **Enforces a two-layer contract allowlist** — calls are restricted to known AWP protocol contracts via a hardcoded static set (11 addresses) INTERSECTED with the live registry. A compromised API cannot add unknown contracts. Per-worknet WorknetManager addresses are verified via the `subnets.list` API before allowing calls.
+- **Requires a session token** — the `--token` argument is a short-lived session token from `awp-wallet unlock`, NOT a private key or password. Token scope is limited to `transfer` operations.
+- **Validates all inputs** — `--to` (address format), `--data` (hex format), `--value` (non-negative integer). Invalid inputs are rejected before any network call.
 
-**Local files** (`~/.awp/`): `openclaw.json`, `daemon.pid`, `daemon.log`, `notifications.json`, `status.json` — all written only with user consent or explicit actions.
+### Background daemon (`awp-daemon.py`)
 
-**Third-party skill installs**: Worknet skills from non-`awp-worknet` sources require explicit user confirmation.
+The daemon is a **read-only monitoring process** that is entirely opt-in:
+
+- **Opt-in only** — requires explicit user consent (Step 7 asks yes/no). Never auto-starts.
+- **Read-only** — polls the AWP JSON-RPC API for status. Does NOT sign transactions, access private keys, send funds, approve spending, or modify wallet state.
+- **No network listeners** — does not open any ports or accept inbound connections.
+- **Scoped file access** — writes only to `~/.awp/` (daemon.pid, daemon.log, notifications.json, status.json). Does not read or write files outside this directory.
+- **Easy to stop** — `kill $(cat ~/.awp/daemon.pid)` or `awp daemon stop`. SIGTERM triggers clean PID file removal.
+- **No auto-install** — does not download or execute remote code. Update checks are informational only.
+
+### Network endpoints
+
+All network endpoints are **hardcoded** (not overridable via environment variables) to prevent env-var hijacking attacks:
+- `https://api.awp.sh/v2` — AWP JSON-RPC API (reads + relay submissions)
+- `https://mainnet.base.org` — Base EVM RPC (on-chain reads for calldata construction)
+- `wss://api.awp.sh/ws/live` — WebSocket for real-time events (optional)
+
+### Other controls
+
+- **Transaction confirmation**: All on-chain write operations require explicit user confirmation before execution.
+- **Revert detection**: `wallet_send` parses transaction receipts and aborts on reverted transactions, preventing multi-step scripts from proceeding past failures.
+- **Anti-phishing**: The skill never asks for private keys, seed phrases, mnemonic words, keystore passwords, or any secret material (Rule 9 in SKILL.md).
+- **Local files** (`~/.awp/`): All files written only with user consent or explicit actions.
+- **Third-party skill installs**: Worknet skills from non-`awp-worknet` sources require explicit user confirmation.
 
 ## Vanity Salt Endpoints
 
