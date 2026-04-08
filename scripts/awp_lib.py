@@ -307,7 +307,16 @@ def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
         return ""  # unreachable
     if result.returncode != 0:
         die(f"wallet-raw-call failed: {result.stderr.strip() or result.stdout.strip()}")
-    return result.stdout.strip()
+    stdout = result.stdout.strip()
+    # Detect on-chain reverts: wallet-raw-call.mjs exits 0 but reports status:"reverted"
+    try:
+        parsed = json.loads(stdout)
+        if isinstance(parsed, dict) and parsed.get("status") == "reverted":
+            tx_hash = parsed.get("txHash", "unknown")
+            die(f"Transaction reverted (txHash: {tx_hash}). Check the transaction on the block explorer.")
+    except json.JSONDecodeError:
+        pass  # Not JSON — return as-is
+    return stdout
 
 
 def wallet_approve(token: str, asset: str, spender: str, amount: str) -> str:

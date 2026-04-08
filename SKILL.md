@@ -792,7 +792,7 @@ Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay
 | `POST /api/relay/deallocate` | Deallocate stake | AWPAllocator |
 | `GET /api/relay/status/{txHash}` | Check relay tx status | -- |
 
-Relay request format uses **v, r, s** signature components (not a combined signature hex):
+Relay request format uses a **combined 65-byte signature** (NOT split v/r/s — the live API rejects split fields):
 ```json
 {
   "chainId": 8453,
