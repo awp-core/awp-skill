@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.2.12
+
+### Bug fixes from deep code review
+
+- **Critical**: `onchain-claim.py` was completely non-functional — WorknetManager
+  contracts (per-worknet, deployed by factory) were never in the `wallet-raw-call.mjs`
+  static allowlist. Added `isWorknetManager()` that verifies the target address via
+  `subnets.list` API before allowing the call.
+- `onchain-unstake.py` / `onchain-switch-worknet.py`: bare `int()` on API allocation
+  fields could crash mid-execution on non-numeric values, leaving user in partially
+  deallocated state. Wrapped in try/except.
+- `onchain-vote.py` / `onchain-propose.py`: `staking.getPositions` paginated dict
+  response caused hard `die()` instead of extracting items list — inconsistent with
+  `onchain-unstake.py` which handled both shapes. Added dict fallback.
+- Previous commit: 4 bugs in new convenience scripts (paginated positions in unstake,
+  inflated deallocate count, onboard return scope, query-status int parsing).
+
 ## v1.2.11
 
 ### Convenience scripts + ClawHub metadata compliance
