@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.2.14
+
+### Robustness fixes (review passes 4–6)
+
+- `awp_lib.py`: `wallet_send` now parses JSON result and `die()` on
+  `status:"reverted"` — all multi-step scripts (stake, onboard, unstake) no
+  longer proceed past a reverted transaction.
+- `awp-daemon.py`: register SIGTERM handler so `kill <pid>` triggers PID file
+  cleanup via `finally` block (was leaving stale `~/.awp/daemon.pid`).
+- `relay-allocate.py`: use `validate_positive_int` for `--worknet` (was bare
+  `int()` accepting 0 and negatives, producing silently wrong expanded IDs).
+- `SKILL.md`: fix contradictory signature format doc — was "v, r, s" but
+  example and all scripts use combined 65-byte signature.
+
 ## v1.2.13
 
 ### Third-pass review fixes
