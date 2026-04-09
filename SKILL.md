@@ -1,6 +1,6 @@
 ---
 name: awp
-version: 1.4.4
+version: 1.5.0
 description: >
   AWP (Agent Work Protocol) — the complete toolkit for agent mining on Base, Ethereum,
   Arbitrum, and BSC. Use this skill whenever the user mentions AWP, worknets, veAWP,
@@ -49,7 +49,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 1.4.4**
+**Skill version: 1.5.0**
 
 ## Requirements & Security
 

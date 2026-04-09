@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.5.0
+
+### Description optimization, final fixes, English-only comments
+
+Description optimization:
+- Rewrote skill description for better trigger recall (baseline: precision=100%,
+  recall=17%). Restructured from keyword list to semantic function groups with
+  explicit implicit-trigger guidance. Trigger eval set (20 queries) saved to
+  `evals/trigger-eval.json`.
+
+Final fixes (from deep review verification):
+- `relay-register-worknet.py`: stringify `minStake` in EIP-712 message (same
+  JS precision fix as `lp_cost` — was incompletely applied).
+- `awp-daemon.py`: concurrent instance guard via PID file check; prevents
+  duplicate notifications from two daemons.
+- `onchain-claim.py`: error message updated to "non-negative integer" (epoch 0
+  is valid per v1.4.4).
+
+Code quality:
+- All 63 Chinese comments across 15 files converted to English for
+  international readability. Zero logic changes.
+
 ## v1.4.4
 
 ### Deep review — 15 security + correctness fixes
