@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.5.1
+
+### ClawHub security review — narrow trigger scope
+
+- Removed aggressive trigger instructions ("trigger even if user doesn't say AWP")
+  that ClawHub flagged as scope creep risk.
+- All generic triggers ("start working", "start earning") replaced with AWP-prefixed
+  commands ("awp start") to prevent activation in unrelated conversations.
+- Description now explicitly states: "do NOT trigger on generic phrases unless AWP
+  is explicitly mentioned in context."
+- Daemon notification messages updated to use "awp start" consistently.
+
 ## v1.5.0
 
 ### Description optimization, final fixes, English-only comments
