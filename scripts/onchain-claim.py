@@ -16,7 +16,7 @@ def build_claim_calldata(epoch: int, amount_wei: int, proof: list[str]) -> str:
     selector = 0x5e4b62ab
     Layout: selector + pad_uint256(epoch) + pad_uint256(amount) + offset_proof + length + proof_elements
     """
-    # head 通过 encode_calldata 进行 selector 格式校验
+    # Head routed through encode_calldata for selector format validation
     head = encode_calldata(
         "0x5e4b62ab",
         pad_uint256(epoch),
@@ -57,7 +57,7 @@ def main() -> None:
     manager: str = args.manager
     validate_address(manager, "manager")
 
-    # epoch 为 uint32 范围内的非负整数（0 为合法 epoch）
+    # epoch: non-negative integer within uint32 range (0 is a valid epoch)
     epoch_str: str = args.epoch
     if not re.match(r"^[0-9]+$", epoch_str):
         die("Invalid --epoch: must be a non-negative integer")

@@ -570,7 +570,7 @@ def check_and_notify(wallet_addr: str) -> bool:
         log(f"Address:    {wallet_addr}")
         log("Status:     API unavailable")
         log("──────────────────────────────────────")
-        return None  # type: ignore[return-value]  # None = 未知状态，防止假通知
+        return None  # type: ignore[return-value]  # None = unknown state, prevents false notifications
 
     is_registered = check.get("isRegistered", False)
 
@@ -790,16 +790,16 @@ def main() -> None:
     # Write PID file so the daemon can be stopped externally (kill $(cat ~/.awp/daemon.pid))
     NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
 
-    # 并发保护：检查已有 daemon 是否在运行
+    # Concurrency guard: check if a daemon is already running
     if PID_FILE.exists():
         try:
             existing_pid = int(PID_FILE.read_text().strip())
-            os.kill(existing_pid, 0)  # 信号 0 仅检查进程是否存在
+            os.kill(existing_pid, 0)  # Signal 0 only checks if process exists
             die(
                 f"Daemon already running (PID {existing_pid}). Stop it first: kill {existing_pid}"
             )
         except (ValueError, OSError):
-            pass  # PID 文件过期或进程已终止 — 安全覆盖
+            pass  # Stale PID file or process terminated — safe to overwrite
 
     try:
         PID_FILE.write_text(str(os.getpid()))
@@ -946,12 +946,12 @@ def _run_daemon(interval: int) -> None:
 
                 # Registration status check (only when wallet is available)
                 if wallet_addr:
-                    is_registered = None  # None = API 不可达，不更新状态
+                    is_registered = None  # None = API unreachable, don't update state
                     check = rpc("address.check", {"address": wallet_addr})
                     if check:
                         is_registered = bool(check.get("isRegistered", False))
 
-                    # 仅在 API 可达时（is_registered 非 None）才更新状态和触发通知
+                    # Only update state and trigger notifications when API is reachable (is_registered is not None)
                     if (
                         is_registered is not None
                         and is_registered != last_registered

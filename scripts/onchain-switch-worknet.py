@@ -92,7 +92,7 @@ def main() -> None:
     for alloc in matching:
         agent = alloc.get("agent", "")
         amount_raw = int(alloc.get("amount", "0"))
-        # 验证 API 返回的 agent 地址格式
+        # Validate API-returned agent address format
         if not ADDR_RE.match(agent):
             info(f"Skipping allocation with invalid agent address: {agent}")
             continue

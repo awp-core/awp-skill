@@ -146,7 +146,7 @@ def main() -> None:
         agent_addr = a.get("agent") or a.get("address", "")
         stake = a.get("stake") or a.get("amount", "0")
         try:
-            # 跳过无效条目（零质押且无地址，或解析失败）
+            # Skip invalid entries (zero stake and no address, or parse failure)
             if int(stake) == 0 and not agent_addr:
                 continue
             if not agent_addr:
@@ -220,10 +220,10 @@ def main() -> None:
     if hints:
         output["hints"] = hints
 
-    # 对 LLM 提供下一步指引（复用 hints 阶段已计算的 ms）
+    # Provide next-step guidance for LLM (reuse ms computed in hints phase)
     if ms == 0 and output.get("status") == "Active":
         output["nextAction"] = "join_worknet"
-        # 免费 worknet 只需注册（relay-onboard 不带 --worknet/--amount 即仅注册）
+        # Free worknet: only registration needed (relay-onboard without --worknet/--amount = register only)
         output["nextCommand"] = f"python3 scripts/preflight.py"
         output["joinMessage"] = (
             "This worknet is FREE to join. Run preflight to check registration status, then allocate."

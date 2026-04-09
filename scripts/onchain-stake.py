@@ -59,7 +59,7 @@ def main() -> None:
     awp_token = require_contract(registry, "awpToken")
     ve_awp = require_contract(registry, "veAWP")
 
-    # 前置条件：确认已注册（未注册时质押没有意义）
+    # Precondition: must be registered (staking without registration is pointless)
     step("precondition_check")
     wallet_addr = get_wallet_address()
     check = rpc("address.check", {"address": wallet_addr})

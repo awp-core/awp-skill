@@ -105,7 +105,7 @@ def main() -> None:
         (
             awp_registry,
             f"0x7ecebe00{addr_padded}",
-        ),  # AWPRegistry.nonces(wallet) — 链上权威
+        ),  # AWPRegistry.nonces(wallet) — authoritative on-chain value
     ]
 
     results = rpc_call_batch(batch_calls)
@@ -131,7 +131,7 @@ def main() -> None:
     lp_cost = initial_alpha_price * initial_alpha_mint // 10**18
 
     permit_nonce = hex_to_int(results[2])
-    registry_nonce = hex_to_int(results[3])  # 始终使用链上 nonce（API 可能延迟）
+    registry_nonce = hex_to_int(results[3])  # Always use on-chain nonce (API may lag)
 
     # Step 5: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600
@@ -157,7 +157,7 @@ def main() -> None:
         {
             "owner": wallet_addr,
             "spender": awp_registry,
-            "value": str(lp_cost),  # 字符串化避免 JS JSON.parse 超过 2^53 时精度丢失
+            "value": str(lp_cost),  # Stringify to avoid JS JSON.parse precision loss for values > 2^53
             "nonce": permit_nonce,
             "deadline": deadline,
         },
@@ -184,7 +184,7 @@ def main() -> None:
                 "salt": salt,
                 "minStake": str(
                     min_stake
-                ),  # 字符串化避免 JS JSON.parse 超过 2^53 精度丢失
+                ),  # Stringify to avoid JS JSON.parse precision loss for values > 2^53
                 "skillsURI": skills_uri,
             },
             "nonce": registry_nonce,

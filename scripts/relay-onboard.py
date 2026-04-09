@@ -224,13 +224,13 @@ def main() -> None:
         args.lock_days,
     ]
     if do_allocate:
-        # 自分配：agent = 自己的地址（Solo Mining 模式下的标准行为）
+        # Self-allocation: agent = own address (standard behavior in Solo Mining mode)
         agent_for_allocate = args.target if args.target else wallet_addr
         stake_args += ["--agent", agent_for_allocate, "--worknet", str(worknet_id)]
 
     stake_output = _run_script("relay-stake.py", stake_args)
 
-    # 解析 relay-stake.py 的输出，覆盖 nextAction 以保持脚本链契约一致
+    # Parse relay-stake.py output, override nextAction to maintain script chain contract
     try:
         parsed = json.loads(stake_output)
     except (json.JSONDecodeError, TypeError):

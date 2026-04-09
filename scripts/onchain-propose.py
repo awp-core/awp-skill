@@ -27,7 +27,7 @@ def build_signal_propose_calldata(description: str, token_ids: list[int]) -> str
     offset_description = 2 * 32  # 64
     offset_token_ids = offset_description + len(desc_encoded) // 2
 
-    # head 通过 encode_calldata 进行 selector 格式校验
+    # Head routed through encode_calldata for selector format validation
     head = encode_calldata(
         "0xb1b5d01d",
         pad_uint256(offset_description),
@@ -65,7 +65,7 @@ def build_executable_propose_calldata(
     offset_description = offset_calldatas + len(calldatas_enc) // 2
     offset_token_ids = offset_description + len(desc_enc) // 2
 
-    # head 通过 encode_calldata 进行 selector 格式校验
+    # Head routed through encode_calldata for selector format validation
     head = encode_calldata(
         "0xb407dd87",
         pad_uint256(offset_targets),

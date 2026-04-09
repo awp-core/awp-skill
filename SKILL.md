@@ -16,7 +16,7 @@ description: >
   on ANY of these: "start working" or "start earning" (AWP onboarding), checking staking
   balances or veAWP positions, worknet operations, agent binding or reward recipients,
   gasless/relay transactions on AWP, AWP governance proposals, or managing awp-wallet.
-  Also trigger for Chinese queries about AWP (质押, 工作网络, 代理挖矿, 分配).
+  Also trigger for Chinese queries about AWP (staking, worknets, agent mining, allocation).
 
   NOT for: Uniswap, Aave, Lido, Compound, generic Solidity/Hardhat, token swaps,
   bridging, or non-AWP DeFi protocols.

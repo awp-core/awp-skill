@@ -32,11 +32,11 @@ def encode_vote_calldata(
     params_bytes = bytes.fromhex(params_hex.replace("0x", ""))
     reason_bytes = reason.encode("utf-8")
 
-    # 4 个 head slot: proposalId(static) + support(static) + offset_reason + offset_params
+    # 4 head slots: proposalId(static) + support(static) + offset_reason + offset_params
     reason_padded_len = ((len(reason_bytes) + 31) // 32) * 32
     offset_params = 128 + 32 + reason_padded_len
 
-    # head 部分通过 encode_calldata 进行 selector 格式校验
+    # Head portion routed through encode_calldata for selector format validation
     head = encode_calldata(
         "0x5f398a14",
         pad_uint256(proposal_id),

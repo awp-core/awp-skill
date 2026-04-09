@@ -48,7 +48,7 @@ from awp_lib import (
 
 
 def _get_chain_id() -> int:
-    """从 EVM_CHAIN 环境变量获取 chainId。"""
+    """Get chainId from EVM_CHAIN environment variable."""
     chain_env = os.environ.get("EVM_CHAIN", "base").lower()
     cid = _CHAIN_IDS.get(chain_env)
     if cid is not None:
@@ -84,17 +84,17 @@ def main() -> None:
     amount_wei = to_wei(args.amount)
     lock_seconds = days_to_seconds(args.lock_days)
 
-    # 最短 1 天（86400 秒），且必须为整天
+    # Minimum 1 day (86400s), must be whole days
     if lock_seconds < 86400:
         die("--lock-days must be >= 1 (minimum lock duration is 1 day)")
     if lock_seconds % 86400 != 0:
         die(
             f"--lock-days must be a whole number (got {args.lock_days} days = {lock_seconds}s, not divisible by 86400)"
         )
-    # uint64 溢出保护
+    # uint64 overflow guard
     if lock_seconds > 2**64 - 1:
         die(f"--lock-days too large: {args.lock_days} days exceeds uint64 max")
-    # uint128 保护（VeAWPHelper 拒绝 > uint128 max 的金额）
+    # uint128 guard (VeAWPHelper rejects amounts > uint128 max)
     if amount_wei > 2**128 - 1:
         die("--amount too large: exceeds uint128 max")
 
@@ -108,12 +108,12 @@ def main() -> None:
         worknet_id = validate_positive_int(args.worknet, "worknet")
         worknet_id = expand_worknet_id(worknet_id)
 
-    # ── Step 1: 获取钱包地址并检查前置条件 ──
+    # ── Step 1: Get wallet address and check preconditions ──
     step("setup")
     wallet_addr = get_wallet_address()
     chain_id = _get_chain_id()
 
-    # 前置条件：确认已注册（未注册时质押没有意义）
+    # Precondition: must be registered (staking without registration is pointless)
     step("precondition_check")
     check = rpc("address.check", {"address": wallet_addr})
     if isinstance(check, dict) and not check.get("isRegistered", False):
@@ -122,9 +122,9 @@ def main() -> None:
             "python3 scripts/relay-start.py --token $TOKEN --mode principal"
         )
 
-    # ── Step 2: 调用 /prepare 端点获取预构建的 typedData ──
-    # 该端点自动获取 permit nonce、构建 EIP-712 域和消息、设置 deadline
-    # LLM 无需记忆合约地址或手动构建 typed data
+    # ── Step 2: Call /prepare endpoint for pre-built typedData ──
+    # Endpoint auto-fetches permit nonce, builds EIP-712 domain/message, sets deadline
+    # LLM never needs to remember contract addresses or build typed data manually
     prepare_url = f"{RELAY_BASE}/relay/stake/prepare"
     step("prepare", endpoint=prepare_url)
     prepare_body = {
@@ -152,8 +152,8 @@ def main() -> None:
         f"nonce={typed_data.get('message', {}).get('nonce', '?')}"
     )
 
-    # ── Step 3: 校验服务端返回的 typedData 关键字段，然后签名 ──
-    # 防止被篡改的 API 返回 max-uint256 value 或错误的 spender/owner
+    # ── Step 3: Validate server-returned typedData critical fields, then sign ──
+    # Prevents a compromised API from returning max-uint256 value or wrong spender/owner
     step("validateTypedData")
     msg = typed_data.get("message", {})
     if str(msg.get("value")) != str(amount_wei):
@@ -166,14 +166,14 @@ def main() -> None:
         die(
             f"Prepare returned wrong owner: expected {wallet_addr}, got {msg.get('owner')}"
         )
-    # 验证 submitTo.url 只指向已知的 relay 域
+    # Verify submitTo.url points to known relay domain only
     if not submit_url.startswith(RELAY_BASE):
         die(f"Prepare returned untrusted submitTo.url: {submit_url}")
 
     step("signPermit")
     signature = wallet_sign_typed_data(token, typed_data)
 
-    # ── Step 4: 提交到 relay — 替换 signature 字段 ──
+    # ── Step 4: Submit to relay — replace signature field ──
     submit_body["signature"] = signature
     step(
         "submitRelay",
@@ -198,13 +198,13 @@ def main() -> None:
         print(json.dumps(result))
         return
 
-    # ── Optional Step 5: 等待确认后 allocate ──
+    # ── Optional Step 5: Wait for confirmation, then allocate ──
     if do_allocate:
         tx_hash = body.get("txHash") if isinstance(body, dict) else None
         if not tx_hash:
             die("Relay did not return txHash — cannot confirm staking before allocate")
 
-        # 轮询 relay 状态直到确认（最多 ~90 秒）
+        # Poll relay status until confirmed (max ~90 seconds)
         step("waitForConfirmation", txHash=tx_hash)
         status_url = f"{RELAY_BASE}/relay/status/{tx_hash}"
         confirmed = False
@@ -228,11 +228,11 @@ def main() -> None:
             except urllib.error.HTTPError as e:
                 if e.code < 500:
                     die(f"Status endpoint returned HTTP {e.code} for tx {tx_hash}")
-                # 5xx — 暂时性服务端错误，重试
+                # 5xx — transient server error, retry
             except json.JSONDecodeError:
                 info(f"Status endpoint returned non-JSON for tx {tx_hash}, retrying...")
             except (urllib.error.URLError, OSError):
-                pass  # 暂时性网络错误，重试
+                pass  # Transient network error, retry
 
         if not confirmed:
             die(
@@ -241,7 +241,7 @@ def main() -> None:
                 "relay-allocate.py separately."
             )
 
-        # 执行 allocate（gasless via relay — 无需 ETH）
+        # Execute allocate (gasless via relay — no ETH needed)
         info(
             f"Now allocating to agent {args.agent} on worknet {worknet_id} (gasless)..."
         )

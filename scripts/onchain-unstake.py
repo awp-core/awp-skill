@@ -63,7 +63,7 @@ def main() -> None:
                 worknet_id = int(worknet_id_raw)
             except (ValueError, TypeError):
                 continue
-            # 验证 API 返回的 agent 地址格式（防止短地址导致 pad_address 错误填充）
+            # Validate API-returned agent address format (prevent short address causing wrong pad_address)
             if not ADDR_RE.match(agent):
                 info(f"Skipping allocation with invalid agent address: {agent}")
                 continue

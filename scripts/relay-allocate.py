@@ -66,8 +66,8 @@ def main() -> None:
     wallet_addr = get_wallet_address()
 
     # Step 2.5: Precondition check — verify staking state before proceeding
-    # 注意：索引器可能延迟数秒，刚质押后 totalStaked 可能还是 0
-    # 因此这里仅作提示性检查，不阻塞执行（让链上合约做最终验证）
+    # Note: indexer may lag by several seconds — totalStaked could still be 0 after a fresh stake.
+    # This is an advisory check only; on-chain contract validation is authoritative.
     step("precondition_check")
     balance = rpc("staking.getBalance", {"address": wallet_addr})
     if isinstance(balance, dict):
@@ -80,7 +80,7 @@ def main() -> None:
             if mode == "deallocate" and int(balance.get("totalAllocated", "0")) == 0:
                 die("No allocations found — nothing to deallocate.")
         except (ValueError, TypeError):
-            pass  # 无法解析余额，继续执行（让合约来拒绝）
+            pass  # Cannot parse balance, continue (let the contract reject)
 
     # Step 3: Convert amount to wei
     amount_wei = to_wei(amount_str)

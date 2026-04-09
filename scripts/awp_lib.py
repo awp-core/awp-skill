@@ -429,7 +429,7 @@ def get_registry() -> dict:
     if target_chain_id is None:
         try:
             cid = int(chain_env)
-            # 仅接受已知的 chainId
+            # Only accept known chainIds
             if cid not in _ID_TO_CANONICAL:
                 die(
                     f"Unknown EVM_CHAIN: {chain_env}. Supported: {', '.join(sorted(_VALID_CHAIN_NAMES))}"

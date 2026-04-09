@@ -30,7 +30,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# 不使用 awp_lib 的 die() — preflight 永远不能 crash，必须返回 JSON
+# Does not use awp_lib's die() — preflight must never crash, always returns JSON
 ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 API_BASE = "https://api.awp.sh/v2"
 _USER_AGENT = "awp-skill/1.4 (+https://github.com/awp-core/awp-skill)"
@@ -38,7 +38,7 @@ _ZERO_ADDR = "0x0000000000000000000000000000000000000000"
 
 
 def _find_wallet_bin() -> str | None:
-    """查找 awp-wallet 二进制文件，找不到返回 None。"""
+    """Find the awp-wallet binary, return None if not found."""
     found = shutil.which("awp-wallet")
     if found:
         return found
@@ -57,7 +57,7 @@ def _find_wallet_bin() -> str | None:
 
 
 def _try_wallet_cmd(wallet_bin: str, args: list[str]) -> tuple[bool, str]:
-    """运行钱包命令，返回 (success, stdout)。不抛异常。"""
+    """Run a wallet command, return (success, stdout). Never raises."""
     try:
         result = subprocess.run(
             [wallet_bin] + args,
@@ -71,7 +71,7 @@ def _try_wallet_cmd(wallet_bin: str, args: list[str]) -> tuple[bool, str]:
 
 
 def _rpc(method: str, params: dict | None = None) -> dict | list | None:
-    """调用 API，出错返回 None。"""
+    """Call API, return None on error."""
     body = json.dumps(
         {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1}
     ).encode()
@@ -99,7 +99,7 @@ def _output(
     message: str,
     **extra: object,
 ) -> None:
-    """输出结构化 JSON 并退出（类似 die() 的终止语义，防止意外双重输出）。"""
+    """Output structured JSON and exit (terminal semantics like die(), prevents double output)."""
     result: dict = {
         "state": state,
         "progress": progress,
@@ -138,7 +138,7 @@ def main() -> None:
         "freeWorknetsAvailable": 0,
     }
 
-    # ── 阶段1：钱包检测 ──
+    # ── Phase 1: Wallet detection ──
     if args.address:
         if not ADDR_RE.match(args.address):
             print(json.dumps({"error": f"Invalid --address format: {args.address}"}))
@@ -161,7 +161,7 @@ def main() -> None:
 
         state["walletInstalled"] = True
 
-        # 尝试 receive — 如果成功，则已初始化且已解锁
+        # Try receive — if successful, wallet is initialized and unlocked
         ok, stdout = _try_wallet_cmd(wallet_bin, ["receive"])
         if ok:
             try:
@@ -174,12 +174,12 @@ def main() -> None:
                 pass
 
         if not state["walletAddress"]:
-            # 检查钱包目录是否存在来判断是否已初始化
+            # Check if wallet directory exists to determine initialization state
             wallet_dir = Path.home() / ".awp-wallet"
             try:
                 is_initialized = wallet_dir.exists() and any(wallet_dir.iterdir())
             except (PermissionError, OSError):
-                # 目录不可读 — 保守假设已初始化（让 unlock 尝试）
+                # Directory unreadable — conservatively assume initialized (let unlock attempt)
                 is_initialized = wallet_dir.exists()
             if is_initialized:
                 state["walletInitialized"] = True
@@ -203,7 +203,7 @@ def main() -> None:
 
     addr = state["walletAddress"]
 
-    # ── 阶段2：检查注册状态 ──
+    # ── Phase 2: Check registration status ──
     check = _rpc("address.check", {"address": addr})
     if isinstance(check, dict):
         state["registered"] = bool(check.get("isRegistered", False))
@@ -213,7 +213,7 @@ def main() -> None:
         )
         state["recipient"] = check.get("recipient", "") or None
     else:
-        # API 不可达 — 报告但不阻塞
+        # API unreachable — report but don't block
         state["registered"] = None
 
     if state["registered"] is False:
@@ -237,7 +237,7 @@ def main() -> None:
         return
 
     if state["registered"] is None:
-        # API 不可达
+        # API unreachable
         _output(
             state,
             "1/4",
@@ -247,11 +247,11 @@ def main() -> None:
         )
         return
 
-    # ── 阶段3：检查质押和分配 ──
+    # ── Phase 3: Check staking and allocations ──
     balance = _rpc("staking.getBalance", {"address": addr})
     if isinstance(balance, dict):
         try:
-            # 两个字段一起解析，避免只解析成功一个导致状态不一致
+            # Parse both fields together to avoid inconsistent state if only one succeeds
             total_staked = int(balance.get("totalStaked", "0"))
             total_allocated = int(balance.get("totalAllocated", "0"))
         except (ValueError, TypeError):
@@ -262,7 +262,7 @@ def main() -> None:
         state["hasAllocations"] = total_allocated > 0
         state["totalAllocated"] = str(total_allocated)
 
-    # ── 阶段4：检查可用 worknet ──
+    # ── Phase 4: Check available worknets ──
     worknets_resp = _rpc("subnets.list", {"status": "Active", "limit": 20})
     free_worknets: list[dict] = []
     raw_list: list = []
@@ -290,16 +290,16 @@ def main() -> None:
 
     state["freeWorknetsAvailable"] = len(free_worknets)
 
-    # ── 决策：下一步是什么？ ──
+    # ── Decision: what's the next step? ──
 
-    # 验证 worknetId 为数字后再嵌入 nextCommand（防止 API 返回恶意值）
+    # Validate worknetId is numeric before embedding in nextCommand (prevent API injection)
     def _safe_wid(wid: object) -> str:
         s = str(wid)
         if re.match(r"^[0-9]+$", s):
             return s
         return "<WORKNET_ID>"
 
-    # 已注册，无质押，无分配 → 选择 worknet 或等待
+    # Registered, no stake, no allocations → pick worknet or wait
     if not state["hasStake"] and not state["hasAllocations"]:
         if free_worknets:
             safe_id = _safe_wid(free_worknets[0]["worknetId"])
@@ -320,7 +320,7 @@ def main() -> None:
                 "Registered but no free worknets available yet. This is normal on new chains.",
             )
     elif state["hasStake"] and not state["hasAllocations"]:
-        # 有质押但无分配 → 需要 allocate
+        # Has stake but no allocations → needs allocate
         _output(
             state,
             "3/4",
@@ -329,7 +329,7 @@ def main() -> None:
             "Staked but not allocated — not earning rewards. Allocate to an agent+worknet to start earning.",
         )
     elif not state["hasStake"] and state["hasAllocations"]:
-        # 有分配但无质押 — 异常状态（可能质押已过期被提取但分配未清除）
+        # Has allocations but no stake — inconsistent state (stake may have expired/withdrawn)
         _output(
             state,
             "3/4",
@@ -338,7 +338,7 @@ def main() -> None:
             "Has allocations but no active stake — run query-status for details. May need to re-stake or deallocate.",
         )
     else:
-        # hasStake=True AND hasAllocations=True → 全部就绪
+        # hasStake=True AND hasAllocations=True → all set
         _output(
             state,
             "4/4",
