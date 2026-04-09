@@ -1,6 +1,6 @@
 ---
 name: awp
-version: 1.4.0
+version: 1.4.1
 description: >
   Use this skill for ANYTHING related to AWP (Agent Work Protocol). AWP is a multi-chain
   DeFi protocol for agent mining — if the user mentions AWP, worknets, agent staking, or
@@ -46,7 +46,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 1.4.0**
+**Skill version: 1.4.1**
 
 ## Requirements & Security
 
@@ -868,6 +868,7 @@ Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay
 | `POST /api/relay/revoke-delegate` | Revoke a delegate | AWPRegistry |
 | `POST /api/relay/activate-worknet` | Activate a pending worknet | AWPRegistry |
 | `POST /api/relay/register-worknet` | Register worknet (with AWP permit) | AWPRegistry |
+| `POST /api/relay/stake/prepare` | **LLM-friendly:** returns pre-built typedData + submitTo body (no manual nonce/domain needed) | -- |
 | `POST /api/relay/stake` | Gasless staking (ERC-2612 permit) | AWP Token (permit domain) |
 | `POST /api/relay/allocate` | Allocate stake to agent | AWPAllocator |
 | `POST /api/relay/deallocate` | Deallocate stake | AWPAllocator |
@@ -1277,7 +1278,22 @@ python3 scripts/relay-stake.py --token $TOKEN --amount 5000 --lock-days 90
 # Stake + allocate in one command:
 python3 scripts/relay-stake.py --token $TOKEN --amount 5000 --lock-days 90 --agent <addr> --worknet 1
 ```
-Uses ERC-2612 permit — the user signs off-chain, the relayer pays gas. Both staking and allocate steps are fully gasless. Preferred over on-chain deposit when the user has no ETH.
+Uses the LLM-friendly `/api/relay/stake/prepare` endpoint — the script sends one request and gets
+back pre-built EIP-712 typedData (with nonce, deadline, and all addresses filled in), then signs and
+submits. No manual nonce fetching, domain construction, or address lookup needed. The entire flow
+is gasless — the relayer pays gas via ERC-2612 permit. Preferred over on-chain deposit when the
+user has no ETH.
+
+**Gasless staking prepare flow (what relay-stake.py does internally):**
+```
+1. POST /api/relay/stake/prepare { chainId, user, amount, lockDuration }
+   → { typedData, submitTo: { url, body } }
+2. Sign typedData with awp-wallet (EIP-712)
+   → signature
+3. POST submitTo.url with submitTo.body (replace "REPLACE_WITH_SIGNATURE" with actual signature)
+   → { txHash }
+4. Poll GET /api/relay/status/{txHash} until confirmed
+```
 
 **On-chain deposit + allocate (requires ETH for gas):**
 ```bash

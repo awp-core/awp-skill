@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.4.1
+
+### relay-stake.py: use /prepare endpoint (LLM-friendly gasless staking)
+
+- `relay-stake.py` rewritten to use `POST /api/relay/stake/prepare` — the server
+  returns pre-built EIP-712 typedData with nonce, deadline, and all addresses filled
+  in. The script no longer needs to fetch registry, read on-chain permit nonce, or
+  manually construct EIP-712 typed data. One POST → sign → submit.
+- SKILL.md: added `/api/relay/stake/prepare` to relay endpoint table, documented
+  the prepare→sign→submit flow in S2 section.
+
 ## v1.4.0
 
 ### Anti-hallucination: preflight state machine + script chain
