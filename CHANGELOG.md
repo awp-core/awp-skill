@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.4.2
+
+### Script chain contract fixes + PEP 8 compliance
+
+Bug fixes:
+- `relay-onboard.py`: staking path now explicitly sets `nextAction`/`nextCommand`
+  instead of blindly forwarding `relay-stake.py` output (was breaking script chain).
+- `query-status.py`: `nextCommand` always emitted (was absent when `nextAction`
+  is `"ready"`, violating the "all scripts return both fields" contract).
+
+Code quality:
+- `relay-stake.py`: all imports moved to top-level (PEP 8); removed duplicated
+  `_CHAIN_IDS` dict, now imports from `awp_lib`.
+- `preflight.py`: User-Agent version `1.3` → `1.4`.
+- `query-worknet.py`: removed duplicate `ms = int(min_stake)` computation.
+
 ## v1.4.1
 
 ### relay-stake.py: use /prepare endpoint (LLM-friendly gasless staking)
