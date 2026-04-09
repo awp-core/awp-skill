@@ -217,11 +217,7 @@ def main() -> None:
     if hints:
         output["hints"] = hints
 
-    # 对 LLM 提供下一步指引
-    try:
-        ms = int(min_stake)
-    except (ValueError, TypeError):
-        ms = 0
+    # 对 LLM 提供下一步指引（复用 hints 阶段已计算的 ms）
     if ms == 0 and output.get("status") == "Active":
         output["nextAction"] = "join_worknet"
         # 免费 worknet 只需注册（relay-onboard 不带 --worknet/--amount 即仅注册）

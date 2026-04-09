@@ -33,7 +33,7 @@ from pathlib import Path
 # 不使用 awp_lib 的 die() — preflight 永远不能 crash，必须返回 JSON
 ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 API_BASE = "https://api.awp.sh/v2"
-_USER_AGENT = "awp-skill/1.3 (+https://github.com/awp-core/awp-skill)"
+_USER_AGENT = "awp-skill/1.4 (+https://github.com/awp-core/awp-skill)"
 _ZERO_ADDR = "0x0000000000000000000000000000000000000000"
 
 

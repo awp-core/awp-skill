@@ -17,10 +17,18 @@ Optional: if --agent and --worknet are provided, also allocate after staking
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 import time
+import urllib.error
+import urllib.request
+from pathlib import Path
 
 from awp_lib import (
     RELAY_BASE,
+    _CHAIN_IDS,
+    _DEFAULT_CHAIN_ID,
     api_post,
     base_parser,
     days_to_seconds,
@@ -36,20 +44,6 @@ from awp_lib import (
     validate_positive_number,
     wallet_sign_typed_data,
 )
-
-# 链名到 chainId 映射（与 awp_lib 保持一致）
-import os
-
-_CHAIN_IDS: dict[str, int] = {
-    "ethereum": 1,
-    "eth": 1,
-    "bsc": 56,
-    "bnb": 56,
-    "base": 8453,
-    "arbitrum": 42161,
-    "arb": 42161,
-}
-_DEFAULT_CHAIN_ID = 8453
 
 
 def _get_chain_id() -> int:
@@ -188,9 +182,6 @@ def main() -> None:
 
         # 轮询 relay 状态直到确认（最多 ~90 秒）
         step("waitForConfirmation", txHash=tx_hash)
-        import urllib.error
-        import urllib.request
-
         status_url = f"{RELAY_BASE}/relay/status/{tx_hash}"
         confirmed = False
         for _ in range(30):
@@ -228,10 +219,6 @@ def main() -> None:
         info(
             f"Now allocating to agent {args.agent} on worknet {worknet_id} (gasless)..."
         )
-        import subprocess
-        import sys
-        from pathlib import Path
-
         allocate_script = str(Path(__file__).parent / "relay-allocate.py")
         alloc_result = subprocess.run(
             [

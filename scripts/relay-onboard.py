@@ -227,18 +227,34 @@ def main() -> None:
         stake_args += ["--agent", wallet_addr, "--worknet", str(worknet_id)]
 
     stake_output = _run_script("relay-stake.py", stake_args)
-    print(stake_output)
+
+    # 解析 relay-stake.py 的输出，覆盖 nextAction 以保持脚本链契约一致
+    try:
+        parsed = json.loads(stake_output)
+    except (json.JSONDecodeError, TypeError):
+        parsed = {"result": stake_output}
 
     if do_allocate:
+        parsed["nextAction"] = "earning"
+        parsed["nextCommand"] = (
+            f"python3 scripts/query-status.py --address {wallet_addr}"
+        )
         info(
             f"Onboarding complete! Registered, staked {args.amount} AWP, "
             f"allocated to worknet {worknet_id}. Entire flow was gasless."
         )
     else:
+        parsed["nextAction"] = "allocate"
+        parsed["nextCommand"] = (
+            f"python3 scripts/relay-allocate.py --token $TOKEN --mode allocate "
+            f"--agent {wallet_addr} --worknet <WORKNET_ID> --amount {args.amount}"
+        )
         info(
             f"Onboarding complete! Registered, staked {args.amount} AWP. "
             "To earn rewards, allocate to an agent+worknet."
         )
+
+    print(json.dumps(parsed))
 
 
 if __name__ == "__main__":

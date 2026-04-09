@@ -241,8 +241,9 @@ def main() -> None:
     if hints:
         output["hints"] = hints
     output["nextAction"] = next_action
-    if next_command:
-        output["nextCommand"] = next_command
+    output["nextCommand"] = (
+        next_command or f"python3 scripts/query-status.py --address {addr}"
+    )
 
     print(json.dumps(output, indent=2))
 
