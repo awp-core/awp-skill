@@ -2,21 +2,24 @@
 name: awp
 version: 1.4.4
 description: >
-  Use this skill for ANYTHING related to AWP (Agent Work Protocol). AWP is a multi-chain
-  DeFi protocol for agent mining — if the user mentions AWP, worknets, agent staking, or
-  wants to start working/earning on AWP, this skill has all the contracts, scripts, and API
-  endpoints needed. Specifically use this skill when the user wants to: check their AWP
-  balance or staking positions, deposit or withdraw AWP (veAWP), allocate or deallocate
-  stake to agents on worknets, register/pause/resume/cancel a worknet, bind an agent to an
-  owner wallet, set a reward recipient, grant or revoke delegates, create governance
-  proposals or vote, monitor real-time on-chain events via WebSocket, check AWP emission
-  rates or epoch schedules, use gasless relay operations (no ETH needed), manage
-  awp-wallet, or look up any AWP contract address or API method. Also trigger on: "start
-  working" (AWP onboarding), "check my balance" (AWP context), "list worknets", "register
-  worknet", "allocate AWP", "bind my agent", "claim rewards", "AWP emission", "AWP epoch",
-  "awp-wallet", "veAWP", "AWPWorkNet", "worknet skill". Multi-chain: Base, Ethereum,
-  Arbitrum, BSC. NOT for: Uniswap, Aave, Lido, Compound, generic Solidity/Hardhat tasks,
-  token swaps, bridging, or other DeFi protocols unrelated to AWP.
+  AWP (Agent Work Protocol) — the complete toolkit for agent mining on Base, Ethereum,
+  Arbitrum, and BSC. Use this skill whenever the user mentions AWP, worknets, veAWP,
+  awp-wallet, agent staking, or wants to earn/mine/work on the AWP protocol.
+
+  This skill handles ALL AWP operations: onboarding (wallet setup, registration, worknet
+  joining), staking (deposit, withdraw, gasless relay), allocation (allocate/deallocate
+  stake to agents on worknets), worknet management (register, pause, resume, cancel),
+  binding (link agent wallet to owner), governance (proposals, voting), and querying
+  (balances, positions, emissions, epochs, announcements).
+
+  IMPORTANT — trigger this skill even if the user doesn't say "AWP" explicitly. Trigger
+  on ANY of these: "start working" or "start earning" (AWP onboarding), checking staking
+  balances or veAWP positions, worknet operations, agent binding or reward recipients,
+  gasless/relay transactions on AWP, AWP governance proposals, or managing awp-wallet.
+  Also trigger for Chinese queries about AWP (质押, 工作网络, 代理挖矿, 分配).
+
+  NOT for: Uniswap, Aave, Lido, Compound, generic Solidity/Hardhat, token swaps,
+  bridging, or non-AWP DeFi protocols.
 metadata:
   openclaw:
     requires:
