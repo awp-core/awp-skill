@@ -1,5 +1,37 @@
 # Changelog
 
+## v1.4.4
+
+### Deep review — 15 security + correctness fixes
+
+Security (critical):
+- `relay-stake.py`: validate /prepare response (value, owner, submitTo URL) before
+  signing — prevents MITM/compromised API from inflating permit amount.
+- `wallet-raw-call.mjs`: pass `chainName` param to `isWorknetManager()` (was
+  `undefined` → always queried Base, breaking non-Base chains).
+- `relay-register-worknet.py`: stringify `lp_cost` in EIP-712 message to prevent
+  JSON precision loss for values > 2^53.
+- `awp_lib.py`: validate EVM_CHAIN against known chains (reject unknown values).
+- `relay-register-worknet.py`: always fetch registry nonce on-chain (API may lag).
+
+Correctness:
+- `relay-stake.py`: fix double stdout print when `do_allocate=True` (caused
+  JSONDecodeError in relay-onboard.py). Now returns early when not allocating.
+- `relay-allocate.py`: staking balance check downgraded from die() to warning
+  (indexer lag after fresh stake caused false "No staked AWP" error).
+- `onchain-allocate.py`: guard `int(unallocated)` with try/except.
+- `onchain-claim.py`: epoch 0 now accepted (valid uint32 value).
+- `onchain-onboard.py`: delegated mode allocates to target address, not self.
+
+Rule 4 compliance (encode_calldata for selector validation):
+- `onchain-vote.py`, `onchain-propose.py`, `onchain-claim.py`: all calldata
+  builders now route head portion through `encode_calldata`.
+
+Other:
+- `awp-daemon.py`: startup guard `if not last_registered` → `if last_registered is False`.
+- `relay-stake.py`: use `_USER_AGENT` from awp_lib instead of hardcoded string.
+- `query-worknet.py`: free worknet nextCommand points to preflight.py (was incomplete).
+
 ## v1.4.3
 
 ### Full codebase review — 26 bug fixes across 16 files

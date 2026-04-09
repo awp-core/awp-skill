@@ -89,7 +89,7 @@ const STATIC_ALLOWED = new Set([
   "0x0000561ede5c1ba0b81ce585964050beae730001", // VeAWPHelper (gasless staking)
 ])
 
-async function isWorknetManager(address) {
+async function isWorknetManager(address, chainName) {
   // Verify an address is a known WorknetManager by querying subnets.list.
   // WorknetManagers are per-worknet contracts deployed by the factory — they are
   // NOT in the static allowlist or the registry. This separate check allows
@@ -262,7 +262,7 @@ try {
 
 if (!allowedContracts.has(args.to.toLowerCase())) {
   // Not in the global registry — check if it's a known WorknetManager
-  const isManager = await isWorknetManager(args.to)
+  const isManager = await isWorknetManager(args.to, args.chain)
   if (!isManager) {
     console.error(JSON.stringify({
       error: `Rejected: ${args.to} is not a known AWP protocol contract or WorknetManager. Only calls to contracts listed in /registry or active worknet managers are allowed.`

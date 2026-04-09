@@ -66,14 +66,16 @@ def main() -> None:
     wallet_addr = get_wallet_address()
 
     # Step 2.5: Precondition check — verify staking state before proceeding
+    # 注意：索引器可能延迟数秒，刚质押后 totalStaked 可能还是 0
+    # 因此这里仅作提示性检查，不阻塞执行（让链上合约做最终验证）
     step("precondition_check")
     balance = rpc("staking.getBalance", {"address": wallet_addr})
     if isinstance(balance, dict):
         try:
             if mode == "allocate" and int(balance.get("totalStaked", "0")) == 0:
-                die(
-                    "No staked AWP. Stake first: "
-                    "python3 scripts/relay-stake.py --token $TOKEN --amount <AMOUNT> --lock-days <DAYS>"
+                info(
+                    "Warning: API shows no staked AWP (may be indexer lag). "
+                    "Proceeding — on-chain validation is authoritative."
                 )
             if mode == "deallocate" and int(balance.get("totalAllocated", "0")) == 0:
                 die("No allocations found — nothing to deallocate.")

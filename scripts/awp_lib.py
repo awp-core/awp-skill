@@ -407,6 +407,9 @@ def wallet_sign_typed_data(token: str, data: dict) -> str:
 # ── Contract registry ───────────────────────────────────
 
 
+_VALID_CHAIN_NAMES = frozenset(_CHAIN_IDS.keys())
+
+
 def get_registry() -> dict:
     """Fetch the contract registry entry for the currently selected chain.
 
@@ -419,14 +422,23 @@ def get_registry() -> dict:
     response regardless of server version, then sanity-check the shape.
 
     Chain selection: EVM_CHAIN env var (name or numeric id), default Base (8453).
+    Rejects unknown chain names to prevent env-var injection attacks.
     """
     chain_env = os.environ.get("EVM_CHAIN", "base").lower()
     target_chain_id = _CHAIN_IDS.get(chain_env)
     if target_chain_id is None:
         try:
-            target_chain_id = int(chain_env)
+            cid = int(chain_env)
+            # 仅接受已知的 chainId
+            if cid not in _ID_TO_CANONICAL:
+                die(
+                    f"Unknown EVM_CHAIN: {chain_env}. Supported: {', '.join(sorted(_VALID_CHAIN_NAMES))}"
+                )
+            target_chain_id = cid
         except ValueError:
-            target_chain_id = _DEFAULT_CHAIN_ID
+            die(
+                f"Invalid EVM_CHAIN: {chain_env}. Supported: {', '.join(sorted(_VALID_CHAIN_NAMES))}"
+            )
 
     result = rpc("registry.get", {"chainId": target_chain_id})
 

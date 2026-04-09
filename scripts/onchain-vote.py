@@ -32,30 +32,29 @@ def encode_vote_calldata(
     params_bytes = bytes.fromhex(params_hex.replace("0x", ""))
     reason_bytes = reason.encode("utf-8")
 
-    selector = "5f398a14"
-
-    # proposalId — static
-    slot0 = format(proposal_id, "064x")
-    # support — static uint8
-    slot1 = format(support, "064x")
-    # offset to reason data — 4 * 32 = 128
-    slot2 = format(128, "064x")
-
-    # reason encoding: length(32) + ceil(len/32)*32
+    # 4 个 head slot: proposalId(static) + support(static) + offset_reason + offset_params
     reason_padded_len = ((len(reason_bytes) + 31) // 32) * 32
     offset_params = 128 + 32 + reason_padded_len
-    slot3 = format(offset_params, "064x")
 
-    # encode reason (string)
+    # head 部分通过 encode_calldata 进行 selector 格式校验
+    head = encode_calldata(
+        "0x5f398a14",
+        pad_uint256(proposal_id),
+        pad_uint256(support),
+        pad_uint256(128),  # offset to reason
+        pad_uint256(offset_params),
+    )
+
+    # reason (string) — dynamic tail
     reason_enc = format(len(reason_bytes), "064x")
     reason_enc += reason_bytes.hex().ljust(reason_padded_len * 2, "0")
 
-    # encode params (bytes)
+    # params (bytes) — dynamic tail
     params_padded_len = ((len(params_bytes) + 31) // 32) * 32
     params_enc = format(len(params_bytes), "064x")
     params_enc += params_bytes.hex().ljust(params_padded_len * 2, "0")
 
-    return "0x" + selector + slot0 + slot1 + slot2 + slot3 + reason_enc + params_enc
+    return head + reason_enc + params_enc
 
 
 def main() -> None:

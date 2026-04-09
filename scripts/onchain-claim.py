@@ -5,6 +5,7 @@ Claims earned WorknetToken rewards for a given epoch using a Merkle proof.
 The WorknetManager address is worknet-specific (not from the global registry).
 Requires ETH for gas.
 """
+
 import re
 
 from awp_lib import *
@@ -15,33 +16,41 @@ def build_claim_calldata(epoch: int, amount_wei: int, proof: list[str]) -> str:
     selector = 0x5e4b62ab
     Layout: selector + pad_uint256(epoch) + pad_uint256(amount) + offset_proof + length + proof_elements
     """
-    selector = "5e4b62ab"
-
-    # epoch — static uint32 (ABI-encoded as 32 bytes)
-    slot0 = pad_uint256(epoch)
-    # amount — static uint256
-    slot1 = pad_uint256(amount_wei)
-    # offset to proof array — 3 static slots * 32 = 96
-    slot2 = pad_uint256(3 * 32)
+    # head 通过 encode_calldata 进行 selector 格式校验
+    head = encode_calldata(
+        "0x5e4b62ab",
+        pad_uint256(epoch),
+        pad_uint256(amount_wei),
+        pad_uint256(3 * 32),  # offset to proof array (3 head slots × 32)
+    )
 
     # proof array: length + each bytes32 element
     proof_parts: list[str] = []
     proof_parts.append(format(len(proof), "064x"))
     for p in proof:
-        # Strip 0x prefix, already 64 hex chars
+        # Strip 0x prefix, already 64 hex chars (validated by validate_bytes32)
         proof_parts.append(p[2:].lower())
 
-    return "0x" + selector + slot0 + slot1 + slot2 + "".join(proof_parts)
+    return head + "".join(proof_parts)
 
 
 def main() -> None:
     # ── Parse arguments ──
     parser = base_parser("Claim WorknetManager epoch rewards")
-    parser.add_argument("--manager", required=True, help="WorknetManager contract address")
+    parser.add_argument(
+        "--manager", required=True, help="WorknetManager contract address"
+    )
     parser.add_argument("--epoch", required=True, help="Epoch number (uint32)")
-    parser.add_argument("--amount", required=True, help="Claim amount in human-readable tokens (18 decimals)")
-    parser.add_argument("--proof", required=True,
-                        help="Comma-separated Merkle proof bytes32 values (0x-prefixed)")
+    parser.add_argument(
+        "--amount",
+        required=True,
+        help="Claim amount in human-readable tokens (18 decimals)",
+    )
+    parser.add_argument(
+        "--proof",
+        required=True,
+        help="Comma-separated Merkle proof bytes32 values (0x-prefixed)",
+    )
     args = parser.parse_args()
 
     # ── Validate inputs ──
@@ -53,8 +62,8 @@ def main() -> None:
     if not re.match(r"^[0-9]+$", epoch_str):
         die("Invalid --epoch: must be a positive integer")
     epoch = int(epoch_str)
-    if epoch <= 0 or epoch > 0xFFFFFFFF:
-        die(f"Invalid --epoch: must be > 0 and <= {0xFFFFFFFF} (uint32 max)")
+    if epoch < 0 or epoch > 0xFFFFFFFF:
+        die(f"Invalid --epoch: must be >= 0 and <= {0xFFFFFFFF} (uint32 max)")
 
     amount_str: str = args.amount
     validate_positive_number(amount_str, "amount")
@@ -71,11 +80,13 @@ def main() -> None:
     wallet_addr = get_wallet_address()
     validate_address(wallet_addr, "wallet")
 
-    step("claim",
-         manager=manager,
-         epoch=epoch,
-         amount=f"{amount_str} tokens",
-         proofLength=len(proof_strs))
+    step(
+        "claim",
+        manager=manager,
+        epoch=epoch,
+        amount=f"{amount_str} tokens",
+        proofLength=len(proof_strs),
+    )
 
     # ── Build calldata and send ──
     calldata = build_claim_calldata(epoch, amount_wei, proof_strs)

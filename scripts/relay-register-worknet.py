@@ -84,24 +84,11 @@ def main() -> None:
     step("get_wallet_address")
     wallet_addr = get_wallet_address()
 
-    # Step 3: Try the API for the AWPRegistry EIP-712 nonce — the API has lower latency
-    # than an eth_call round-trip, and several scripts share the same code path.
-    step("get_registry_nonce")
-    nonce_resp = rpc("nonce.get", {"address": wallet_addr})
-    registry_nonce: int | None = None
-    if isinstance(nonce_resp, dict):
-        raw = nonce_resp.get("nonce")
-        if raw is not None and raw != "null":
-            try:
-                registry_nonce = int(raw)
-            except (ValueError, TypeError):
-                pass  # 回退到链上 nonce 读取
-
-    # Step 4: Batch the remaining read-only contract calls.
+    # Step 3: Batch read-only contract calls (always fetch nonce on-chain — API may lag).
     #   - initialAlphaPrice() on AWPRegistry → wei AWP per whole WorknetToken
     #   - initialAlphaMint()  on AWPRegistry → total WorknetTokens minted for LP (wei)
     #   - nonces(wallet) on AWPToken         → ERC-2612 permit nonce
-    #   - nonces(wallet) on AWPRegistry      → fallback if the API did not provide a nonce
+    #   - nonces(wallet) on AWPRegistry      → EIP-712 registry nonce (authoritative on-chain)
     # Selectors verified by keccak256 against the live AWPRegistry bytecode:
     #   0x6d345eea = initialAlphaPrice()
     #   0x5bd9c498 = initialAlphaMint()
@@ -115,9 +102,11 @@ def main() -> None:
         (awp_registry, "0x6d345eea"),  # initialAlphaPrice()
         (awp_registry, "0x5bd9c498"),  # initialAlphaMint()
         (awp_token, f"0x7ecebe00{addr_padded}"),  # AWPToken.nonces(wallet)
+        (
+            awp_registry,
+            f"0x7ecebe00{addr_padded}",
+        ),  # AWPRegistry.nonces(wallet) — 链上权威
     ]
-    if registry_nonce is None:
-        batch_calls.append((awp_registry, f"0x7ecebe00{addr_padded}"))
 
     results = rpc_call_batch(batch_calls)
 
@@ -142,9 +131,7 @@ def main() -> None:
     lp_cost = initial_alpha_price * initial_alpha_mint // 10**18
 
     permit_nonce = hex_to_int(results[2])
-
-    if registry_nonce is None:
-        registry_nonce = hex_to_int(results[3])
+    registry_nonce = hex_to_int(results[3])  # 始终使用链上 nonce（API 可能延迟）
 
     # Step 5: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600
@@ -170,7 +157,7 @@ def main() -> None:
         {
             "owner": wallet_addr,
             "spender": awp_registry,
-            "value": lp_cost,
+            "value": str(lp_cost),  # 字符串化避免 JS JSON.parse 超过 2^53 时精度丢失
             "nonce": permit_nonce,
             "deadline": deadline,
         },

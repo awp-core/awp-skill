@@ -21,19 +21,20 @@ def build_signal_propose_calldata(description: str, token_ids: list[int]) -> str
     selector = 0xb1b5d01d
     Layout: selector + offset_description + offset_tokenIds + description_data + tokenIds_data
     """
-    selector = "b1b5d01d"
-
-    # 2 dynamic params, each with one offset slot
-    # offset_description = 2 * 32 = 64
     desc_encoded = encode_dynamic_string(description)
     token_ids_encoded = encode_uint256_array(token_ids)
 
-    offset_description = 2 * 32
+    offset_description = 2 * 32  # 64
     offset_token_ids = offset_description + len(desc_encoded) // 2
 
-    head = format(offset_description, "064x") + format(offset_token_ids, "064x")
+    # head 通过 encode_calldata 进行 selector 格式校验
+    head = encode_calldata(
+        "0xb1b5d01d",
+        pad_uint256(offset_description),
+        pad_uint256(offset_token_ids),
+    )
 
-    return "0x" + selector + head + desc_encoded + token_ids_encoded
+    return head + desc_encoded + token_ids_encoded
 
 
 def build_executable_propose_calldata(
@@ -47,8 +48,6 @@ def build_executable_propose_calldata(
     selector = 0xb407dd87
     Layout: selector + 5 offset slots + targets_data + values_data + calldatas_data + description_data + tokenIds_data
     """
-    selector = "b407dd87"
-
     # Encode each dynamic segment
     targets_enc = encode_address_array(targets)
     values_enc = encode_uint256_array(values)
@@ -66,24 +65,17 @@ def build_executable_propose_calldata(
     offset_description = offset_calldatas + len(calldatas_enc) // 2
     offset_token_ids = offset_description + len(desc_enc) // 2
 
-    head = (
-        format(offset_targets, "064x")
-        + format(offset_values, "064x")
-        + format(offset_calldatas, "064x")
-        + format(offset_description, "064x")
-        + format(offset_token_ids, "064x")
+    # head 通过 encode_calldata 进行 selector 格式校验
+    head = encode_calldata(
+        "0xb407dd87",
+        pad_uint256(offset_targets),
+        pad_uint256(offset_values),
+        pad_uint256(offset_calldatas),
+        pad_uint256(offset_description),
+        pad_uint256(offset_token_ids),
     )
 
-    return (
-        "0x"
-        + selector
-        + head
-        + targets_enc
-        + values_enc
-        + calldatas_enc
-        + desc_enc
-        + token_ids_enc
-    )
+    return head + targets_enc + values_enc + calldatas_enc + desc_enc + token_ids_enc
 
 
 def main() -> None:

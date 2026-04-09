@@ -224,9 +224,9 @@ def main() -> None:
     if ms == 0 and output.get("status") == "Active":
         output["nextAction"] = "join_worknet"
         # 免费 worknet 只需注册（relay-onboard 不带 --worknet/--amount 即仅注册）
-        output["nextCommand"] = "python3 scripts/relay-onboard.py --token $TOKEN"
+        output["nextCommand"] = f"python3 scripts/preflight.py"
         output["joinMessage"] = (
-            "This worknet is FREE to join. Register (if needed), then start working."
+            "This worknet is FREE to join. Run preflight to check registration status, then allocate."
         )
     elif ms > 0 and output.get("status") == "Active":
         output["nextAction"] = "stake_and_join"

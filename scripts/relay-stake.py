@@ -29,6 +29,7 @@ from awp_lib import (
     RELAY_BASE,
     _CHAIN_IDS,
     _DEFAULT_CHAIN_ID,
+    _USER_AGENT,
     api_post,
     base_parser,
     days_to_seconds,
@@ -151,7 +152,24 @@ def main() -> None:
         f"nonce={typed_data.get('message', {}).get('nonce', '?')}"
     )
 
-    # ── Step 3: 签名 — 直接使用服务端返回的 typedData ──
+    # ── Step 3: 校验服务端返回的 typedData 关键字段，然后签名 ──
+    # 防止被篡改的 API 返回 max-uint256 value 或错误的 spender/owner
+    step("validateTypedData")
+    msg = typed_data.get("message", {})
+    if str(msg.get("value")) != str(amount_wei):
+        die(
+            f"Prepare returned wrong permit value: expected {amount_wei}, "
+            f"got {msg.get('value')}"
+        )
+    msg_owner = (msg.get("owner") or "").lower()
+    if msg_owner != wallet_addr.lower():
+        die(
+            f"Prepare returned wrong owner: expected {wallet_addr}, got {msg.get('owner')}"
+        )
+    # 验证 submitTo.url 只指向已知的 relay 域
+    if not submit_url.startswith(RELAY_BASE):
+        die(f"Prepare returned untrusted submitTo.url: {submit_url}")
+
     step("signPermit")
     signature = wallet_sign_typed_data(token, typed_data)
 
@@ -165,18 +183,20 @@ def main() -> None:
     )
     http_code, body = api_post(submit_url, submit_body)
 
-    if 200 <= http_code < 300:
-        info(f"Gasless stake successful: {body}")
-        result = body if isinstance(body, dict) else {"result": body}
-        if not do_allocate:
-            result["nextAction"] = "allocate"
-            result["nextCommand"] = (
-                f"python3 scripts/relay-allocate.py --token $TOKEN --mode allocate "
-                f"--agent {wallet_addr} --worknet <WORKNET_ID> --amount {args.amount}"
-            )
-        print(json.dumps(result))
-    else:
+    if not (200 <= http_code < 300):
         die(f"Relay returned HTTP {http_code}: {body}")
+
+    info(f"Gasless stake successful: {body}")
+
+    if not do_allocate:
+        result = body if isinstance(body, dict) else {"result": body}
+        result["nextAction"] = "allocate"
+        result["nextCommand"] = (
+            f"python3 scripts/relay-allocate.py --token $TOKEN --mode allocate "
+            f"--agent {wallet_addr} --worknet <WORKNET_ID> --amount {args.amount}"
+        )
+        print(json.dumps(result))
+        return
 
     # ── Optional Step 5: 等待确认后 allocate ──
     if do_allocate:
@@ -193,7 +213,7 @@ def main() -> None:
             try:
                 req = urllib.request.Request(
                     status_url,
-                    headers={"User-Agent": "awp-skill/1.4"},
+                    headers={"User-Agent": _USER_AGENT},
                 )
                 with urllib.request.urlopen(req, timeout=10) as resp:
                     status_data = json.loads(resp.read().decode())

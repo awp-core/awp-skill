@@ -245,12 +245,13 @@ def main() -> None:
 
     awp_allocator = require_contract(registry, "awpAllocator")
 
-    # Allocate to self (agent = wallet_addr) on the specified worknet
+    # Allocate: agent = target (delegated mode) or self (solo mode)
+    agent_for_allocate = args.target if args.target else wallet_addr
     # allocate(address,address,uint256,uint256) selector = 0xd035a9a7
     allocate_calldata = encode_calldata(
         "0xd035a9a7",
         pad_address(wallet_addr),
-        pad_address(wallet_addr),
+        pad_address(agent_for_allocate),
         pad_uint256(worknet_id),
         pad_uint256(amount_wei),
     )

@@ -3,6 +3,7 @@
 V2 signature: allocate(address staker, address agent, uint256 worknetId, uint256 amount)
 The staker parameter is now explicit (first argument). Caller must be staker or delegate.
 """
+
 from awp_lib import *
 
 
@@ -40,11 +41,16 @@ def main() -> None:
         die("Could not fetch balance — check address")
 
     amount_wei = to_wei(amount)
-    unallocated_int = int(unallocated)
+    try:
+        unallocated_int = int(unallocated)
+    except (ValueError, TypeError):
+        die(f"Could not parse unallocated balance: {unallocated}")
     # Note: API data may be delayed (by a few seconds) and on-chain state may have changed.
     # This check is intended to catch obvious errors early; the on-chain validation is authoritative.
     if amount_wei > unallocated_int:
-        die(f"Insufficient unallocated balance: have {unallocated_int / 10**18} AWP, need {amount} AWP")
+        die(
+            f"Insufficient unallocated balance: have {unallocated_int / 10**18} AWP, need {amount} AWP"
+        )
 
     # allocate(address,address,uint256,uint256) selector = 0xd035a9a7
     # Parameters: staker (self), agent, worknetId, amount
@@ -56,7 +62,13 @@ def main() -> None:
         pad_uint256(amount_wei),
     )
 
-    step("allocate", staker=wallet_addr, agent=agent, worknet=worknet_id, amount=f"{amount} AWP")
+    step(
+        "allocate",
+        staker=wallet_addr,
+        agent=agent,
+        worknet=worknet_id,
+        amount=f"{amount} AWP",
+    )
     result = wallet_send(token, awp_allocator, calldata)
     print(result)
 
