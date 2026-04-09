@@ -3,23 +3,22 @@ name: awp
 version: 1.5.0
 description: >
   AWP (Agent Work Protocol) — the complete toolkit for agent mining on Base, Ethereum,
-  Arbitrum, and BSC. Use this skill whenever the user mentions AWP, worknets, veAWP,
-  awp-wallet, agent staking, or wants to earn/mine/work on the AWP protocol.
+  Arbitrum, and BSC. Use this skill when the user explicitly mentions AWP, worknets,
+  veAWP, awp-wallet, or AWP-specific operations.
 
-  This skill handles ALL AWP operations: onboarding (wallet setup, registration, worknet
-  joining), staking (deposit, withdraw, gasless relay), allocation (allocate/deallocate
-  stake to agents on worknets), worknet management (register, pause, resume, cancel),
+  Handles: onboarding (wallet setup, registration, worknet joining), staking (deposit,
+  withdraw, gasless relay via ERC-2612 permit), allocation (allocate/deallocate stake
+  to agents on worknets), worknet management (register, pause, resume, cancel), agent
   binding (link agent wallet to owner), governance (proposals, voting), and querying
   (balances, positions, emissions, epochs, announcements).
 
-  IMPORTANT — trigger this skill even if the user doesn't say "AWP" explicitly. Trigger
-  on ANY of these: "start working" or "start earning" (AWP onboarding), checking staking
-  balances or veAWP positions, worknet operations, agent binding or reward recipients,
-  gasless/relay transactions on AWP, AWP governance proposals, or managing awp-wallet.
-  Also trigger for Chinese queries about AWP (staking, worknets, agent mining, allocation).
+  Trigger keywords: AWP, veAWP, awp-wallet, worknet, AWPRegistry, AWPAllocator,
+  AWPWorkNet, agent staking (in AWP context), "allocate AWP", "bind my agent",
+  "claim AWP rewards", "AWP emission", "AWP epoch".
 
   NOT for: Uniswap, Aave, Lido, Compound, generic Solidity/Hardhat, token swaps,
-  bridging, or non-AWP DeFi protocols.
+  bridging, or non-AWP DeFi protocols. Do NOT trigger on generic phrases like
+  "start working" or "start earning" unless AWP is explicitly mentioned in context.
 metadata:
   openclaw:
     requires:
@@ -184,7 +183,7 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 
 **IMPORTANT: Always show the user what you're doing.** Every query result, every transaction, every event — print it clearly. Never run API calls silently.
 
-**CRITICAL: Registration is FREE and most worknets require ZERO staking.** Do NOT tell users they need AWP tokens or staking to get started. The typical flow is: register (gasless, free) → pick a worknet with min_stake=0 → start working immediately. Staking/depositing AWP is only needed for worknets that explicitly require it (min_stake > 0), and is completely optional for getting started.
+**CRITICAL: Registration is FREE and most worknets require ZERO staking.** Do NOT tell users they need AWP tokens or staking to get started. The typical flow is: register (gasless, free) → pick a worknet with min_stake=0 → start earning immediately. Staking/depositing AWP is only needed for worknets that explicitly require it (min_stake > 0), and is completely optional for getting started.
 
 ## Contract Addresses (same on all 4 chains)
 
@@ -230,10 +229,10 @@ welcome to awp.
 one protocol. infinite jobs. nonstop earnings.
 
 ── quick start ──────────────────
-"start working"    → register + join (free, no AWP needed)
-"check my balance" → staking overview
-"list worknets"    → browse active worknets
-"watch events"     → real-time monitor
+"awp start"        → register + join (free, no AWP needed)
+"awp balance"      → staking overview
+"awp worknets"     → browse active worknets
+"awp watch"        → real-time monitor
 "awp help"         → all commands
 ──────────────────────────────────
 
@@ -455,17 +454,17 @@ awp announcements → protocol announcements
 awp help          → this list
 
 ── actions ───────────────────────
-"start working"    → register + join (free)
-"check my balance" → staking overview
+"awp start"        → register + join (free)
+"awp balance"      → staking overview
 "deposit X AWP"    → stake tokens (optional)
-"allocate"         → direct stake (optional)
-"watch events"     → real-time monitor
+"allocate AWP"     → direct stake (optional)
+"awp watch"        → real-time monitor
 ──────────────────────────────────
 ```
 
 ## Onboarding Flow
 
-When the user says "start working", "get started", or similar, use the **preflight-driven flow**.
+When the user says "awp start", "get started with AWP", or similar AWP-specific phrases, use the **preflight-driven flow**.
 The entire flow is FREE — no AWP tokens or ETH needed.
 
 ### Preflight-Driven Onboarding (recommended)
@@ -553,7 +552,7 @@ If the user later wants to work on a worknet that requires staking, guide them t
 
 | User wants to... | Action | Reference file to load |
 |-------------------|--------|------------------------|
-| Start / onboard / setup | ONBOARD | **references/commands-staking.md** |
+| AWP start / onboard / setup | ONBOARD | **references/commands-staking.md** |
 | Query worknet info | Q1 | None |
 | Check balance / positions | Q2 | None |
 | View emission / epoch info | Q3 | None |
@@ -629,7 +628,7 @@ After confirmation and completion:
 
 1. **Registration is FREE.** Never tell users they need AWP tokens, ETH, or staking to register. Registration uses the gasless relay and costs nothing.
 2. **Most worknets are FREE to join.** Worknets with `min_stake = 0` require no staking at all. Always prefer these during onboarding. Only mention staking when the user specifically picks a worknet with `min_stake > 0`.
-3. **Do NOT block onboarding on staking.** The flow is: register → pick free worknet → start working. Staking is a separate, optional, later step.
+3. **Do NOT block onboarding on staking.** The flow is: register → pick free worknet → start earning. Staking is a separate, optional, later step.
 4. **Use bundled scripts for ALL write operations.** Never manually construct calldata, ABI encoding, or EIP-712 JSON.
 5. **Always fetch contract addresses from the API** before write actions — the bundled scripts handle this automatically via `registry.get`. Never hardcode contract addresses.
 6. **Show amounts as human-readable AWP** (wei / 10^18, 4 decimals). Never show raw wei.
@@ -1507,7 +1506,7 @@ Subscribe to `EpochSettled` + `AllocationsSubmitted` and surface per-epoch total
 | JSON-RPC -32601 | `[!] method not found` | Check method name |
 | JSON-RPC -32001 | `[!] not found` | Suggest list/search |
 | 429 Rate Limit | `[!] rate limited. retrying in 60s...` | Auto-retry |
-| "not registered" | `[!] not registered. say "start working"` | Guide to onboarding |
+| "not registered" | `[!] not registered. say "awp start"` | Guide to onboarding |
 | "insufficient balance" | `[!] insufficient balance` | Guide to S2 |
 | PositionExpired | `[!] position expired. withdraw first.` | Guide to S2 |
 | Session expired | `[!] re-unlocking wallet...` | Auto re-unlock |

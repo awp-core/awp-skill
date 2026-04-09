@@ -300,10 +300,10 @@ def write_status(
         next_step = 'Tell your agent: "initialize my wallet"'
     elif registered is None or not registered:
         phase = "not_registered"
-        next_step = 'Tell your agent: "start working" (free, gasless)'
+        next_step = 'Tell your agent: "awp start" (free, gasless)'
     else:
         phase = "ready"
-        next_step = 'Tell your agent: "list worknets" or "start working"'
+        next_step = 'Tell your agent: "list worknets" or "awp start"'
 
     status = {
         "phase": phase,
@@ -454,7 +454,7 @@ WELCOME_BANNER = """\
 ├──────────────────────────────────────────┤
 │  QUICK START                             │
 │                                          │
-│  "start working"    register + join      │
+│  "awp start"    register + join      │
 │  "check my balance" staking overview     │
 │  "list worknets"     browse active        │
 │  "awp help"         all commands         │
@@ -582,7 +582,7 @@ def check_and_notify(wallet_addr: str) -> bool:
         log("│  You are not registered yet.                  │")
         log("│                                              │")
         log("│  To register (free, gasless), tell your      │")
-        log('│  agent: "start working"                      │')
+        log('│  agent: "awp start"                      │')
         log("└─────────────────────────────────────────────┘")
     else:
         bound_to = check.get("boundTo", "")
@@ -636,7 +636,7 @@ def check_and_notify(wallet_addr: str) -> bool:
 
     print()
     if not is_registered:
-        log('→ Next: say "start working" to register for free')
+        log('→ Next: say "awp start" to register for free')
     else:
         if worknets:
             log(
@@ -860,7 +860,7 @@ def _run_daemon(interval: int) -> None:
                 "Wallet Ready — Next Step",
                 f"Wallet is ready: {addr}\n"
                 "You are not registered yet. Registration is FREE (gasless).\n"
-                'Tell your agent: "start working"',
+                'Tell your agent: "awp start"',
                 "info",
             )
         # Wallet ready and registered — guide user to pick a worknet and start working
@@ -872,7 +872,7 @@ def _run_daemon(interval: int) -> None:
                 "Next steps:\n"
                 '  - Tell your agent: "list worknets" to browse available worknets\n'
                 '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
-                '  - Or just say: "start working" to auto-pick a free worknet',
+                '  - Or just say: "awp start" to auto-pick a free worknet',
                 "info",
             )
     else:
@@ -940,7 +940,7 @@ def _run_daemon(interval: int) -> None:
                                 "Wallet Ready — Next Step",
                                 f"Wallet is now ready: {addr}\n"
                                 "You are not registered yet. Registration is FREE (gasless).\n"
-                                'Tell your agent: "start working"',
+                                'Tell your agent: "awp start"',
                                 "info",
                             )
 
@@ -966,7 +966,7 @@ def _run_daemon(interval: int) -> None:
                                 "Next steps:\n"
                                 '  - Tell your agent: "list worknets" to browse available worknets\n'
                                 '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
-                                '  - Or just say: "start working" to auto-pick a free worknet',
+                                '  - Or just say: "awp start" to auto-pick a free worknet',
                                 "info",
                             )
                             check_and_notify(wallet_addr)
@@ -976,7 +976,7 @@ def _run_daemon(interval: int) -> None:
                             notify(
                                 "Deregistered",
                                 f"Address {addr} is no longer registered.\n"
-                                'To re-register (free), tell your agent: "start working"',
+                                'To re-register (free), tell your agent: "awp start"',
                                 "warning",
                             )
 
