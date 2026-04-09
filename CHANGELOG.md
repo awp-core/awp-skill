@@ -1,5 +1,51 @@
 # Changelog
 
+## v1.4.3
+
+### Full codebase review — 26 bug fixes across 16 files
+
+Critical fixes:
+- `awp_lib.py`: `pad_address` now enforces exactly 40 hex chars (was silently
+  accepting short addresses → wrong calldata).
+- `awp_lib.py`: `rpc_call_batch` IDs start at 1 (not 0), and response count is
+  verified against request count (prevents silent calldata misalignment).
+- `awp_lib.py`: AWPAllocator EIP-712 domain dies on empty `verifyingContract`
+  instead of silently producing invalid signature.
+- `wallet-raw-call.mjs`: `isWorknetManager` now passes `chainId` to prevent
+  cross-chain WorknetManager allowlist bypass.
+- `onchain-worknet-update.py` + `onchain-worknet-metadata.py`: string-encoding
+  calldata builders now route through `encode_calldata` for selector validation.
+- `onchain-add-position.py`: replaced `float` with `Decimal` for lock-time
+  computation (project standard, prevents off-by-one-second truncation).
+- `relay-register-worknet.py`: `int(nonce)` wrapped in try/except (was
+  unguarded ValueError).
+
+nextAction contract completion:
+- `relay-unbind.py`, `relay-delegate.py`, `relay-register-worknet.py`: all now
+  emit `nextAction`/`nextCommand` on success.
+- `relay-unbind.py`: dies on non-dict API response instead of skipping guard.
+
+Daemon reliability:
+- `awp-daemon.py`: API outage no longer triggers false "Registration detected!"
+  notification (returns None instead of False on unreachable).
+- `awp-daemon.py`: malformed announcement ID no longer aborts entire monitor cycle.
+- `awp-daemon.py`: PID write moved inside try/finally block.
+
+Input validation:
+- `relay-stake.py`: fractional `--lock-days` now rejected (must be whole days).
+- `onchain-unstake.py` + `onchain-switch-worknet.py`: API-returned agent addresses
+  validated via ADDR_RE before `pad_address`.
+- `query-status.py`: `int(totalStaked_wei)` wrapped in try/except.
+- `query-worknet.py`: zero-stake agents without address properly filtered.
+
+Other:
+- `awp_lib.py` User-Agent `1.1` → `1.4`.
+- `relay-stake.py`: `json.JSONDecodeError` now logged instead of silently swallowed.
+- `relay-onboard.py`: allocate uses target address when in agent mode.
+- SKILL.md: removed phantom `/api/relay/register` endpoint; noted
+  `/api/relay/activate-worknet` has no bundled script; added `relay-onboard`
+  to `allocate` row in nextAction table.
+
 ## v1.4.2
 
 ### Script chain contract fixes + PEP 8 compliance

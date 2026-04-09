@@ -92,6 +92,11 @@ def main() -> None:
     for alloc in matching:
         agent = alloc.get("agent", "")
         amount_raw = int(alloc.get("amount", "0"))
+        # 验证 API 返回的 agent 地址格式
+        if not ADDR_RE.match(agent):
+            info(f"Skipping allocation with invalid agent address: {agent}")
+            continue
+
         move_amount = (
             partial_amount_wei if partial_amount_wei is not None else amount_raw
         )

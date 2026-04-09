@@ -57,11 +57,14 @@ RECEIPT_WIDTH = 42  # Receipt content width (excluding border)
 
 # ── Logging & Notifications ──────────────────────
 
+
 def log(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] {msg}")
 
+
 def warn(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] ⚠ {msg}")
+
 
 def err(msg: str) -> None:
     print(f"[AWP {datetime.now():%H:%M:%S}] ✗ {msg}", file=sys.stderr)
@@ -127,6 +130,7 @@ def _get_openclaw_config() -> Tuple[str, str]:
             pass
     return "", ""
 
+
 def _find_openclaw() -> Optional[str]:
     """Locate the openclaw executable, checking common installation paths."""
     found = shutil.which("openclaw")
@@ -169,12 +173,14 @@ def notify(title: str, message: str, level: str = "info") -> None:
             except (json.JSONDecodeError, OSError):
                 notifications = []
 
-        notifications.append({
-            "timestamp": timestamp,
-            "level": level,
-            "title": f"🪼 {title}",
-            "message": message,
-        })
+        notifications.append(
+            {
+                "timestamp": timestamp,
+                "level": level,
+                "title": f"🪼 {title}",
+                "message": message,
+            }
+        )
 
         # Keep only the latest 50 entries; atomic write (write to temp file then rename)
         notifications = notifications[-50:]
@@ -196,11 +202,19 @@ def notify(title: str, message: str, level: str = "info") -> None:
         if channel and target:
             try:
                 subprocess.run(
-                    [openclaw_bin, "message", "send",
-                     "--channel", channel,
-                     "--target", target,
-                     "--message", f"**🪼 {title}**\n```\n{message}\n```"],
-                    capture_output=True, timeout=10
+                    [
+                        openclaw_bin,
+                        "message",
+                        "send",
+                        "--channel",
+                        channel,
+                        "--target",
+                        target,
+                        "--message",
+                        f"**🪼 {title}**\n```\n{message}\n```",
+                    ],
+                    capture_output=True,
+                    timeout=10,
                 )
             except (subprocess.SubprocessError, OSError):
                 pass  # Silently skip on send failure
@@ -208,14 +222,14 @@ def notify(title: str, message: str, level: str = "info") -> None:
     # 3. Terminal output
     log(f"[NOTIFY] {title}: {message}")
 
+
 # ── Helpers ──────────────────────────────────────
+
 
 def run(cmd: list[str]) -> Tuple[int, str]:
     """Run a command (as a list, no shell injection risk) and return (returncode, stdout)."""
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=30
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         return result.returncode, result.stdout.strip()
     except subprocess.TimeoutExpired:
         return 1, ""
@@ -249,12 +263,14 @@ def fetch_text(url: str) -> str:
     except (urllib.error.URLError, OSError, UnicodeDecodeError):
         return ""
 
+
 def wei_to_awp(wei: str) -> str:
     """Convert a wei string to a human-readable AWP amount."""
     try:
         return f"{int(wei) / 10**18:,.4f}"
     except (ValueError, TypeError):
         return wei
+
 
 def parse_version(v: str) -> Tuple[int, ...]:
     """Parse a version string into a comparable tuple of integers."""
@@ -263,7 +279,9 @@ def parse_version(v: str) -> Tuple[int, ...]:
     except (ValueError, AttributeError):
         return (0,)
 
+
 # ── Status File ─────────────────────────────────
+
 
 def write_status(
     wallet_installed: bool,
@@ -304,6 +322,7 @@ def write_status(
 
 
 # ── Worknet Tracking ─────────────────────────────
+
 
 def fetch_announcements() -> list[dict[str, Any]]:
     """Fetch the active-announcements list from the REST endpoint."""
@@ -354,7 +373,11 @@ def format_worknet_list(worknets: list[dict[str, Any]]) -> str:
             min_stake = _field(s, "minStake", "min_stake", default=0)
             status = _field(s, "status", default="")
             owner_raw = _field(s, "owner", default="") or ""
-            owner = (owner_raw[:6] + "..." + owner_raw[-4:]) if len(owner_raw) > 14 else owner_raw
+            owner = (
+                (owner_raw[:6] + "..." + owner_raw[-4:])
+                if len(owner_raw) > 14
+                else owner_raw
+            )
             skills_uri = _field(s, "skillsURI", "skills_uri", default="")
             created_raw = _field(s, "createdAt", "created_at", default="")
             created = str(created_raw) if created_raw else ""
@@ -393,12 +416,18 @@ def format_worknet_list(worknets: list[dict[str, Any]]) -> str:
 
             # Separator between worknets (not after the last one)
             if i < len(worknets) - 1:
-                lines.append("│" + "  " + "· " * ((W - 4) // 2) + " " * ((W - 4) % 2) + "  │")
+                lines.append(
+                    "│" + "  " + "· " * ((W - 4) // 2) + " " * ((W - 4) % 2) + "  │"
+                )
 
         lines.append("├" + "─" * W + "┤")
         total = len(worknets)
-        free = sum(1 for s in worknets if _field(s, "minStake", "min_stake", default=0) == 0)
-        with_skills = sum(1 for s in worknets if _field(s, "skillsURI", "skills_uri", default=""))
+        free = sum(
+            1 for s in worknets if _field(s, "minStake", "min_stake", default=0) == 0
+        )
+        with_skills = sum(
+            1 for s in worknets if _field(s, "skillsURI", "skills_uri", default="")
+        )
         summary = f"  {total} worknets · {free} free · {with_skills} with skills"
         lines.append("│" + summary.ljust(W) + "│")
     lines.append("└" + "─" * W + "┘")
@@ -454,6 +483,7 @@ def send_welcome(worknets: list[dict[str, Any]]) -> None:
 
 # ── New Worknet Detection ────────────────────────
 
+
 def detect_new_worknets(
     current: list[dict[str, Any]],
     known_ids: set[int],
@@ -472,6 +502,7 @@ def detect_new_worknets(
 
 
 # ── 1. Wallet Installation ───────────────────────
+
 
 def ensure_wallet_installed() -> bool:
     """Check whether awp-wallet is installed (does NOT auto-download or execute remote scripts).
@@ -496,7 +527,9 @@ def ensure_wallet_installed() -> bool:
     err("Then restart the daemon.")
     return False
 
+
 # ── 2. Wallet Initialization ─────────────────────
+
 
 def ensure_wallet_initialized() -> Optional[str]:
     """Check whether the wallet is initialized and return the address, or None.
@@ -522,7 +555,9 @@ def ensure_wallet_initialized() -> Optional[str]:
     err("After init, restart the daemon.")
     return None
 
+
 # ── 3. Check Registration & Show Status ──────────
+
 
 def check_and_notify(wallet_addr: str) -> bool:
     """Check registration status, display info, and return is_registered."""
@@ -535,7 +570,7 @@ def check_and_notify(wallet_addr: str) -> bool:
         log(f"Address:    {wallet_addr}")
         log("Status:     API unavailable")
         log("──────────────────────────────────────")
-        return False
+        return None  # type: ignore[return-value]  # None = 未知状态，防止假通知
 
     is_registered = check.get("isRegistered", False)
 
@@ -546,7 +581,7 @@ def check_and_notify(wallet_addr: str) -> bool:
         log("┌─────────────────────────────────────────────┐")
         log("│  You are not registered yet.                  │")
         log("│                                              │")
-        log('│  To register (free, gasless), tell your      │')
+        log("│  To register (free, gasless), tell your      │")
         log('│  agent: "start working"                      │')
         log("└─────────────────────────────────────────────┘")
     else:
@@ -580,11 +615,17 @@ def check_and_notify(wallet_addr: str) -> bool:
             min_stake = _field(s, "minStake", "min_stake", default=0)
             skills = "✓" if _field(s, "skillsURI", "skills_uri", default="") else "—"
             chain = chain_label(s)
-            log(f"  #{sid}  {str(name):<26s} [{chain:<4s}] min: {min_stake} AWP  skills: {skills}")
+            log(
+                f"  #{sid}  {str(name):<26s} [{chain:<4s}] min: {min_stake} AWP  skills: {skills}"
+            )
 
         total = len(worknets)
-        free = sum(1 for s in worknets if _field(s, "minStake", "min_stake", default=0) == 0)
-        with_skills = sum(1 for s in worknets if _field(s, "skillsURI", "skills_uri", default=""))
+        free = sum(
+            1 for s in worknets if _field(s, "minStake", "min_stake", default=0) == 0
+        )
+        with_skills = sum(
+            1 for s in worknets if _field(s, "skillsURI", "skills_uri", default="")
+        )
         log("")
         log(f"{total} worknets. {free} free (no staking). {with_skills} with skills.")
     else:
@@ -598,15 +639,19 @@ def check_and_notify(wallet_addr: str) -> bool:
         log('→ Next: say "start working" to register for free')
     else:
         if worknets:
-            log('→ Next: say "list worknets" to browse, or "install skill for worknet #1" to start')
+            log(
+                '→ Next: say "list worknets" to browse, or "install skill for worknet #1" to start'
+            )
         else:
-            log('→ All set! Your agent will start working as soon as worknets go live.')
+            log("→ All set! Your agent will start working as soon as worknets go live.")
             log('  Run "list worknets" anytime to check for new ones.')
     print()
 
     return is_registered
 
+
 # ── 4. Update Checker ────────────────────────────
+
 
 def get_local_version() -> str:
     """Read the version number from the local SKILL.md."""
@@ -617,6 +662,7 @@ def get_local_version() -> str:
     except (OSError, UnicodeDecodeError):
         return ""
 
+
 def get_remote_version(url: str) -> str:
     """Read the version number from a remote SKILL.md."""
     text = fetch_text(url)
@@ -624,6 +670,7 @@ def get_remote_version(url: str) -> str:
         return ""
     match = re.search(r"Skill version:\s*([\d.]+)", text)
     return match.group(1) if match else ""
+
 
 def fetch_changelog(version: str) -> str:
     """Extract changelog summary for a specific version from remote CHANGELOG.md."""
@@ -640,7 +687,9 @@ def fetch_changelog(version: str) -> str:
     start = match.end()
     # Extract until next ## or end of file
     next_section = re.search(r"(?m)^## ", text[start:])
-    section = text[start:start + next_section.start()] if next_section else text[start:]
+    section = (
+        text[start : start + next_section.start()] if next_section else text[start:]
+    )
     # Extract heading lines and first 8 bullet points
     lines: list[str] = []
     for line in section.strip().splitlines():
@@ -702,21 +751,30 @@ def check_updates() -> None:
         if remote_wallet and local_wallet:
             if parse_version(remote_wallet) > parse_version(local_wallet):
                 log(f"awp-wallet {remote_wallet} available (current: {local_wallet})")
-                notify("Update Available",
-                       f"awp-wallet {remote_wallet} available (current: {local_wallet})")
+                notify(
+                    "Update Available",
+                    f"awp-wallet {remote_wallet} available (current: {local_wallet})",
+                )
             else:
                 log(f"awp-wallet {local_wallet} — up to date ✓")
         elif remote_wallet:
             log(f"awp-wallet latest: {remote_wallet}")
 
+
 # ── Main ─────────────────────────────────────────
+
 
 def main() -> None:
     import argparse
     import signal
+
     parser = argparse.ArgumentParser(description="AWP Daemon")
-    parser.add_argument("--interval", type=int, default=CHECK_INTERVAL,
-                        help=f"Check interval in seconds (minimum 10, default {CHECK_INTERVAL})")
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=CHECK_INTERVAL,
+        help=f"Check interval in seconds (minimum 10, default {CHECK_INTERVAL})",
+    )
     args = parser.parse_args()
 
     interval = max(args.interval, 10)
@@ -726,13 +784,14 @@ def main() -> None:
     # SystemExit propagates through finally blocks, ensuring PID file is removed.
     def _sigterm_handler(signum: int, frame: object) -> None:
         raise SystemExit(0)
+
     signal.signal(signal.SIGTERM, _sigterm_handler)
 
     # Write PID file so the daemon can be stopped externally (kill $(cat ~/.awp/daemon.pid))
     NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
-    PID_FILE.write_text(str(os.getpid()))
 
     try:
+        PID_FILE.write_text(str(os.getpid()))
         _run_daemon(interval)
     finally:
         try:
@@ -764,7 +823,9 @@ def _run_daemon(interval: int) -> None:
         if ann_id is not None:
             seen_announcement_ids.add(int(ann_id))
     if initial_announcements:
-        log(f"Recorded {len(seen_announcement_ids)} existing announcements (no notifications sent)")
+        log(
+            f"Recorded {len(seen_announcement_ids)} existing announcements (no notifications sent)"
+        )
 
     # Phase 2: Check dependencies (no auto-install; notify and continue if missing)
     log("Phase 2: Checking awp-wallet dependency...")
@@ -784,40 +845,53 @@ def _run_daemon(interval: int) -> None:
         # Wallet ready but not registered — prompt to register
         if not last_registered:
             addr = short_addr(wallet_addr)
-            notify("Wallet Ready — Next Step",
-                   f"Wallet is ready: {addr}\n"
-                   "You are not registered yet. Registration is FREE (gasless).\n"
-                   'Tell your agent: "start working"',
-                   "info")
+            notify(
+                "Wallet Ready — Next Step",
+                f"Wallet is ready: {addr}\n"
+                "You are not registered yet. Registration is FREE (gasless).\n"
+                'Tell your agent: "start working"',
+                "info",
+            )
         # Wallet ready and registered — guide user to pick a worknet and start working
         else:
             addr = short_addr(wallet_addr)
-            notify("Registered — Ready to Work",
-                   f"Wallet {addr} is registered.\n"
-                   'Next steps:\n'
-                   '  - Tell your agent: "list worknets" to browse available worknets\n'
-                   '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
-                   '  - Or just say: "start working" to auto-pick a free worknet',
-                   "info")
+            notify(
+                "Registered — Ready to Work",
+                f"Wallet {addr} is registered.\n"
+                "Next steps:\n"
+                '  - Tell your agent: "list worknets" to browse available worknets\n'
+                '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
+                '  - Or just say: "start working" to auto-pick a free worknet',
+                "info",
+            )
     else:
         if not wallet_ready:
-            notify("Wallet Not Ready",
-                   "awp-wallet is not installed. Cannot proceed without it.\n"
-                   "Tell your agent to install the official AWP wallet:\n"
-                   '  "install awp-wallet from https://github.com/awp-core/awp-wallet"',
-                   "warning")
+            notify(
+                "Wallet Not Ready",
+                "awp-wallet is not installed. Cannot proceed without it.\n"
+                "Tell your agent to install the official AWP wallet:\n"
+                '  "install awp-wallet from https://github.com/awp-core/awp-wallet"',
+                "warning",
+            )
         else:
-            notify("Wallet Not Initialized",
-                   "awp-wallet is installed but no wallet exists yet.\n"
-                   "Tell your agent:\n"
-                   '  "initialize my wallet"\n'
-                   "The agent will run awp-wallet init to create an agent work wallet.\n"
-                   "Note: Do NOT store personal assets in this wallet.",
-                   "warning")
+            notify(
+                "Wallet Not Initialized",
+                "awp-wallet is installed but no wallet exists yet.\n"
+                "Tell your agent:\n"
+                '  "initialize my wallet"\n'
+                "The agent will run awp-wallet init to create an agent work wallet.\n"
+                "Note: Do NOT store personal assets in this wallet.",
+                "warning",
+            )
 
     # Write initial status file
-    write_status(wallet_ready, wallet_addr, last_registered,
-                 len(initial_worknets), datetime.now().isoformat())
+    write_status(
+        wallet_ready,
+        wallet_addr,
+        last_registered,
+        len(initial_worknets),
+        datetime.now().isoformat(),
+    )
 
     # Phase 5: Check for updates (informational only, no auto-update)
     log("Phase 5: Checking for updates (informational only)...")
@@ -851,55 +925,73 @@ def _run_daemon(interval: int) -> None:
                         # Wallet just became ready — push next-step guidance
                         if not last_registered:
                             addr = short_addr(wallet_addr)
-                            notify("Wallet Ready — Next Step",
-                                   f"Wallet is now ready: {addr}\n"
-                                   "You are not registered yet. Registration is FREE (gasless).\n"
-                                   'Tell your agent: "start working"',
-                                   "info")
+                            notify(
+                                "Wallet Ready — Next Step",
+                                f"Wallet is now ready: {addr}\n"
+                                "You are not registered yet. Registration is FREE (gasless).\n"
+                                'Tell your agent: "start working"',
+                                "info",
+                            )
 
                 # Registration status check (only when wallet is available)
                 if wallet_addr:
-                    is_registered = False
+                    is_registered = None  # None = API 不可达，不更新状态
                     check = rpc("address.check", {"address": wallet_addr})
                     if check:
-                        is_registered = check.get("isRegistered", False)
+                        is_registered = bool(check.get("isRegistered", False))
 
-                    if is_registered != last_registered and last_registered is not None:
+                    # 仅在 API 可达时（is_registered 非 None）才更新状态和触发通知
+                    if (
+                        is_registered is not None
+                        and is_registered != last_registered
+                        and last_registered is not None
+                    ):
                         if is_registered:
                             log("Registration detected! You are now registered.")
                             addr = short_addr(wallet_addr)
-                            notify("Registered — Ready to Work",
-                                   f"Wallet {addr} is now registered!\n"
-                                   'Next steps:\n'
-                                   '  - Tell your agent: "list worknets" to browse available worknets\n'
-                                   '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
-                                   '  - Or just say: "start working" to auto-pick a free worknet',
-                                   "info")
+                            notify(
+                                "Registered — Ready to Work",
+                                f"Wallet {addr} is now registered!\n"
+                                "Next steps:\n"
+                                '  - Tell your agent: "list worknets" to browse available worknets\n'
+                                '  - Tell your agent: "install skill for worknet #N" to join a worknet\n'
+                                '  - Or just say: "start working" to auto-pick a free worknet',
+                                "info",
+                            )
                             check_and_notify(wallet_addr)
                         else:
                             log("Registration lost — address is no longer registered.")
                             addr = short_addr(wallet_addr)
-                            notify("Deregistered",
-                                   f"Address {addr} is no longer registered.\n"
-                                   'To re-register (free), tell your agent: "start working"',
-                                   "warning")
+                            notify(
+                                "Deregistered",
+                                f"Address {addr} is no longer registered.\n"
+                                'To re-register (free), tell your agent: "start working"',
+                                "warning",
+                            )
 
-                    last_registered = is_registered
+                    if is_registered is not None:
+                        last_registered = is_registered
 
                 # New worknet detection
                 current_worknets = fetch_active_worknets()
                 new_worknets = detect_new_worknets(current_worknets, known_worknet_ids)
                 if new_worknets:
                     for s in new_worknets:
-                        sid = _field(s, "worknetId", "subnet_id", "subnetId", default="?")
+                        sid = _field(
+                            s, "worknetId", "subnet_id", "subnetId", default="?"
+                        )
                         name = _field(s, "name", default="Unknown")
                         symbol = _field(s, "symbol", default="")
                         owner_raw = _field(s, "owner", default="") or ""
-                        owner = (owner_raw[:10] + "...") if len(owner_raw) > 10 else owner_raw
+                        owner = (
+                            (owner_raw[:10] + "...")
+                            if len(owner_raw) > 10
+                            else owner_raw
+                        )
                         min_stake = _field(s, "minStake", "min_stake", default=0)
                         skills = _field(s, "skillsURI", "skills_uri", default="")
                         chain = chain_label(s)
-                        msg = f"#{sid} \"{name}\" ({symbol}) [{chain}] by {owner}"
+                        msg = f'#{sid} "{name}" ({symbol}) [{chain}] by {owner}'
                         if min_stake == 0:
                             msg += " | FREE (no staking required)"
                         else:
@@ -909,7 +1001,9 @@ def _run_daemon(interval: int) -> None:
                         notify("New Worknet", msg)
                     # Update known worknet set
                     for s in new_worknets:
-                        sid = _field(s, "worknetId", "subnet_id", "subnetId", default=None)
+                        sid = _field(
+                            s, "worknetId", "subnet_id", "subnetId", default=None
+                        )
                         if sid is not None:
                             try:
                                 known_worknet_ids.add(int(sid))
@@ -921,14 +1015,21 @@ def _run_daemon(interval: int) -> None:
                 priority_map: dict[int, str] = {0: "info", 1: "warning", 2: "critical"}
                 for ann in announcements:
                     ann_id = ann.get("id")
-                    if ann_id is not None and int(ann_id) not in seen_announcement_ids:
+                    try:
+                        ann_id_int = int(ann_id) if ann_id is not None else None
+                    except (ValueError, TypeError):
+                        continue
+                    if (
+                        ann_id_int is not None
+                        and ann_id_int not in seen_announcement_ids
+                    ):
                         category = ann.get("category", "general")
                         title = ann.get("title", "Announcement")
                         content = ann.get("content", "")
                         priority = ann.get("priority", 0)
                         level = priority_map.get(priority, "info")
                         notify(f"[{category.upper()}] {title}", content, level)
-                        seen_announcement_ids.add(int(ann_id))
+                        seen_announcement_ids.add(ann_id_int)
 
                 # Prevent seen_announcement_ids from growing unbounded (keep latest 500)
                 if len(seen_announcement_ids) > 500:
@@ -936,15 +1037,27 @@ def _run_daemon(interval: int) -> None:
                     seen_announcement_ids = set(sorted_ids[-500:])
 
                 # Update status file
-                write_status(wallet_ready, wallet_addr, last_registered,
-                             len(current_worknets), datetime.now().isoformat())
+                write_status(
+                    wallet_ready,
+                    wallet_addr,
+                    last_registered,
+                    len(current_worknets),
+                    datetime.now().isoformat(),
+                )
 
                 # Update check (every UPDATE_CHECK_EVERY cycles)
                 if cycle_count % UPDATE_CHECK_EVERY == 0:
                     check_updates()
 
-            except (OSError, urllib.error.URLError, json.JSONDecodeError,
-                    subprocess.SubprocessError, ValueError, KeyError, TypeError) as e:
+            except (
+                OSError,
+                urllib.error.URLError,
+                json.JSONDecodeError,
+                subprocess.SubprocessError,
+                ValueError,
+                KeyError,
+                TypeError,
+            ) as e:
                 # Broad enough to keep the daemon alive through transient failures,
                 # but narrow enough that real programming bugs (AttributeError,
                 # NameError, etc.) still crash the loop so they can be fixed.

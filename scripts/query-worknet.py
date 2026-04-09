@@ -146,7 +146,10 @@ def main() -> None:
         agent_addr = a.get("agent") or a.get("address", "")
         stake = a.get("stake") or a.get("amount", "0")
         try:
+            # 跳过无效条目（零质押且无地址，或解析失败）
             if int(stake) == 0 and not agent_addr:
+                continue
+            if not agent_addr:
                 continue
         except (ValueError, TypeError):
             continue

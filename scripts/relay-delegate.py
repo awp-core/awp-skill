@@ -27,7 +27,9 @@ def parse_args() -> tuple[str, str, str]:
     """Parse CLI arguments, return (token, mode, delegate)."""
     parser = base_parser("AWP gasless delegate — grant or revoke delegate via relay")
     parser.add_argument(
-        "--mode", required=True, choices=["grant", "revoke"],
+        "--mode",
+        required=True,
+        choices=["grant", "revoke"],
         help="grant (add delegate) or revoke (remove delegate)",
     )
     parser.add_argument("--delegate", required=True, help="delegate address")
@@ -46,7 +48,9 @@ def main() -> None:
     step("fetch_registry")
     registry = get_registry()
     domain = get_eip712_domain(registry)
-    info(f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}")
+    info(
+        f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}"
+    )
 
     # Step 2: Get wallet address
     step("get_wallet_address")
@@ -108,7 +112,12 @@ def main() -> None:
     http_code, body = api_post(relay_endpoint, relay_body)
 
     if 200 <= http_code < 300:
-        print(json.dumps(body) if isinstance(body, dict) else body)
+        result = body if isinstance(body, dict) else {"result": body}
+        result["nextAction"] = "check_status"
+        result["nextCommand"] = (
+            f"python3 scripts/query-status.py --address {wallet_addr}"
+        )
+        print(json.dumps(result))
     else:
         die(f"Relay returned HTTP {http_code}: {body}")
 

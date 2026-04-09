@@ -63,6 +63,10 @@ def main() -> None:
                 worknet_id = int(worknet_id_raw)
             except (ValueError, TypeError):
                 continue
+            # 验证 API 返回的 agent 地址格式（防止短地址导致 pad_address 错误填充）
+            if not ADDR_RE.match(agent):
+                info(f"Skipping allocation with invalid agent address: {agent}")
+                continue
             step("deallocateAll", agent=agent, worknet=worknet_id)
 
             # deallocateAll(address,address,uint256) selector = 0x586ac6b3

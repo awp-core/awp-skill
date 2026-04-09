@@ -37,7 +37,9 @@ def main() -> None:
     step("fetch_registry")
     registry = get_registry()
     domain = get_eip712_domain(registry)
-    info(f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}")
+    info(
+        f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}"
+    )
 
     # Step 2: Get wallet address
     step("get_wallet_address")
@@ -46,12 +48,22 @@ def main() -> None:
     # Step 3: Pre-check — verify the user IS currently bound
     step("check_status")
     check = rpc("address.check", {"address": wallet_addr})
+    if not isinstance(check, dict):
+        die("Could not verify binding status — API returned unexpected response")
     zero_addr = "0x0000000000000000000000000000000000000000"
-    if isinstance(check, dict):
-        bound_to = check.get("boundTo", "")
-        if not bound_to or bound_to == "null" or bound_to == zero_addr:
-            print(json.dumps({"status": "not_bound", "address": wallet_addr}))
-            return
+    bound_to = check.get("boundTo", "")
+    if not bound_to or bound_to == "null" or bound_to == zero_addr:
+        print(
+            json.dumps(
+                {
+                    "status": "not_bound",
+                    "address": wallet_addr,
+                    "nextAction": "check_status",
+                    "nextCommand": f"python3 scripts/preflight.py --address {wallet_addr}",
+                }
+            )
+        )
+        return
 
     # Step 4: Get nonce
     step("get_nonce")
@@ -100,7 +112,10 @@ def main() -> None:
     http_code, body = api_post(relay_endpoint, relay_body)
 
     if 200 <= http_code < 300:
-        print(json.dumps(body) if isinstance(body, dict) else body)
+        result = body if isinstance(body, dict) else {"result": body}
+        result["nextAction"] = "check_status"
+        result["nextCommand"] = f"python3 scripts/preflight.py --address {wallet_addr}"
+        print(json.dumps(result))
     else:
         die(f"Relay returned HTTP {http_code}: {body}")
 

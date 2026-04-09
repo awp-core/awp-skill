@@ -207,19 +207,21 @@ def main() -> None:
         hints.append("Not registered. Run: relay-start.py or relay-onboard.py")
         next_action = "register"
         next_command = "python3 scripts/preflight.py"
-    elif (
-        output["balance"]
-        and int(output["balance"]["totalStaked_wei"]) > 0
-        and not output["allocations"]
-    ):
-        hints.append(
-            "Has staked AWP but no allocations — not earning rewards. Allocate to an agent+worknet."
-        )
-        next_action = "allocate"
-        next_command = f"python3 scripts/relay-allocate.py --token $TOKEN --mode allocate --agent {addr} --worknet <WORKNET_ID> --amount <AMOUNT>"
-    elif output.get("registered") is True and (
-        not output["balance"] or int(output["balance"]["totalStaked_wei"]) == 0
-    ):
+    elif output["balance"]:
+        try:
+            staked_wei = int(output["balance"]["totalStaked_wei"])
+        except (ValueError, TypeError):
+            staked_wei = 0
+        if staked_wei > 0 and not output["allocations"]:
+            hints.append(
+                "Has staked AWP but no allocations — not earning rewards. Allocate to an agent+worknet."
+            )
+            next_action = "allocate"
+            next_command = f"python3 scripts/relay-allocate.py --token $TOKEN --mode allocate --agent {addr} --worknet <WORKNET_ID> --amount <AMOUNT>"
+        elif staked_wei == 0 and output.get("registered") is True:
+            next_action = "pick_worknet"
+            next_command = f"python3 scripts/preflight.py --address {addr}"
+    elif output.get("registered") is True and not output["balance"]:
         next_action = "pick_worknet"
         next_command = f"python3 scripts/preflight.py --address {addr}"
 

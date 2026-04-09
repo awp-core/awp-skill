@@ -57,7 +57,15 @@ def parse_args() -> tuple[str, str, str, str, int, str, str]:
     validate_address(args.worknet_manager, "worknet-manager")
     validate_bytes32(args.salt, "salt")
 
-    return args.token, args.name, args.symbol, args.salt, min_stake, args.worknet_manager, args.skills_uri
+    return (
+        args.token,
+        args.name,
+        args.symbol,
+        args.salt,
+        min_stake,
+        args.worknet_manager,
+        args.skills_uri,
+    )
 
 
 def main() -> None:
@@ -84,7 +92,10 @@ def main() -> None:
     if isinstance(nonce_resp, dict):
         raw = nonce_resp.get("nonce")
         if raw is not None and raw != "null":
-            registry_nonce = int(raw)
+            try:
+                registry_nonce = int(raw)
+            except (ValueError, TypeError):
+                pass  # 回退到链上 nonce 读取
 
     # Step 4: Batch the remaining read-only contract calls.
     #   - initialAlphaPrice() on AWPRegistry → wei AWP per whole WorknetToken
@@ -101,9 +112,9 @@ def main() -> None:
     step("get_onchain_params")
     addr_padded = pad_address(wallet_addr)
     batch_calls: list[tuple[str, str]] = [
-        (awp_registry, "0x6d345eea"),                        # initialAlphaPrice()
-        (awp_registry, "0x5bd9c498"),                        # initialAlphaMint()
-        (awp_token, f"0x7ecebe00{addr_padded}"),             # AWPToken.nonces(wallet)
+        (awp_registry, "0x6d345eea"),  # initialAlphaPrice()
+        (awp_registry, "0x5bd9c498"),  # initialAlphaMint()
+        (awp_token, f"0x7ecebe00{addr_padded}"),  # AWPToken.nonces(wallet)
     ]
     if registry_nonce is None:
         batch_calls.append((awp_registry, f"0x7ecebe00{addr_padded}"))
@@ -112,13 +123,17 @@ def main() -> None:
 
     price_hex = results[0]
     if not price_hex or price_hex in ("0x", "null"):
-        die("initialAlphaPrice() returned empty — is the AWPRegistry contract reachable?")
+        die(
+            "initialAlphaPrice() returned empty — is the AWPRegistry contract reachable?"
+        )
     initial_alpha_price = hex_to_int(price_hex)  # wei AWP per whole WorknetToken
 
     mint_hex = results[1]
     if not mint_hex or mint_hex in ("0x", "null"):
-        die("initialAlphaMint() returned empty — is the AWPRegistry contract reachable?")
-    initial_alpha_mint = hex_to_int(mint_hex)    # total WorknetTokens (wei, 18 decimals)
+        die(
+            "initialAlphaMint() returned empty — is the AWPRegistry contract reachable?"
+        )
+    initial_alpha_mint = hex_to_int(mint_hex)  # total WorknetTokens (wei, 18 decimals)
 
     # LP cost in AWP wei = initialAlphaPrice × (initialAlphaMint / 1e18)
     # Both price and mint are stored as 18-decimal wei; the division cancels one set of
@@ -227,7 +242,12 @@ def main() -> None:
     http_code, body = api_post(relay_url, relay_body)
 
     if 200 <= http_code < 300:
-        print(json.dumps(body) if isinstance(body, dict) else body)
+        result = body if isinstance(body, dict) else {"result": body}
+        result["nextAction"] = "check_status"
+        result["nextCommand"] = (
+            f"python3 scripts/query-status.py --address {wallet_addr}"
+        )
+        print(json.dumps(result))
     else:
         die(f"Relay returned HTTP {http_code}: {body}")
 

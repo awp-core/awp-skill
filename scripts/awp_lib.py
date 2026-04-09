@@ -1,4 +1,5 @@
 """AWP shared script library — API calls, wallet commands, ABI encoding, input validation"""
+
 from __future__ import annotations
 
 import argparse
@@ -27,14 +28,23 @@ RPC_URL = "https://mainnet.base.org"
 
 # Cloudflare-fronted endpoints (including mainnet.base.org) reject the default
 # Python-urllib User-Agent with 403. Send a benign identifier instead.
-_USER_AGENT = "awp-skill/1.1 (+https://github.com/awp-core/awp-skill)"
+_USER_AGENT = "awp-skill/1.4 (+https://github.com/awp-core/awp-skill)"
 
 # Chain name → chainId mapping
-_CHAIN_IDS: dict[str, int] = {"ethereum": 1, "eth": 1, "bsc": 56, "bnb": 56, "base": 8453, "arbitrum": 42161, "arb": 42161}
+_CHAIN_IDS: dict[str, int] = {
+    "ethereum": 1,
+    "eth": 1,
+    "bsc": 56,
+    "bnb": 56,
+    "base": 8453,
+    "arbitrum": 42161,
+    "arb": 42161,
+}
 _DEFAULT_CHAIN_ID = 8453  # Base
 
 
 # ── Output ────────────────────────────────────────
+
 
 def info(msg: str) -> None:
     """Print JSON info message to stderr"""
@@ -54,11 +64,14 @@ def die(msg: str) -> None:
 
 # ── HTTP ────────────────────────────────────────
 
+
 def api_post(url: str, body: dict) -> tuple[int, dict | str]:
     """POST JSON, return (http_code, parsed_body)"""
     data = json.dumps(body).encode()
     req = urllib.request.Request(
-        url, data=data, method="POST",
+        url,
+        data=data,
+        method="POST",
         headers={
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -84,7 +97,9 @@ def rpc(method: str, params: dict | None = None) -> dict | list | None:
     body = {"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1}
     data = json.dumps(body).encode()
     req = urllib.request.Request(
-        API_BASE, data=data, method="POST",
+        API_BASE,
+        data=data,
+        method="POST",
         headers={
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -96,7 +111,9 @@ def rpc(method: str, params: dict | None = None) -> dict | list | None:
             result = json.loads(resp.read().decode())
             if "error" in result:
                 err = result["error"]
-                msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+                msg = (
+                    err.get("message", str(err)) if isinstance(err, dict) else str(err)
+                )
                 die(f"RPC error: {msg}")
             return result.get("result")
     except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
@@ -107,12 +124,16 @@ def rpc(method: str, params: dict | None = None) -> dict | list | None:
 def rpc_call(to: str, data: str) -> str:
     """eth_call via JSON-RPC, return hex result"""
     payload = {
-        "jsonrpc": "2.0", "method": "eth_call",
-        "params": [{"to": to, "data": data}, "latest"], "id": 1,
+        "jsonrpc": "2.0",
+        "method": "eth_call",
+        "params": [{"to": to, "data": data}, "latest"],
+        "id": 1,
     }
     body = json.dumps(payload).encode()
     req = urllib.request.Request(
-        RPC_URL, data=body, method="POST",
+        RPC_URL,
+        data=body,
+        method="POST",
         headers={
             "Content-Type": "application/json",
             "User-Agent": _USER_AGENT,
@@ -124,7 +145,9 @@ def rpc_call(to: str, data: str) -> str:
             # Check for RPC-level errors (revert, etc.)
             if "error" in result:
                 err = result["error"]
-                msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+                msg = (
+                    err.get("message", str(err)) if isinstance(err, dict) else str(err)
+                )
                 die(f"RPC error: {msg}")
             return result.get("result", "")
     except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
@@ -142,14 +165,18 @@ def rpc_call_batch(calls: list[tuple[str, str]]) -> list[str]:
         return []
     payload = [
         {
-            "jsonrpc": "2.0", "method": "eth_call",
-            "params": [{"to": to, "data": data}, "latest"], "id": idx,
+            "jsonrpc": "2.0",
+            "method": "eth_call",
+            "params": [{"to": to, "data": data}, "latest"],
+            "id": idx,
         }
-        for idx, (to, data) in enumerate(calls)
+        for idx, (to, data) in enumerate(calls, start=1)
     ]
     body = json.dumps(payload).encode()
     req = urllib.request.Request(
-        RPC_URL, data=body, method="POST",
+        RPC_URL,
+        data=body,
+        method="POST",
         headers={
             "Content-Type": "application/json",
             "User-Agent": _USER_AGENT,
@@ -174,6 +201,8 @@ def rpc_call_batch(calls: list[tuple[str, str]]) -> list[str]:
             msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
             die(f"RPC batch error: {msg}")
         out.append(r.get("result", ""))
+    if len(out) != len(calls):
+        die(f"RPC batch: expected {len(calls)} results, got {len(out)}")
     return out
 
 
@@ -186,7 +215,12 @@ def hex_to_int(val: str) -> int:
 
 # ── Chain selection ─────────────────────────────────────
 
-_ID_TO_CANONICAL: dict[int, str] = {1: "ethereum", 56: "bsc", 8453: "base", 42161: "arbitrum"}
+_ID_TO_CANONICAL: dict[int, str] = {
+    1: "ethereum",
+    56: "bsc",
+    8453: "base",
+    42161: "arbitrum",
+}
 
 
 def _get_chain_name() -> str:
@@ -209,6 +243,7 @@ def _get_chain_name() -> str:
 
 # ── Wallet commands ─────────────────────────────────────
 
+
 def _find_awp_wallet() -> str:
     """Find the awp-wallet binary, checking PATH + common install locations.
 
@@ -218,6 +253,7 @@ def _find_awp_wallet() -> str:
     Python scripts work even when Claude's Step 2 PATH export didn't stick.
     """
     import shutil
+
     # 1. Check PATH first (fast path)
     found = shutil.which("awp-wallet")
     if found:
@@ -265,13 +301,17 @@ def wallet_cmd(args: list[str]) -> str:
     try:
         result = subprocess.run(
             [_AWP_WALLET_BIN] + args,
-            capture_output=True, text=True, timeout=60,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
     except subprocess.TimeoutExpired:
         die(f"awp-wallet {args[0]} timed out after 60s")
         return ""  # unreachable
     if result.returncode != 0:
-        die(f"awp-wallet {args[0]} failed: {result.stderr.strip() or result.stdout.strip()}")
+        die(
+            f"awp-wallet {args[0]} failed: {result.stderr.strip() or result.stdout.strip()}"
+        )
     return result.stdout.strip()
 
 
@@ -299,7 +339,20 @@ def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
     """
     bridge = str(Path(__file__).parent / "wallet-raw-call.mjs")
     chain = _get_chain_name()
-    args = ["node", bridge, "--token", token, "--to", to, "--data", data, "--value", value, "--chain", chain]
+    args = [
+        "node",
+        bridge,
+        "--token",
+        token,
+        "--to",
+        to,
+        "--data",
+        data,
+        "--value",
+        value,
+        "--chain",
+        chain,
+    ]
     try:
         result = subprocess.run(args, capture_output=True, text=True, timeout=120)
     except subprocess.TimeoutExpired:
@@ -313,7 +366,9 @@ def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
         parsed = json.loads(stdout)
         if isinstance(parsed, dict) and parsed.get("status") == "reverted":
             tx_hash = parsed.get("txHash", "unknown")
-            die(f"Transaction reverted (txHash: {tx_hash}). Check the transaction on the block explorer.")
+            die(
+                f"Transaction reverted (txHash: {tx_hash}). Check the transaction on the block explorer."
+            )
     except json.JSONDecodeError:
         pass  # Not JSON — return as-is
     return stdout
@@ -321,8 +376,19 @@ def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
 
 def wallet_approve(token: str, asset: str, spender: str, amount: str) -> str:
     """Approve token spend, return result JSON"""
-    return wallet_cmd(["approve", "--token", token, "--asset", asset,
-                        "--spender", spender, "--amount", amount])
+    return wallet_cmd(
+        [
+            "approve",
+            "--token",
+            token,
+            "--asset",
+            asset,
+            "--spender",
+            spender,
+            "--amount",
+            amount,
+        ]
+    )
 
 
 def wallet_sign_typed_data(token: str, data: dict) -> str:
@@ -339,6 +405,7 @@ def wallet_sign_typed_data(token: str, data: dict) -> str:
 
 
 # ── Contract registry ───────────────────────────────────
+
 
 def get_registry() -> dict:
     """Fetch the contract registry entry for the currently selected chain.
@@ -368,16 +435,27 @@ def get_registry() -> dict:
     if isinstance(result, dict):
         entry = result
     elif isinstance(result, list) and result:
-        entry = next((r for r in result if isinstance(r, dict) and r.get("chainId") == target_chain_id), None)
+        entry = next(
+            (
+                r
+                for r in result
+                if isinstance(r, dict) and r.get("chainId") == target_chain_id
+            ),
+            None,
+        )
         if entry is None:
-            info(f"Chain {target_chain_id} not found in registry list, using first entry")
+            info(
+                f"Chain {target_chain_id} not found in registry list, using first entry"
+            )
             entry = result[0]
 
     if not isinstance(entry, dict) or not entry.get("chainId"):
         die(f"Invalid registry.get response for chain {target_chain_id}: {result}")
 
     if entry.get("chainId") != target_chain_id:
-        info(f"Registry returned chain {entry.get('chainId')}, expected {target_chain_id}")
+        info(
+            f"Registry returned chain {entry.get('chainId')}, expected {target_chain_id}"
+        )
 
     return entry
 
@@ -392,15 +470,18 @@ def require_contract(registry: dict, key: str) -> str:
 
 # ── ABI encoding ─────────────────────────────────────
 
+
 def pad_address(addr: str) -> str:
-    """Pad 0x address to 64 characters (zero-padded on left), validate hex format"""
+    """Pad 0x address to 64 characters (zero-padded on left), validate hex format and length"""
     raw = addr.lower()
     if raw.startswith("0x"):
         raw = raw[2:]
     if not re.match(r"^[0-9a-f]+$", raw):
         die(f"pad_address: invalid hex characters in address: {addr}")
-    if len(raw) > 64:
-        die(f"pad_address: address too long after stripping 0x prefix: {addr}")
+    if len(raw) != 40:
+        die(
+            f"pad_address: address must be exactly 20 bytes (40 hex chars), got {len(raw)}: {addr}"
+        )
     return raw.zfill(64)
 
 
@@ -476,7 +557,9 @@ def days_to_seconds(days: str) -> int:
 def encode_calldata(selector: str, *params: str) -> str:
     """Concatenate selector + params, validate selector format (0x + 8 hex)"""
     if not re.match(r"^0x[0-9a-fA-F]{8}$", selector):
-        die(f"encode_calldata: invalid selector format: {selector} (expected 0x + 8 hex chars)")
+        die(
+            f"encode_calldata: invalid selector format: {selector} (expected 0x + 8 hex chars)"
+        )
     return selector + "".join(params)
 
 
@@ -574,6 +657,7 @@ def validate_positive_int(val: str, name: str = "id") -> int:
 
 # ── EIP-712 construction ─────────────────────────────────
 
+
 def get_eip712_domain(registry: dict, contract_name: str = "AWPRegistry") -> dict:
     """Get EIP-712 domain info for AWPRegistry or AWPAllocator."""
     domain = registry.get("eip712Domain", {})
@@ -582,11 +666,18 @@ def get_eip712_domain(registry: dict, contract_name: str = "AWPRegistry") -> dic
     if contract_name == "AWPAllocator":
         # AWPAllocator uses the dedicated allocatorEip712Domain field from registry
         alloc_domain = registry.get("allocatorEip712Domain", {})
+        alloc_contract = alloc_domain.get("verifyingContract") or registry.get(
+            "awpAllocator", ""
+        )
+        if not alloc_contract:
+            die("Cannot determine AWPAllocator verifyingContract from registry")
         return {
             "name": alloc_domain.get("name", "AWPAllocator"),
             "version": str(alloc_domain.get("version", "1")),
-            "chainId": int(alloc_domain.get("chainId") or chain_id or _DEFAULT_CHAIN_ID),
-            "verifyingContract": alloc_domain.get("verifyingContract") or registry.get("awpAllocator", ""),
+            "chainId": int(
+                alloc_domain.get("chainId") or chain_id or _DEFAULT_CHAIN_ID
+            ),
+            "verifyingContract": alloc_contract,
         }
 
     # AWPRegistry domain (default)
@@ -615,8 +706,13 @@ def get_eip712_domain(registry: dict, contract_name: str = "AWPRegistry") -> dic
     }
 
 
-def build_eip712(domain: dict, primary_type: str, type_fields: list[dict],
-                 message: dict, extra_types: dict[str, list[dict]] | None = None) -> dict:
+def build_eip712(
+    domain: dict,
+    primary_type: str,
+    type_fields: list[dict],
+    message: dict,
+    extra_types: dict[str, list[dict]] | None = None,
+) -> dict:
     """Build complete EIP-712 typed data (supports nested struct types)."""
     types: dict[str, list[dict]] = {
         "EIP712Domain": [
@@ -638,6 +734,7 @@ def build_eip712(domain: dict, primary_type: str, type_fields: list[dict],
 
 
 # ── Common argument parsing ─────────────────────────────────
+
 
 def base_parser(description: str) -> argparse.ArgumentParser:
     """Create base argument parser with --token"""

@@ -224,7 +224,9 @@ def main() -> None:
         args.lock_days,
     ]
     if do_allocate:
-        stake_args += ["--agent", wallet_addr, "--worknet", str(worknet_id)]
+        # 自分配：agent = 自己的地址（Solo Mining 模式下的标准行为）
+        agent_for_allocate = args.target if args.target else wallet_addr
+        stake_args += ["--agent", agent_for_allocate, "--worknet", str(worknet_id)]
 
     stake_output = _run_script("relay-stake.py", stake_args)
 

@@ -3,8 +3,10 @@
 addToPosition(uint256 tokenId, uint256 amount, uint64 newLockEndTime)
 Checks remainingTime, fetches current lockEndTime, then approve + addToPosition. Requires ETH for gas.
 """
+
 import re
 import time as _time
+from decimal import Decimal
 
 from awp_lib import *
 
@@ -14,7 +16,11 @@ def main() -> None:
     parser = base_parser("Add AWP to existing veAWP position")
     parser.add_argument("--position", required=True, help="veAWP token ID")
     parser.add_argument("--amount", required=True, help="AWP amount (human readable)")
-    parser.add_argument("--extend-days", default="0", help="Additional days to extend the lock (default 0)")
+    parser.add_argument(
+        "--extend-days",
+        default="0",
+        help="Additional days to extend the lock (default 0)",
+    )
     args = parser.parse_args()
 
     position = validate_positive_int(args.position, "position")
@@ -24,7 +30,7 @@ def main() -> None:
     extend_days_str: str = args.extend_days
     if not re.match(r"^[0-9]+\.?[0-9]*$", extend_days_str):
         die("Invalid --extend-days: must be a non-negative number")
-    extend_days = int(extend_days_str) if "." not in extend_days_str else float(extend_days_str)
+    extend_days = Decimal(extend_days_str)
 
     # ── Pre-checks ──
     registry = get_registry()
@@ -36,16 +42,20 @@ def main() -> None:
     # ── Step 1: Batch two independent reads to save a round-trip ──
     #   - remainingTime(tokenId)  selector 0x0c64a7f2 — is the lock still active?
     #   - positions(tokenId)      selector 0x99fbab88 — returns (amount, lockEndTime, createdAt)
-    remaining_hex, positions_hex = rpc_call_batch([
-        (ve_awp, encode_calldata("0x0c64a7f2", token_id_hex)),
-        (ve_awp, encode_calldata("0x99fbab88", token_id_hex)),
-    ])
+    remaining_hex, positions_hex = rpc_call_batch(
+        [
+            (ve_awp, encode_calldata("0x0c64a7f2", token_id_hex)),
+            (ve_awp, encode_calldata("0x99fbab88", token_id_hex)),
+        ]
+    )
 
     if not remaining_hex or remaining_hex in ("0x", "null"):
         die("remainingTime() call failed — position may not exist")
     remaining = hex_to_int(remaining_hex)
     if remaining == 0:
-        die(f"PositionExpired: position {position} lock has expired (remainingTime=0). Cannot add to an expired position.")
+        die(
+            f"PositionExpired: position {position} lock has expired (remainingTime=0). Cannot add to an expired position."
+        )
 
     if not positions_hex or positions_hex in ("0x", "null"):
         die("positions() call failed")
@@ -57,7 +67,7 @@ def main() -> None:
     # ── Step 3: Compute newLockEndTime ──
     now = int(_time.time())
     if extend_days > 0:
-        candidate = now + int(extend_days * 86400)
+        candidate = now + int(extend_days * Decimal(86400))
         new_lock_end = max(current_lock_end, candidate)
     else:
         new_lock_end = current_lock_end
@@ -79,8 +89,13 @@ def main() -> None:
         pad_uint256(new_lock_end),
     )
 
-    step("addToPosition", tokenId=position, amount_wei=str(amount_wei),
-         newLockEndTime=new_lock_end, remainingTime=remaining)
+    step(
+        "addToPosition",
+        tokenId=position,
+        amount_wei=str(amount_wei),
+        newLockEndTime=new_lock_end,
+        remainingTime=remaining,
+    )
     result = wallet_send(args.token, ve_awp, calldata)
     print(result)
 

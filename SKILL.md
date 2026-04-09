@@ -1,6 +1,6 @@
 ---
 name: awp
-version: 1.4.2
+version: 1.4.3
 description: >
   Use this skill for ANYTHING related to AWP (Agent Work Protocol). AWP is a multi-chain
   DeFi protocol for agent mining — if the user mentions AWP, worknets, agent staking, or
@@ -46,7 +46,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 1.4.2**
+**Skill version: 1.4.3**
 
 ## Requirements & Security
 
@@ -717,7 +717,7 @@ preflight.py → nextAction: "register" → relay-start.py →
 | Value | Emitted by | Meaning |
 |-------|-----------|---------|
 | `pick_worknet` | relay-start, relay-onboard, onchain-onboard | Just registered, pick a worknet |
-| `allocate` | relay-stake, onchain-stake, onchain-onboard | Staked, need to allocate |
+| `allocate` | relay-stake, relay-onboard, onchain-stake, onchain-onboard | Staked, need to allocate |
 | `earning` | relay-allocate, onchain-stake, onchain-onboard | Just allocated, now earning |
 | `check_status` | relay-allocate (deallocate), onchain-unstake | Post-action status check |
 
@@ -860,13 +860,12 @@ Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay
 
 | Endpoint | Description | EIP-712 Domain |
 |----------|-------------|----------------|
-| `POST /api/relay/register` | Register (= setRecipient to self) | AWPRegistry |
 | `POST /api/relay/bind` | Bind agent to target | AWPRegistry |
 | `POST /api/relay/unbind` | Unbind from tree | AWPRegistry |
 | `POST /api/relay/set-recipient` | Set reward recipient | AWPRegistry |
 | `POST /api/relay/grant-delegate` | Authorize a delegate | AWPRegistry |
 | `POST /api/relay/revoke-delegate` | Revoke a delegate | AWPRegistry |
-| `POST /api/relay/activate-worknet` | Activate a pending worknet | AWPRegistry |
+| `POST /api/relay/activate-worknet` | Activate a pending worknet (no bundled script — call manually) | AWPRegistry |
 | `POST /api/relay/register-worknet` | Register worknet (with AWP permit) | AWPRegistry |
 | `POST /api/relay/stake/prepare` | **LLM-friendly:** returns pre-built typedData + submitTo body (no manual nonce/domain needed) | -- |
 | `POST /api/relay/stake` | Gasless staking (ERC-2612 permit) | AWP Token (permit domain) |

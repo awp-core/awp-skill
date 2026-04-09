@@ -107,7 +107,7 @@ async function isWorknetManager(address) {
           body: JSON.stringify({
             jsonrpc: "2.0",
             method: "subnets.list",
-            params: { status, limit: 100, page },
+            params: { status, limit: 100, page, chainId: CHAIN_IDS[chainName?.toLowerCase()] || 8453 },
             id: 2,
           }),
           signal: AbortSignal.timeout(10_000),

@@ -83,9 +83,13 @@ def main() -> None:
     amount_wei = to_wei(args.amount)
     lock_seconds = days_to_seconds(args.lock_days)
 
-    # 最短 1 天（86400 秒）
+    # 最短 1 天（86400 秒），且必须为整天
     if lock_seconds < 86400:
         die("--lock-days must be >= 1 (minimum lock duration is 1 day)")
+    if lock_seconds % 86400 != 0:
+        die(
+            f"--lock-days must be a whole number (got {args.lock_days} days = {lock_seconds}s, not divisible by 86400)"
+        )
     # uint64 溢出保护
     if lock_seconds > 2**64 - 1:
         die(f"--lock-days too large: {args.lock_days} days exceeds uint64 max")
@@ -205,7 +209,9 @@ def main() -> None:
                 if e.code < 500:
                     die(f"Status endpoint returned HTTP {e.code} for tx {tx_hash}")
                 # 5xx — 暂时性服务端错误，重试
-            except (urllib.error.URLError, json.JSONDecodeError, OSError):
+            except json.JSONDecodeError:
+                info(f"Status endpoint returned non-JSON for tx {tx_hash}, retrying...")
+            except (urllib.error.URLError, OSError):
                 pass  # 暂时性网络错误，重试
 
         if not confirmed:
