@@ -27,7 +27,9 @@ def parse_args() -> tuple[str, str, str]:
     """Parse command-line arguments, returning (token, mode, target)"""
     parser = base_parser("AWP gasless onboarding — register or bind via relay")
     parser.add_argument(
-        "--mode", required=True, choices=["principal", "agent"],
+        "--mode",
+        required=True,
+        choices=["principal", "agent"],
         help="principal (register / set self as recipient) or agent (bind to target address)",
     )
     parser.add_argument("--target", default="", help="target address in agent mode")
@@ -49,7 +51,9 @@ def main() -> None:
     step("fetch_registry")
     registry = get_registry()
     domain = get_eip712_domain(registry)
-    info(f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}")
+    info(
+        f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}"
+    )
 
     # Step 2: Get wallet address
     step("get_wallet_address")
@@ -63,12 +67,36 @@ def main() -> None:
         bound_to = check.get("boundTo", "")
 
         if mode == "principal" and is_registered:
-            print(json.dumps({"status": "already_registered", "address": wallet_addr}))
+            print(
+                json.dumps(
+                    {
+                        "status": "already_registered",
+                        "address": wallet_addr,
+                        "nextAction": "pick_worknet",
+                        "nextCommand": f"python3 scripts/preflight.py --address {wallet_addr}",
+                    }
+                )
+            )
             return
 
         zero_addr = "0x0000000000000000000000000000000000000000"
-        if mode == "agent" and bound_to and bound_to != "null" and bound_to != zero_addr:
-            print(json.dumps({"status": "already_bound", "address": wallet_addr, "boundTo": bound_to}))
+        if (
+            mode == "agent"
+            and bound_to
+            and bound_to != "null"
+            and bound_to != zero_addr
+        ):
+            print(
+                json.dumps(
+                    {
+                        "status": "already_bound",
+                        "address": wallet_addr,
+                        "boundTo": bound_to,
+                        "nextAction": "pick_worknet",
+                        "nextCommand": f"python3 scripts/preflight.py --address {wallet_addr}",
+                    }
+                )
+            )
             return
 
     # Step 4: Get nonce
@@ -152,7 +180,10 @@ def main() -> None:
     http_code, body = api_post(relay_endpoint, relay_body)
 
     if 200 <= http_code < 300:
-        print(json.dumps(body) if isinstance(body, dict) else body)
+        result = body if isinstance(body, dict) else {"result": body}
+        result["nextAction"] = "pick_worknet"
+        result["nextCommand"] = f"python3 scripts/preflight.py --address {wallet_addr}"
+        print(json.dumps(result))
     else:
         die(f"Relay returned HTTP {http_code}: {body}")
 

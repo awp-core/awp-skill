@@ -200,9 +200,14 @@ def main() -> None:
 
     # ── Summary hints for LLM ──
     hints: list[str] = []
+    next_action: str = "ready"
+    next_command: str = ""
+
     if output.get("registered") is False:
-        hints.append("Not registered. Run: onchain-onboard.py or relay-start.py")
-    if (
+        hints.append("Not registered. Run: relay-start.py or relay-onboard.py")
+        next_action = "register"
+        next_command = "python3 scripts/preflight.py"
+    elif (
         output["balance"]
         and int(output["balance"]["totalStaked_wei"]) > 0
         and not output["allocations"]
@@ -210,6 +215,14 @@ def main() -> None:
         hints.append(
             "Has staked AWP but no allocations — not earning rewards. Allocate to an agent+worknet."
         )
+        next_action = "allocate"
+        next_command = f"python3 scripts/relay-allocate.py --token $TOKEN --mode allocate --agent {addr} --worknet <WORKNET_ID> --amount <AMOUNT>"
+    elif output.get("registered") is True and (
+        not output["balance"] or int(output["balance"]["totalStaked_wei"]) == 0
+    ):
+        next_action = "pick_worknet"
+        next_command = f"python3 scripts/preflight.py --address {addr}"
+
     if output["positions"]:
         expired_count = sum(1 for p in output["positions"] if p["expired"])
         if expired_count > 0:
@@ -222,8 +235,14 @@ def main() -> None:
             hints.append(
                 "All positions expired but still allocated — deallocate first, then withdraw."
             )
+            next_action = "deallocate_then_withdraw"
+            next_command = "python3 scripts/onchain-unstake.py --token $TOKEN"
+
     if hints:
         output["hints"] = hints
+    output["nextAction"] = next_action
+    if next_command:
+        output["nextCommand"] = next_command
 
     print(json.dumps(output, indent=2))
 

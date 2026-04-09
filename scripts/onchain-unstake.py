@@ -139,10 +139,12 @@ def main() -> None:
     # ── Summary ──
     import json
 
-    summary = {
+    summary: dict = {
         "withdrawn": withdrawn,
         "skipped_locked": skipped,
         "deallocated": deallocated,
+        "nextAction": "check_status",
+        "nextCommand": f"python3 scripts/query-status.py --address {wallet_addr}",
     }
     if withdrawn == 0 and skipped > 0:
         info(f"No positions withdrawn — {skipped} position(s) still locked")

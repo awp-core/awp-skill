@@ -1,5 +1,37 @@
 # Changelog
 
+## v1.4.0
+
+### Anti-hallucination: preflight state machine + script chain
+
+Core anti-hallucination improvement: LLM no longer needs to make sequential
+decisions during onboarding. Every script now returns machine-readable
+`nextAction` + `nextCommand` fields, forming an unambiguous chain.
+
+New script:
+- `preflight.py` — state machine that checks ALL preconditions (wallet
+  installed/init/unlocked, registered, staked, allocated, free worknets) and
+  returns exactly what to do next. Safe, read-only, no wallet token needed.
+
+Script output contract:
+- All scripts (`relay-start.py`, `relay-stake.py`, `relay-allocate.py`,
+  `relay-onboard.py`, `onchain-stake.py`, `onchain-onboard.py`,
+  `onchain-unstake.py`, `query-status.py`, `query-worknet.py`) now include
+  `nextAction` and `nextCommand` in their JSON output.
+
+Precondition checks (idempotency):
+- `relay-stake.py`: verifies registration before staking (prevents wasted gas).
+- `relay-allocate.py`: verifies staking balance before allocating; verifies
+  allocations exist before deallocating.
+- `onchain-stake.py`: verifies registration before deposit.
+
+SKILL.md updates:
+- New "Error Recovery Protocol" section: if any step fails, run `preflight.py`.
+- New "Script Output Contract" section: documents all `nextAction` values.
+- Onboarding Flow rewritten to preflight-driven loop.
+- Pre-Flight Checklist updated to recommend `preflight.py` first.
+- `preflight.py` added to Bundled Scripts listing.
+
 ## v1.3.1
 
 ### Fully gasless onboarding + worknet query + bug fixes

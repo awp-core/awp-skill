@@ -9,6 +9,8 @@ If --agent and --worknet are omitted, only deposit is performed (no allocate).
 Requires ETH for gas.
 """
 
+import json
+
 from awp_lib import *
 
 
@@ -57,6 +59,16 @@ def main() -> None:
     awp_token = require_contract(registry, "awpToken")
     ve_awp = require_contract(registry, "veAWP")
 
+    # 前置条件：确认已注册（未注册时质押没有意义）
+    step("precondition_check")
+    wallet_addr = get_wallet_address()
+    check = rpc("address.check", {"address": wallet_addr})
+    if isinstance(check, dict) and not check.get("isRegistered", False):
+        die(
+            "Not registered on AWP. Register first (free, gasless): "
+            "python3 scripts/relay-start.py --token $TOKEN --mode principal"
+        )
+
     # Unit conversion
     amount_wei = to_wei(amount)
     lock_seconds = days_to_seconds(lock_days)
@@ -84,15 +96,22 @@ def main() -> None:
     info(f"Deposit confirmed: {deposit_result}")
 
     if not do_allocate:
-        print(deposit_result)
+        print(
+            json.dumps(
+                {
+                    "status": "deposited",
+                    "result": deposit_result,
+                    "nextAction": "allocate",
+                    "nextCommand": f"python3 scripts/onchain-allocate.py --token $TOKEN --agent {wallet_addr} --worknet <WORKNET_ID> --amount {amount}",
+                }
+            )
+        )
         info(
-            "Deposit complete (no allocate). To start earning, allocate to an agent+worknet: "
-            "python3 scripts/onchain-allocate.py --token $TOKEN --agent <addr> --worknet <id> --amount <amount>"
+            "Deposit complete (no allocate). To start earning, allocate to an agent+worknet."
         )
         return
 
     # ── Step 3: Allocate to agent+worknet ──
-    wallet_addr = get_wallet_address()
     awp_allocator = require_contract(registry, "awpAllocator")
 
     # allocate(address,address,uint256,uint256) selector = 0xd035a9a7
@@ -112,7 +131,16 @@ def main() -> None:
         amount=f"{amount} AWP",
     )
     allocate_result = wallet_send(token, awp_allocator, allocate_calldata)
-    print(allocate_result)
+    print(
+        json.dumps(
+            {
+                "status": "staked_and_allocated",
+                "result": allocate_result,
+                "nextAction": "earning",
+                "nextCommand": f"python3 scripts/query-status.py --address {wallet_addr}",
+            }
+        )
+    )
     info(
         f"Staked and allocated {amount} AWP to agent {agent_addr} on worknet {worknet_id}. Now earning rewards."
     )

@@ -31,6 +31,7 @@ from awp_lib import (
     get_wallet_address,
     info,
     pad_address,
+    rpc,
     rpc_call,
     step,
     to_wei,
@@ -77,7 +78,7 @@ def main() -> None:
         die(f"--lock-days too large: {args.lock_days} days exceeds uint64 max")
     # uint128 guard (VeAWPHelper rejects amounts > uint128 max)
     if amount_wei > 2**128 - 1:
-        die(f"--amount too large: exceeds uint128 max")
+        die("--amount too large: exceeds uint128 max")
 
     do_allocate = bool(args.agent and args.worknet)
     if bool(args.agent) != bool(args.worknet):
@@ -100,6 +101,15 @@ def main() -> None:
     ve_awp_helper = registry.get("veAWPHelper", VE_AWP_HELPER)
 
     wallet_addr = get_wallet_address()
+
+    # 前置条件：确认已注册（未注册时质押没有意义）
+    step("precondition_check")
+    check = rpc("address.check", {"address": wallet_addr})
+    if isinstance(check, dict) and not check.get("isRegistered", False):
+        die(
+            "Not registered on AWP. Register first (free, gasless): "
+            "python3 scripts/relay-start.py --token $TOKEN --mode principal"
+        )
     chain_id = registry.get("chainId", 8453)
 
     # Read AWPToken.nonces(user) on-chain — selector 0x7ecebe00
@@ -164,10 +174,13 @@ def main() -> None:
 
     if 200 <= http_code < 300:
         info(f"Gasless stake successful: {body}")
-        if isinstance(body, dict):
-            print(json.dumps(body))
-        else:
-            print(body)
+        result = body if isinstance(body, dict) else {"result": body}
+        if not do_allocate:
+            result["nextAction"] = "allocate"
+            result["nextCommand"] = (
+                f"python3 scripts/relay-allocate.py --token $TOKEN --mode allocate --agent {wallet_addr} --worknet <WORKNET_ID> --amount {args.amount}"
+            )
+        print(json.dumps(result))
     else:
         die(f"Relay returned HTTP {http_code}: {body}")
 

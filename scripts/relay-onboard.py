@@ -200,7 +200,16 @@ def main() -> None:
 
     # ── Phase 2: Gasless stake (optional) ──
     if not do_stake:
-        print(json.dumps({"status": "registered", "address": wallet_addr}))
+        print(
+            json.dumps(
+                {
+                    "status": "registered",
+                    "address": wallet_addr,
+                    "nextAction": "pick_worknet",
+                    "nextCommand": f"python3 scripts/preflight.py --address {wallet_addr}",
+                }
+            )
+        )
         info("Registration complete. No staking requested.")
         return
 

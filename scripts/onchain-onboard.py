@@ -192,7 +192,16 @@ def main() -> None:
 
     # ── Phase 2: Deposit (optional) ──
     if not do_deposit:
-        print(json.dumps({"status": "registered", "address": wallet_addr}))
+        print(
+            json.dumps(
+                {
+                    "status": "registered",
+                    "address": wallet_addr,
+                    "nextAction": "pick_worknet",
+                    "nextCommand": f"python3 scripts/preflight.py --address {wallet_addr}",
+                }
+            )
+        )
         info("Registration complete. No deposit requested.")
         if not already_registered:
             info("To start earning: deposit AWP and allocate to a worknet.")
@@ -222,7 +231,13 @@ def main() -> None:
     if not do_allocate:
         print(
             json.dumps(
-                {"status": "deposited", "address": wallet_addr, "amount": args.amount}
+                {
+                    "status": "deposited",
+                    "address": wallet_addr,
+                    "amount": args.amount,
+                    "nextAction": "allocate",
+                    "nextCommand": f"python3 scripts/relay-allocate.py --token $TOKEN --mode allocate --agent {wallet_addr} --worknet <WORKNET_ID> --amount {args.amount}",
+                }
             )
         )
         info("Deposit complete. To earn rewards, allocate to an agent+worknet.")
@@ -250,6 +265,8 @@ def main() -> None:
                 "address": wallet_addr,
                 "deposited": args.amount,
                 "allocatedTo": {"agent": wallet_addr, "worknet": worknet_id},
+                "nextAction": "earning",
+                "nextCommand": f"python3 scripts/query-status.py --address {wallet_addr}",
             }
         )
     )

@@ -21,6 +21,7 @@ from awp_lib import (
     step,
     to_wei,
     validate_address,
+    validate_positive_int,
     validate_positive_number,
     wallet_sign_typed_data,
 )
@@ -28,9 +29,13 @@ from awp_lib import (
 
 def parse_args() -> tuple[str, str, str, str, str]:
     """Parse CLI arguments, return (token, mode, agent, worknet, amount)."""
-    parser = base_parser("AWP gasless allocate — allocate or deallocate stake via relay")
+    parser = base_parser(
+        "AWP gasless allocate — allocate or deallocate stake via relay"
+    )
     parser.add_argument(
-        "--mode", required=True, choices=["allocate", "deallocate"],
+        "--mode",
+        required=True,
+        choices=["allocate", "deallocate"],
         help="allocate (add stake) or deallocate (remove stake)",
     )
     parser.add_argument("--agent", required=True, help="agent address")
@@ -52,11 +57,28 @@ def main() -> None:
     step("fetch_registry")
     registry = get_registry()
     domain = get_eip712_domain(registry, "AWPAllocator")
-    info(f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}")
+    info(
+        f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}"
+    )
 
     # Step 2: Get wallet address
     step("get_wallet_address")
     wallet_addr = get_wallet_address()
+
+    # Step 2.5: Precondition check — verify staking state before proceeding
+    step("precondition_check")
+    balance = rpc("staking.getBalance", {"address": wallet_addr})
+    if isinstance(balance, dict):
+        try:
+            if mode == "allocate" and int(balance.get("totalStaked", "0")) == 0:
+                die(
+                    "No staked AWP. Stake first: "
+                    "python3 scripts/relay-stake.py --token $TOKEN --amount <AMOUNT> --lock-days <DAYS>"
+                )
+            if mode == "deallocate" and int(balance.get("totalAllocated", "0")) == 0:
+                die("No allocations found — nothing to deallocate.")
+        except (ValueError, TypeError):
+            pass  # 无法解析余额，继续执行（让合约来拒绝）
 
     # Step 3: Convert amount to wei
     amount_wei = to_wei(amount_str)
@@ -128,7 +150,18 @@ def main() -> None:
     http_code, body = api_post(relay_endpoint, relay_body)
 
     if 200 <= http_code < 300:
-        print(json.dumps(body) if isinstance(body, dict) else body)
+        result = body if isinstance(body, dict) else {"result": body}
+        if mode == "allocate":
+            result["nextAction"] = "earning"
+            result["nextCommand"] = (
+                f"python3 scripts/query-status.py --address {wallet_addr}"
+            )
+        else:
+            result["nextAction"] = "check_status"
+            result["nextCommand"] = (
+                f"python3 scripts/query-status.py --address {wallet_addr}"
+            )
+        print(json.dumps(result))
     else:
         die(f"Relay returned HTTP {http_code}: {body}")
 

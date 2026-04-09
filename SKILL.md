@@ -1,6 +1,6 @@
 ---
 name: awp
-version: 1.3.1
+version: 1.4.0
 description: >
   Use this skill for ANYTHING related to AWP (Agent Work Protocol). AWP is a multi-chain
   DeFi protocol for agent mining — if the user mentions AWP, worknets, agent staking, or
@@ -46,7 +46,7 @@ metadata:
 
 # AWP Registry
 
-**Skill version: 1.3.1**
+**Skill version: 1.4.0**
 
 ## Requirements & Security
 
@@ -462,21 +462,31 @@ awp help          → this list
 
 ## Onboarding Flow
 
-When the user says "start working", "get started", or similar, run this guided flow. The entire flow is FREE — no AWP tokens or ETH needed.
+When the user says "start working", "get started", or similar, use the **preflight-driven flow**.
+The entire flow is FREE — no AWP tokens or ETH needed.
 
-**Step 1: Check wallet**
-- No wallet → agent runs `awp-wallet init` (handles credentials internally, no password needed)
-- Wallet locked → `TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")` — capture the session token for subsequent script calls
-- Print: `[1/4] wallet       <short_address> ✓`
+### Preflight-Driven Onboarding (recommended)
 
-**Step 2: Register (FREE, gasless)**
+Instead of manually checking each step, run `preflight.py` and follow its output:
+
 ```bash
-curl -s -X POST https://api.awp.sh/v2 \
-  -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"address.check","params":{"address":"'$WALLET_ADDR'"},"id":1}'
+python3 scripts/preflight.py
 ```
-- Already registered → proceed to Step 3
-- Not registered → **present both options and WAIT for the user to choose.** Do NOT auto-select either option. The user must explicitly pick one.
+
+The script returns JSON with the exact next step. Follow the loop:
+
+```
+1. Run preflight.py
+2. Read nextAction from output
+3. If nextAction == "ready" → done
+4. If nextAction == "register" → show options A/B to user (see below),
+   wait for choice, execute the chosen option's command, then go to step 1
+5. Otherwise → execute nextCommand, then go to step 1
+```
+
+### Registration Choice (when preflight returns nextAction: "register")
+
+**Present both options and WAIT for the user to choose.** Do NOT auto-select.
 
 ```
 ── how do you want to start? ─────
@@ -494,35 +504,19 @@ curl -s -X POST https://api.awp.sh/v2 \
 ───────────────────────────────────
 ```
 
-**Option A** (Solo Mining) — after user picks A:
-```bash
-python3 scripts/relay-start.py --token $TOKEN --mode principal
-```
+The preflight output includes an `options` object with the exact command for each choice.
 
-**Option B** (Delegated Mining) — after user picks B:
-Ask the user for their wallet address, then:
-```bash
-python3 scripts/relay-start.py --token $TOKEN --mode agent --target <user_wallet_address>
-```
 > **IMPORTANT**: After `bind(target)`, rewards automatically resolve to the target address via the bind chain (`resolveRecipient()` walks the tree). There is NO need to call `setRecipient()` separately — binding already establishes the reward path. Do NOT suggest or execute `setRecipient()` after a successful bind.
 
-Print: `[2/4] registered   ✓  (free, no AWP required)`
+### Worknet Selection (when preflight returns nextAction: "pick_worknet")
 
-**Step 3: Auto-select a free worknet**
-```bash
-curl -s -X POST https://api.awp.sh/v2 \
-  -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"subnets.list","params":{"status":"Active","limit":10},"id":1}'
-```
-Filter for worknets with `min_stake = 0` AND `skills_uri` not empty. These worknets are FREE to join — no staking needed.
+Preflight includes a `freeWorknets` array when available. If there is exactly one free worknet
+with a skill: auto-select it without asking. If there are multiple: show only the free ones.
 
-**If the result is an empty array** (no active worknets exist on any chain), this is
-normal on a newly launched chain — the protocol is live but no one has registered a worknet
-yet. Do NOT treat this as an error. Print:
+**If no worknets exist** (preflight returns nextAction: "wait_for_worknets"), this is
+normal on a newly launched chain. Do NOT treat as an error:
 
 ```
-[3/4] discovering worknets...
-
 ── no active worknets yet ────────
 The AWP network is live and your agent is registered,
 but no worknets have been created yet on this chain.
@@ -530,54 +524,24 @@ but no worknets have been created yet on this chain.
 Your setup is complete:
   ✓ wallet ready
   ✓ registered on AWP
-  ✓ all dependencies installed
   ✓ ready to accept tasks
 
-What happens next:
-  - When the first worknet goes live, you can join instantly
-  - Run "list worknets" anytime to check for new ones
-  - No further setup needed — you're first in line
+Run "list worknets" anytime to check for new ones.
 ──────────────────────────────────
 ```
 
-Then skip Step 4 and go directly to Step 8 (route to action). Do NOT suggest the user
-"fix" anything, install anything else, or troubleshoot — there is nothing wrong. The
-user is simply early.
+### Installing Worknet Skill
 
-**If worknets exist:**
+Check the worknet's `skills_uri` source. If it is from `github.com/awp-worknet/*`, install directly. If it is from a third-party source, show a warning and ask for confirmation before installing (see Q6 for the exact flow). If the user declines, return to the worknet list.
 
-If there is exactly one free worknet with a skill: auto-select it without asking.
-If there are multiple: show only the free ones first, let user pick.
+### Progress Display
 
+Show progress based on preflight's `progress` field:
 ```
-[3/4] discovering worknets...
-
-── free worknets (no staking needed) ──
-#1  Benchmark    ✓ skill ready    ← recommended
-──────────────────────────────────
-
-Auto-selecting #1 Benchmark (free, skill ready)
-```
-
-Only show worknets with min_stake > 0 if the user explicitly asks, or if no free worknets exist.
-
-**Step 4: Install worknet skill and start working**
-
-Check the worknet's `skills_uri` source. If it is from `github.com/awp-worknet/*`, install directly. If it is from a third-party source, show a warning and ask for confirmation before installing (see Q6 for the exact flow). If the user declines, return to the worknet list from Step 3.
-
-Install example (awp-worknet source):
-```
-[4/4] installing Benchmark skill...
-[4/4] ready ✓
-
-── onboarding complete ───────────
-wallet:     <short_address>
-worknet:    #1 "Benchmark"
-cost:       FREE (no staking required)
-──────────────────────────────────
-
-Your agent is now working on worknet #1.
-No AWP tokens were needed.
+[1/4] wallet       <short_address> ✓
+[2/4] registered   ✓  (free, no AWP required)
+[3/4] worknet      #1 "Benchmark" (free)
+[4/4] ready        ✓
 ```
 
 If the user later wants to work on a worknet that requires staking, guide them to S2 (deposit) and S3 (allocate) at that time — not during initial onboarding. For a fully gasless flow that combines registration + staking + allocation in one command, use `relay-onboard.py`.
@@ -694,12 +658,88 @@ After confirmation and completion:
 13. **Bind already sets the reward path.** After `bind(target)`, rewards resolve to the target via the bind chain. Do NOT call `setRecipient()` after a successful bind — it's redundant.
 14. **Multi-chain awareness.** Use chain-appropriate explorer links. Include `chainId` in API params when the user specifies a chain. Default to Base (8453) when unspecified.
 
+## Error Recovery Protocol
+
+**If ANY step fails, produces unexpected output, or the current state is unclear:**
+
+```
+1. Run: python3 scripts/preflight.py
+2. Read the nextAction field from the JSON output
+3. Execute the nextCommand exactly as given
+4. Repeat until preflight returns nextAction: "ready"
+```
+
+**CRITICAL: Do NOT diagnose errors yourself. Do NOT invent recovery steps. Do NOT guess what state
+the user is in.** The preflight script checks everything — wallet, registration, staking, allocations —
+and returns the exact command to run next. Trust it.
+
+Common failure scenarios and the correct response:
+
+| Failure | WRONG response | CORRECT response |
+|---------|---------------|------------------|
+| `awp-wallet unlock` fails | Guess the wallet state | Run `preflight.py` |
+| Script returns unexpected JSON | Try to parse and continue | Run `preflight.py` |
+| Registration script errors | Manually construct relay call | Run `preflight.py` |
+| "command not found" error | Tell user to install things | Run `preflight.py` (it detects missing deps) |
+| Any step in onboarding fails | Retry the failed step | Run `preflight.py` (it skips completed steps) |
+
+## Script Output Contract
+
+**All scripts return JSON with `nextAction` and `nextCommand` fields.** After running ANY script,
+read its output and follow the `nextCommand` to continue. This forms a script chain — each script
+points to the next one. The LLM never needs to decide what to do next.
+
+Example chain:
+```
+preflight.py → nextAction: "unlock_wallet" → user unlocks →
+preflight.py → nextAction: "register" → relay-start.py →
+  nextAction: "pick_worknet" → preflight.py →
+  nextAction: "ready" ✓
+```
+
+`nextAction` values (grouped by emitting script):
+
+**From `preflight.py`** (state machine — run first):
+| Value | Meaning |
+|-------|---------|
+| `install_wallet` | awp-wallet CLI not found |
+| `init_wallet` | Wallet CLI installed but not initialized |
+| `unlock_wallet` | Wallet initialized but locked |
+| `register` | Wallet ready, needs registration |
+| `pick_worknet` | Registered, choose a worknet |
+| `wait_for_worknets` | No worknets available yet (normal) |
+| `allocate` | Staked but not allocated (not earning) |
+| `check_status` | General status check (e.g., inconsistent state) |
+| `ready` | Everything is set up |
+| `retry_preflight` | API unreachable, retry later |
+
+**From action scripts** (relay-*.py, onchain-*.py):
+| Value | Emitted by | Meaning |
+|-------|-----------|---------|
+| `pick_worknet` | relay-start, relay-onboard, onchain-onboard | Just registered, pick a worknet |
+| `allocate` | relay-stake, onchain-stake, onchain-onboard | Staked, need to allocate |
+| `earning` | relay-allocate, onchain-stake, onchain-onboard | Just allocated, now earning |
+| `check_status` | relay-allocate (deallocate), onchain-unstake | Post-action status check |
+
+**From query scripts** (query-*.py):
+| Value | Emitted by | Meaning |
+|-------|-----------|---------|
+| `register` | query-status | Not registered |
+| `allocate` | query-status | Staked but no allocations |
+| `pick_worknet` | query-status | Registered, no stake |
+| `deallocate_then_withdraw` | query-status | Expired, deallocate first |
+| `ready` | query-status | All set |
+| `join_worknet` | query-worknet | Free worknet, register to join |
+| `stake_and_join` | query-worknet | Worknet requires staking |
+| `info_only` | query-worknet | Read-only, no action needed |
+
 ## Bundled Scripts
 
 Every write operation has a script. Always use the script — never construct calldata manually.
 
 ```
 scripts/
+├── preflight.py                      ★ State machine: checks ALL state, returns nextAction + nextCommand (run FIRST)
 ├── awp-daemon.py                     Background daemon (opt-in): monitors status/updates, writes PID to ~/.awp/daemon.pid, stops on Ctrl+C or kill
 ├── awp_lib.py                        Shared library (API, wallet, ABI encoding, validation)
 ├── wallet-raw-call.mjs               Node.js bridge: contract calls restricted to /registry allowlist only
@@ -881,6 +921,14 @@ Deallocate(address staker, address agent, uint256 worknetId, uint256 amount, uin
 
 ## Pre-Flight Checklist (before ANY write action)
 
+**Preferred: Run `preflight.py` — it checks everything in one command:**
+```bash
+python3 scripts/preflight.py
+```
+Returns JSON with complete state + nextAction + nextCommand. If nextAction is not "ready",
+follow the nextCommand before proceeding with the write action.
+
+**Manual fallback (if preflight.py is unavailable):**
 ```
 1. Wallet unlocked?     → TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 2. Wallet address?      → WALLET_ADDR=$(awp-wallet receive | python3 -c "import sys,json; print(json.load(sys.stdin)['eoaAddress'])")

@@ -21,9 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
 from awp_lib import (
-    die,
     expand_worknet_id,
-    info,
     rpc,
     step,
     validate_positive_int,
@@ -218,6 +216,26 @@ def main() -> None:
 
     if hints:
         output["hints"] = hints
+
+    # 对 LLM 提供下一步指引
+    try:
+        ms = int(min_stake)
+    except (ValueError, TypeError):
+        ms = 0
+    if ms == 0 and output.get("status") == "Active":
+        output["nextAction"] = "join_worknet"
+        # 免费 worknet 只需注册（relay-onboard 不带 --worknet/--amount 即仅注册）
+        output["nextCommand"] = "python3 scripts/relay-onboard.py --token $TOKEN"
+        output["joinMessage"] = (
+            "This worknet is FREE to join. Register (if needed), then start working."
+        )
+    elif ms > 0 and output.get("status") == "Active":
+        output["nextAction"] = "stake_and_join"
+        output["nextCommand"] = (
+            f"python3 scripts/relay-stake.py --token $TOKEN --amount <AMOUNT> --lock-days <DAYS> --agent <AGENT_ADDR> --worknet {wid}"
+        )
+    else:
+        output["nextAction"] = "info_only"
 
     print(json.dumps(output, indent=2))
 
