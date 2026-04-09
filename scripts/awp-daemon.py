@@ -790,6 +790,17 @@ def main() -> None:
     # Write PID file so the daemon can be stopped externally (kill $(cat ~/.awp/daemon.pid))
     NOTIFY_DIR.mkdir(parents=True, exist_ok=True)
 
+    # 并发保护：检查已有 daemon 是否在运行
+    if PID_FILE.exists():
+        try:
+            existing_pid = int(PID_FILE.read_text().strip())
+            os.kill(existing_pid, 0)  # 信号 0 仅检查进程是否存在
+            die(
+                f"Daemon already running (PID {existing_pid}). Stop it first: kill {existing_pid}"
+            )
+        except (ValueError, OSError):
+            pass  # PID 文件过期或进程已终止 — 安全覆盖
+
     try:
         PID_FILE.write_text(str(os.getpid()))
         _run_daemon(interval)

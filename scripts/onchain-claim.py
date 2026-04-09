@@ -57,10 +57,10 @@ def main() -> None:
     manager: str = args.manager
     validate_address(manager, "manager")
 
-    # epoch must be a positive integer within uint32 range
+    # epoch 为 uint32 范围内的非负整数（0 为合法 epoch）
     epoch_str: str = args.epoch
     if not re.match(r"^[0-9]+$", epoch_str):
-        die("Invalid --epoch: must be a positive integer")
+        die("Invalid --epoch: must be a non-negative integer")
     epoch = int(epoch_str)
     if epoch < 0 or epoch > 0xFFFFFFFF:
         die(f"Invalid --epoch: must be >= 0 and <= {0xFFFFFFFF} (uint32 max)")

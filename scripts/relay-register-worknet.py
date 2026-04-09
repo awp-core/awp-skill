@@ -182,7 +182,9 @@ def main() -> None:
                 "symbol": symbol,
                 "worknetManager": worknet_manager,
                 "salt": salt,
-                "minStake": min_stake,
+                "minStake": str(
+                    min_stake
+                ),  # 字符串化避免 JS JSON.parse 超过 2^53 精度丢失
                 "skillsURI": skills_uri,
             },
             "nonce": registry_nonce,
