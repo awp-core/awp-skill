@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.5.2
+
+### Fix awp-wallet install method + anti-hallucination
+
+- Corrected install method from invalid `skill install` to
+  `git clone https://github.com/awp-core/awp-wallet && bash install.sh`.
+- Added explicit anti-hallucination rule: do NOT invent install commands
+  (`npm install -g`, `pip install`, `brew install`, etc. — these packages
+  do not exist).
+- Updated `preflight.py` nextCommand to use correct install method.
+
 ## v1.5.1
 
 ### ClawHub security review — narrow trigger scope
