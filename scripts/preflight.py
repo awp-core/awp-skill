@@ -154,7 +154,7 @@ def main() -> None:
                 state,
                 "0/4",
                 "install_wallet",
-                "skill install https://github.com/awp-core/awp-wallet",
+                "git clone https://github.com/awp-core/awp-wallet.git /tmp/awp-wallet-install && bash /tmp/awp-wallet-install/install.sh",
                 "awp-wallet not installed. Install the wallet CLI first.",
             )
             return
