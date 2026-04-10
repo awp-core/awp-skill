@@ -280,6 +280,13 @@ After install, re-run the detection snippet above (Case A or B). If still empty 
 install, the install script did land the binary somewhere unusual — ask the user to run
 `find $HOME -name awp-wallet -type f 2>/dev/null` and add that directory to PATH.
 
+**CRITICAL — do NOT invent install commands.** The ONLY supported install method is
+`skill install https://github.com/awp-core/awp-wallet`. Do NOT suggest `npm install -g awp-wallet`,
+`pip install awp-wallet`, `brew install awp-wallet`, `apt install awp-wallet`, or any other
+package manager command — these packages do not exist and will confuse users. If `skill install`
+fails, tell the user to visit https://github.com/awp-core/awp-wallet for manual installation
+instructions. Do NOT guess or fabricate alternative install methods.
+
 **Critical: do NOT prompt the user for a password during wallet init.** `awp-wallet init` is
 non-interactive — it generates an agent work wallet with credentials stored internally. No password
 input, no passphrase, no secret questions. If the wallet CLI itself appears to be waiting for
