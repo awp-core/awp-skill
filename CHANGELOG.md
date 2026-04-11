@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.6.0
+
+### Critical EIP-712 fix + optional token for new wallets
+
+Critical fix:
+- All 6 relay scripts: convert `nonce` from string to `int` before EIP-712 signing.
+  The API returns nonce as a JSON string (e.g., `"5"`), but EIP-712 uint256 fields
+  require integers. String nonces produced a different hash → "invalid EIP-712
+  signature" (HTTP 400) on every gasless operation. Affected: relay-start.py,
+  relay-delegate.py, relay-unbind.py, relay-allocate.py, relay-onboard.py,
+  onchain-onboard.py.
+
+Optional token (awp-wallet >= v0.17.0):
+- `--token` is now optional in all scripts (via `base_parser`). New wallet versions
+  (>= v0.17.0) work without unlock/token. Old versions (< v0.17.0) still require it.
+- `awp_lib.py`: `wallet_send`, `wallet_approve`, `wallet_sign_typed_data` only pass
+  `--token` when non-empty.
+- `preflight.py`: new `_wallet_needs_token()` function parses `awp-wallet --version`
+  and compares against v0.17.0 threshold. Provides correct guidance per version.
+- SKILL.md: wallet setup, rules, pre-flight checklist updated with version-based
+  detection logic.
+
 ## v1.5.2
 
 ### Fix awp-wallet install method + anti-hallucination
