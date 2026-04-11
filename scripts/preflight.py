@@ -56,6 +56,19 @@ def _find_wallet_bin() -> str | None:
     return None
 
 
+def _wallet_needs_token(wallet_bin: str) -> bool:
+    """Check if wallet version < 0.17.0 (requires --token). Returns True if old version."""
+    ok, stdout = _try_wallet_cmd(wallet_bin, ["--version"])
+    if not ok:
+        return True  # Cannot determine version — assume old wallet
+    # Parse version like "0.17.0" or "awp-wallet v0.17.0"
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", stdout)
+    if not match:
+        return True  # Cannot parse — assume old wallet
+    major, minor, patch = int(match.group(1)), int(match.group(2)), int(match.group(3))
+    return (major, minor, patch) < (0, 17, 0)
+
+
 def _try_wallet_cmd(wallet_bin: str, args: list[str]) -> tuple[bool, str]:
     """Run a wallet command, return (success, stdout). Never raises."""
     try:
@@ -160,8 +173,9 @@ def main() -> None:
             return
 
         state["walletInstalled"] = True
+        needs_token = _wallet_needs_token(wallet_bin)
 
-        # Try receive — if successful, wallet is initialized and unlocked
+        # Try receive — if successful, wallet is initialized (and unlocked if old version)
         ok, stdout = _try_wallet_cmd(wallet_bin, ["receive"])
         if ok:
             try:
@@ -179,19 +193,28 @@ def main() -> None:
             try:
                 is_initialized = wallet_dir.exists() and any(wallet_dir.iterdir())
             except (PermissionError, OSError):
-                # Directory unreadable — conservatively assume initialized (let unlock attempt)
                 is_initialized = wallet_dir.exists()
             if is_initialized:
                 state["walletInitialized"] = True
-                # Wallet dir exists but 'receive' failed → old wallet version that requires unlock
-                _output(
-                    state,
-                    "1/4",
-                    "unlock_wallet",
-                    'TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)[\'token\'])")',
-                    "Old wallet version detected (requires unlock). "
-                    "Run 'awp-wallet unlock' to get a session token, then pass --token to scripts.",
-                )
+                if needs_token:
+                    # awp-wallet < v0.17.0: must unlock to get session token
+                    _output(
+                        state,
+                        "1/4",
+                        "unlock_wallet",
+                        'TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)[\'token\'])")',
+                        "awp-wallet < v0.17.0 detected — unlock required. "
+                        "Run unlock to get a session token, then pass --token to scripts.",
+                    )
+                else:
+                    # awp-wallet >= v0.17.0: receive failed but no token needed — likely not initialized
+                    _output(
+                        state,
+                        "0/4",
+                        "init_wallet",
+                        "awp-wallet init",
+                        "awp-wallet >= v0.17.0 detected but wallet not initialized. Run init first.",
+                    )
                 return
             else:
                 _output(

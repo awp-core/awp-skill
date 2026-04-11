@@ -847,18 +847,21 @@ awp-wallet init
 awp-wallet receive
 ```
 
-**How to determine wallet version:**
-```bash
-awp-wallet receive 2>/dev/null
-```
-- **Exit 0 + returns address** → new wallet, no unlock needed. Run scripts without `--token`.
-- **Exit non-zero or "locked" error** → old wallet, must unlock first:
-  ```bash
-  TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
-  ```
-  Then pass `--token $TOKEN` to all scripts. Old wallets REQUIRE the token — without it, commands will fail.
+**Token requirement depends on wallet version:**
+- **awp-wallet >= v0.17.0**: no unlock needed, `--token` is optional. All commands work directly.
+- **awp-wallet < v0.17.0**: must unlock first, `--token` is REQUIRED.
 
-Scope: `read` (balance only), `transfer` (send/approve/sign), `full` (all).
+**How to detect:**
+```bash
+VERSION=$(awp-wallet --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+```
+If version >= 0.17.0, skip unlock. Otherwise:
+```bash
+TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+```
+Then pass `--token $TOKEN` to all scripts.
+
+Scope (old wallets only): `read` (balance only), `transfer` (send/approve/sign), `full` (all).
 
 On first setup, inform the user:
 ```
