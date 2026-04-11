@@ -29,6 +29,7 @@ from awp_lib import (
     encode_calldata,
     expand_worknet_id,
     get_eip712_domain,
+    get_onchain_nonce,
     get_registry,
     get_wallet_address,
     info,
@@ -102,7 +103,7 @@ def main() -> None:
 
     # ── Phase 1: Register via relay (gasless) ──
     step("checkRegistration")
-    check = rpc("address.check", {"address": wallet_addr})
+    check = rpc("address.check", {"address": wallet_addr, "chainId": int(chain_id)})
     already_registered = False
 
     if isinstance(check, dict):
@@ -123,10 +124,8 @@ def main() -> None:
 
     if not already_registered:
         step("register")
-        nonce_resp = rpc("nonce.get", {"address": wallet_addr})
-        if not isinstance(nonce_resp, dict) or "nonce" not in nonce_resp:
-            die(f"Invalid nonce response: {nonce_resp}")
-        nonce = int(nonce_resp["nonce"])  # Must be int for EIP-712 uint256 encoding
+        awp_registry = require_contract(registry, "awpRegistry")
+        nonce = get_onchain_nonce(awp_registry, wallet_addr)
         deadline = int(time.time()) + 3600
 
         if args.target:

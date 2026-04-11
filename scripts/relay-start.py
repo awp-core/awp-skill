@@ -13,9 +13,11 @@ from awp_lib import (
     build_eip712,
     die,
     get_eip712_domain,
+    get_onchain_nonce,
     get_registry,
     get_wallet_address,
     info,
+    require_contract,
     rpc,
     step,
     validate_address,
@@ -51,6 +53,7 @@ def main() -> None:
     step("fetch_registry")
     registry = get_registry()
     domain = get_eip712_domain(registry)
+    chain_id_for_check = int(domain["chainId"])
     info(
         f"domain: {domain['name']} v{domain['version']} chain={domain['chainId']} contract={domain['verifyingContract']}"
     )
@@ -59,9 +62,9 @@ def main() -> None:
     step("get_wallet_address")
     wallet_addr = get_wallet_address()
 
-    # Step 3: Check current status
+    # Step 3: Check current status — pass chainId to get flat response (not multi-chain)
     step("check_status")
-    check = rpc("address.check", {"address": wallet_addr})
+    check = rpc("address.check", {"address": wallet_addr, "chainId": chain_id_for_check})
     if isinstance(check, dict):
         is_registered = bool(check.get("isRegistered", False))
         bound_to = check.get("boundTo", "")
@@ -99,12 +102,11 @@ def main() -> None:
             )
             return
 
-    # Step 4: Get nonce
+    # Step 4: Get nonce — ALWAYS fetch on-chain (API indexer may lag)
     step("get_nonce")
-    nonce_resp = rpc("nonce.get", {"address": wallet_addr})
-    if not isinstance(nonce_resp, dict) or "nonce" not in nonce_resp:
-        die(f"Invalid nonce response: {nonce_resp}")
-    nonce = int(nonce_resp["nonce"])  # Must be int for EIP-712 uint256 encoding
+    awp_registry = require_contract(registry, "awpRegistry")
+    nonce = get_onchain_nonce(awp_registry, wallet_addr)
+    info(f"Registry nonce (on-chain): {nonce}")
 
     # Step 5: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600

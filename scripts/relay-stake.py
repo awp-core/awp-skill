@@ -115,7 +115,7 @@ def main() -> None:
 
     # Precondition: must be registered (staking without registration is pointless)
     step("precondition_check")
-    check = rpc("address.check", {"address": wallet_addr})
+    check = rpc("address.check", {"address": wallet_addr, "chainId": int(chain_id)})
     if isinstance(check, dict) and not check.get("isRegistered", False):
         die(
             "Not registered on AWP. Register first (free, gasless): "

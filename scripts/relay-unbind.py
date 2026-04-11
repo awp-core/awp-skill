@@ -13,9 +13,11 @@ from awp_lib import (
     build_eip712,
     die,
     get_eip712_domain,
+    get_onchain_nonce,
     get_registry,
     get_wallet_address,
     info,
+    require_contract,
     rpc,
     step,
     wallet_sign_typed_data,
@@ -47,7 +49,7 @@ def main() -> None:
 
     # Step 3: Pre-check — verify the user IS currently bound
     step("check_status")
-    check = rpc("address.check", {"address": wallet_addr})
+    check = rpc("address.check", {"address": wallet_addr, "chainId": int(domain["chainId"])})
     if not isinstance(check, dict):
         die("Could not verify binding status — API returned unexpected response")
     zero_addr = "0x0000000000000000000000000000000000000000"
@@ -65,12 +67,10 @@ def main() -> None:
         )
         return
 
-    # Step 4: Get nonce
+    # Step 4: Get nonce — ALWAYS fetch on-chain (API indexer may lag)
     step("get_nonce")
-    nonce_resp = rpc("nonce.get", {"address": wallet_addr})
-    if not isinstance(nonce_resp, dict) or "nonce" not in nonce_resp:
-        die(f"Invalid nonce response: {nonce_resp}")
-    nonce = int(nonce_resp["nonce"])  # Must be int for EIP-712 uint256 encoding
+    awp_registry = require_contract(registry, "awpRegistry")
+    nonce = get_onchain_nonce(awp_registry, wallet_addr)
 
     # Step 5: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600

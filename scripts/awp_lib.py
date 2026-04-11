@@ -731,6 +731,20 @@ def build_eip712(
 # ── Common argument parsing ─────────────────────────────────
 
 
+def get_onchain_nonce(contract_addr: str, wallet_addr: str) -> int:
+    """Read nonces(address) on-chain from any contract with ERC-2612-style nonce tracking.
+
+    Selector 0x7ecebe00 = nonces(address). Used by AWPRegistry, AWPAllocator, AWPToken.
+    ALWAYS prefer this over API nonce endpoints — the API indexer may lag behind the
+    chain state after a recent transaction, causing signed messages to use stale nonces
+    and producing 'invalid EIP-712 signature' errors.
+    """
+    nonce_hex = rpc_call(contract_addr, encode_calldata("0x7ecebe00", pad_address(wallet_addr)))
+    if not nonce_hex or nonce_hex in ("0x", "null"):
+        die(f"Could not read nonces({wallet_addr}) from {contract_addr}")
+    return hex_to_int(nonce_hex)
+
+
 def base_parser(description: str) -> argparse.ArgumentParser:
     """Create base argument parser with --token (optional for new wallet versions)"""
     parser = argparse.ArgumentParser(description=description)

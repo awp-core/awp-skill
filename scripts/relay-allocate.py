@@ -14,9 +14,11 @@ from awp_lib import (
     die,
     expand_worknet_id,
     get_eip712_domain,
+    get_onchain_nonce,
     get_registry,
     get_wallet_address,
     info,
+    require_contract,
     rpc,
     step,
     to_wei,
@@ -90,12 +92,10 @@ def main() -> None:
     worknet_id = validate_positive_int(worknet, "worknet")
     worknet_id = expand_worknet_id(worknet_id)
 
-    # Step 5: Get staking nonce (AWPAllocator nonce, NOT nonce.get)
+    # Step 5: Get staking nonce — ALWAYS fetch on-chain from AWPAllocator (API may lag)
     step("get_nonce")
-    nonce_resp = rpc("nonce.getStaking", {"address": wallet_addr})
-    if not isinstance(nonce_resp, dict) or "nonce" not in nonce_resp:
-        die(f"Invalid nonce response: {nonce_resp}")
-    nonce = int(nonce_resp["nonce"])  # Must be int for EIP-712 uint256 encoding
+    awp_allocator = require_contract(registry, "awpAllocator")
+    nonce = get_onchain_nonce(awp_allocator, wallet_addr)
 
     # Step 6: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600
