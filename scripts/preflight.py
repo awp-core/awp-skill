@@ -183,14 +183,14 @@ def main() -> None:
                 is_initialized = wallet_dir.exists()
             if is_initialized:
                 state["walletInitialized"] = True
+                # Wallet dir exists but 'receive' failed → old wallet version that requires unlock
                 _output(
                     state,
                     "1/4",
                     "unlock_wallet",
-                    "awp-wallet receive",
-                    "Wallet installed and initialized but could not read address. "
-                    "Try 'awp-wallet receive' (new wallets work without unlock). "
-                    "For older wallets: awp-wallet unlock --duration 3600 --scope transfer",
+                    'TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c "import sys,json; print(json.load(sys.stdin)[\'token\'])")',
+                    "Old wallet version detected (requires unlock). "
+                    "Run 'awp-wallet unlock' to get a session token, then pass --token to scripts.",
                 )
                 return
             else:
