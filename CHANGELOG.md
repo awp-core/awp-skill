@@ -1,5 +1,37 @@
 # Changelog
 
+## v1.7.0
+
+### Critical gasless fix + full API sync with skill-reference.md
+
+Critical fix (all gasless operations were broken):
+- Reproduced "Relay returned HTTP 400: invalid EIP-712 signature" end-to-end.
+  Two independent bugs combined:
+  1. API `nonce.get` / `nonce.getStaking` returned stale nonces (indexer lag
+     after recent transactions) → signed message used old nonce → relay rejected.
+  2. `address.check` without `chainId` returned multi-chain format (no top-level
+     `boundTo` field) → "already_bound" early-return never fired → script
+     proceeded to re-sign a bind that would have failed anyway.
+- New helper `awp_lib.get_onchain_nonce()` — reads `nonces(address)` directly
+  from any contract via `eth_call` (selector 0x7ecebe00). Authoritative.
+- All 6 relay scripts now fetch nonces on-chain instead of via API:
+  relay-start.py, relay-unbind.py, relay-delegate.py, relay-allocate.py,
+  relay-onboard.py, onchain-onboard.py.
+- All `address.check` calls now pass `chainId` to force single-chain response.
+- Verified: `relay-start.py --mode agent` on already-bound address correctly
+  returns `already_bound` (was: invalid EIP-712 signature).
+
+SKILL.md sync with skill-reference.md:
+- Fixed 3 stale API method names: `staking.getAgentWorknetStake` →
+  `getAgentSubnetStake`, plus `getAgentSubnets`, `getSubnetTotalStake`.
+- Added `staking.getPending` (missing method).
+- Added Guardian Safe 3/5 address and per-chain WorknetManager default impls.
+- Added `POST /api/relay/register` and `POST /api/relay/vote` endpoints.
+- Removed phantom `POST /api/relay/activate-worknet` (does not exist).
+- Nonce workflow docs updated to mandate on-chain reads; API methods labeled
+  with indexer-lag warnings.
+- Documented `rejectWorknet` / `banWorknet` / `unbanWorknet` as Guardian-only.
+
 ## v1.6.0
 
 ### Critical EIP-712 fix + optional token for new wallets
