@@ -187,8 +187,10 @@ def main() -> None:
                     state,
                     "1/4",
                     "unlock_wallet",
-                    "TOKEN=$(awp-wallet unlock --duration 3600 --scope transfer | python3 -c \"import sys,json; print(json.load(sys.stdin)['token'])\")",
-                    "Wallet installed and initialized but locked. Unlock to continue.",
+                    "awp-wallet receive",
+                    "Wallet installed and initialized but could not read address. "
+                    "Try 'awp-wallet receive' (new wallets work without unlock). "
+                    "For older wallets: awp-wallet unlock --duration 3600 --scope transfer",
                 )
                 return
             else:

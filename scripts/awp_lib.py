@@ -339,20 +339,9 @@ def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
     """
     bridge = str(Path(__file__).parent / "wallet-raw-call.mjs")
     chain = _get_chain_name()
-    args = [
-        "node",
-        bridge,
-        "--token",
-        token,
-        "--to",
-        to,
-        "--data",
-        data,
-        "--value",
-        value,
-        "--chain",
-        chain,
-    ]
+    args = ["node", bridge, "--to", to, "--data", data, "--value", value, "--chain", chain]
+    if token:
+        args += ["--token", token]
     try:
         result = subprocess.run(args, capture_output=True, text=True, timeout=120)
     except subprocess.TimeoutExpired:
@@ -376,24 +365,18 @@ def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
 
 def wallet_approve(token: str, asset: str, spender: str, amount: str) -> str:
     """Approve token spend, return result JSON"""
-    return wallet_cmd(
-        [
-            "approve",
-            "--token",
-            token,
-            "--asset",
-            asset,
-            "--spender",
-            spender,
-            "--amount",
-            amount,
-        ]
-    )
+    args = ["approve", "--asset", asset, "--spender", spender, "--amount", amount]
+    if token:
+        args += ["--token", token]
+    return wallet_cmd(args)
 
 
 def wallet_sign_typed_data(token: str, data: dict) -> str:
     """EIP-712 sign, return signature hex"""
-    out = wallet_cmd(["sign-typed-data", "--token", token, "--data", json.dumps(data)])
+    args = ["sign-typed-data", "--data", json.dumps(data)]
+    if token:
+        args += ["--token", token]
+    out = wallet_cmd(args)
     try:
         sig = json.loads(out).get("signature", "")
     except json.JSONDecodeError:
@@ -749,7 +732,11 @@ def build_eip712(
 
 
 def base_parser(description: str) -> argparse.ArgumentParser:
-    """Create base argument parser with --token"""
+    """Create base argument parser with --token (optional for new wallet versions)"""
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--token", required=True, help="awp-wallet session token")
+    parser.add_argument(
+        "--token",
+        default="",
+        help="awp-wallet session token (optional for new wallet versions that no longer require unlock)",
+    )
     return parser
