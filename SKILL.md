@@ -111,8 +111,8 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 | `address.check` | `address` **(required)**, `chainId?` | Check registration status, binding, recipient. See response format below. |
 | `address.resolveRecipient` | `address` **(required)**, `chainId?` | Walk bind chain to root, return effective reward recipient |
 | `address.batchResolveRecipients` | `addresses[]` **(required, max 500)**, `chainId?` | Batch resolve effective recipients (on-chain call) |
-| `nonce.get` | `address` **(required)**, `chainId?` | AWPRegistry EIP-712 nonce (for bind/unbind/setRecipient/registerWorknet/activateWorknet/grantDelegate/revokeDelegate) |
-| `nonce.getStaking` | `address` **(required)**, `chainId?` | AWPAllocator EIP-712 nonce (for allocate/deallocate) |
+| `nonce.get` | `address` **(required)**, `chainId?` | AWPRegistry EIP-712 nonce (for bind/unbind/setRecipient/registerWorknet/grantDelegate/revokeDelegate). **Note**: may lag behind on-chain state; prefer reading `AWPRegistry.nonces(user)` on-chain for signing. |
+| `nonce.getStaking` | `address` **(required)**, `chainId?` | AWPAllocator EIP-712 nonce (for allocate/deallocate). **Note**: may lag behind on-chain state; prefer reading `AWPAllocator.nonces(user)` on-chain for signing. |
 
 #### Agents
 
@@ -133,9 +133,10 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 | `staking.getPositionsGlobal` | `address` **(required)** | Positions across all chains (includes chainId per position) |
 | `staking.getAllocations` | `address` **(required)**, `chainId?`, `page?`, `limit?` | Paginated allocation records: `{agent, worknetId, amount}` |
 | `staking.getFrozen` | `address` **(required)**, `chainId?` | Frozen allocations (from banned worknets) |
-| `staking.getAgentWorknetStake` | `agent` **(required)**, `worknetId` **(required)** | Agent's total allocated stake in a specific worknet (cross-chain) |
-| `staking.getAgentWorknets` | `agent` **(required)** | All worknetIds where this agent has non-zero allocations |
-| `staking.getWorknetTotalStake` | `worknetId` **(required)** | Total AWP staked across all agents in a worknet |
+| `staking.getPending` | `address` **(required)**, `chainId?` | Pending allocations awaiting confirmation |
+| `staking.getAgentSubnetStake` | `agent` **(required)**, `worknetId` **(required)** | Agent's total allocated stake in a specific worknet (cross-chain) |
+| `staking.getAgentSubnets` | `agent` **(required)** | All worknetIds where this agent has non-zero allocations |
+| `staking.getSubnetTotalStake` | `worknetId` **(required)** | Total AWP staked across all agents in a worknet |
 
 #### Worknets
 
@@ -188,20 +189,30 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 ## Contract Addresses (same on all 4 chains)
 
 ```
-AWPToken:           0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1
-AWPRegistry:        0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A
-AWPEmission:        0x3C9cB73f8B81083882c5308Cce4F31f93600EaA9
-AWPAllocator:       0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA
-veAWP:           0x0000b534C63D78212f1BDCc315165852793A00A8
-AWPWorkNet:         0x00000bfbdEf8533E5F3228c9C846522D906100A7
-LPManager (proxy):  0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2
+AWPToken:             0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1
+AWPRegistry:          0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A
+AWPEmission:          0x3C9cB73f8B81083882c5308Cce4F31f93600EaA9
+AWPAllocator:         0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA
+veAWP:                0x0000b534C63D78212f1BDCc315165852793A00A8
+AWPWorkNet:           0x00000bfbdEf8533E5F3228c9C846522D906100A7
+LPManager (proxy):    0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2
 WorknetTokenFactory:  0x000058EF25751Bb3687eB314185B46b942bE00AF
-Treasury:           0x82562023a053025F3201785160CaE6051efD759e
-VeAWPHelper:        0x0000561EDE5C1Ba0b81cE585964050bEAE730001
-AWPDAO:             0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0
+Treasury:             0x82562023a053025F3201785160CaE6051efD759e
+VeAWPHelper:          0x0000561EDE5C1Ba0b81cE585964050bEAE730001
+AWPDAO:               0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0
+Guardian (Safe 3/5):  0x000002bEfa6A1C99A710862Feb6dB50525dF00A3
 ```
 
-Supported chains: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). All addresses identical across all 4 chains (except LPManager and WorknetManager impls which differ per DEX).
+### WorknetManager Default Implementation (differs per chain due to DEX integration)
+
+| Chain | Address |
+|-------|---------|
+| Base (8453) | `0x00000cb9FFd06DDd1e85abAa5AC147bB4e3B0001` |
+| Ethereum (1) | `0x0000031Aa47479219317C062E6dF065bb4d50001` |
+| Arbitrum (42161) | `0x000073a1393a36c8b7677069706B261683Ec0001` |
+| BSC (56) | `0x0000907bEC346871dE2D7c54e8E6fD102De00001` |
+
+Supported chains: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). All core protocol addresses identical across all 4 chains (except LPManager proxies and WorknetManager default impls which differ per DEX).
 
 ## On Skill Load
 
@@ -881,23 +892,25 @@ awp-wallet balance --token $TOKEN
 - **Has ETH** → use `onchain-*.py` scripts
 - **No ETH** → use `relay-*.py` scripts (gasless, rate limit: 100/IP/1h)
 - **Staking** → prefer `relay-stake.py` (gasless via ERC-2612 permit); fallback to `onchain-deposit.py` if relay fails
-- vote/cancelWorknet always need ETH — no gasless option
+- **Governance voting** → gasless via `/api/relay/vote` (OZ ExtendedBallot); no bundled script yet, call endpoint manually
+- cancelWorknet/pauseWorknet/resumeWorknet always need ETH — NFT-owner-only, no gasless option
 
 Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay/*`
 
 | Endpoint | Description | EIP-712 Domain |
 |----------|-------------|----------------|
+| `POST /api/relay/register` | Self-registration (= setRecipient to self) | AWPRegistry |
 | `POST /api/relay/bind` | Bind agent to target | AWPRegistry |
 | `POST /api/relay/unbind` | Unbind from tree | AWPRegistry |
 | `POST /api/relay/set-recipient` | Set reward recipient | AWPRegistry |
 | `POST /api/relay/grant-delegate` | Authorize a delegate | AWPRegistry |
 | `POST /api/relay/revoke-delegate` | Revoke a delegate | AWPRegistry |
-| `POST /api/relay/activate-worknet` | Activate a pending worknet (no bundled script — call manually) | AWPRegistry |
-| `POST /api/relay/register-worknet` | Register worknet (with AWP permit) | AWPRegistry |
+| `POST /api/relay/register-worknet` | Register worknet (with AWP permit, 2 signatures) | AWPRegistry |
 | `POST /api/relay/stake/prepare` | **LLM-friendly:** returns pre-built typedData + submitTo body (no manual nonce/domain needed) | -- |
 | `POST /api/relay/stake` | Gasless staking (ERC-2612 permit) | AWP Token (permit domain) |
 | `POST /api/relay/allocate` | Allocate stake to agent | AWPAllocator |
 | `POST /api/relay/deallocate` | Deallocate stake | AWPAllocator |
+| `POST /api/relay/vote` | Gasless governance vote (OZ ExtendedBallot EIP-712) | AWPDAO |
 | `GET /api/relay/status/{txHash}` | Check relay tx status | -- |
 
 Relay request format uses a **combined 65-byte signature** (NOT split v/r/s — the live API rejects split fields):
@@ -913,7 +926,7 @@ Response: `{"txHash": "0x..."}` | Error: `{"error": "invalid EIP-712 signature"}
 
 ### EIP-712 Domains
 
-**AWPRegistry domain** (bind, unbind, setRecipient, grantDelegate, revokeDelegate, registerWorknet, activateWorknet):
+**AWPRegistry domain** (bind, unbind, setRecipient, grantDelegate, revokeDelegate, registerWorknet):
 ```json
 {"name": "AWPRegistry", "version": "1", "chainId": 8453, "verifyingContract": "0x0000F34Ed3594F54faABbCb2Ec45738DDD1c001A"}
 ```
@@ -944,7 +957,7 @@ Allocate(address staker, address agent, uint256 worknetId, uint256 amount, uint2
 Deallocate(address staker, address agent, uint256 worknetId, uint256 amount, uint256 nonce, uint256 deadline)
 ```
 
-**Nonce workflow**: Always fetch the current nonce via `nonce.get` (AWPRegistry) or `nonce.getStaking` (AWPAllocator) immediately before signing. Nonces auto-increment after each successful relay. Using a stale nonce causes `InvalidSignature` error.
+**Nonce workflow**: **ALWAYS read nonces directly from the chain via `eth_call(nonces(address))`** on `AWPRegistry` (for bind/unbind/setRecipient/registerWorknet/grantDelegate/revokeDelegate) or `AWPAllocator` (for allocate/deallocate). The API methods `nonce.get` / `nonce.getStaking` may return stale values due to indexer lag, causing `invalid EIP-712 signature` errors. The bundled scripts use `awp_lib.get_onchain_nonce()` which reads from the contract directly via selector `0x7ecebe00`. Nonces auto-increment after each successful relay; failed verification does NOT increment.
 
 ## Pre-Flight Checklist (before ANY write action)
 
@@ -1420,10 +1433,12 @@ python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action
 python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action cancel
 ```
 `pause` / `resume` / `cancel` are the only actions a worknet owner can take on their
-own NFT. `activateWorknet` is **Guardian-only** — the Guardian calls it after verifying
-the LP pool was created; end users cannot self-activate and any attempt will revert.
-Cancel is only valid for Pending worknets (before Guardian activation) and refunds
-the full AWP escrow.
+own NFT. `activateWorknet`, `rejectWorknet`, `banWorknet`, `unbanWorknet` are all
+**Guardian-only** — end users cannot self-activate/reject/ban and any attempt will
+revert. Cancel is only valid for Pending worknets (before Guardian activation) and
+refunds the full AWP escrow. Reject (Guardian) on Pending worknets also refunds the
+escrow. Banned worknets have their allocations frozen (use `staking.getFrozen` to
+see stuck funds).
 
 ### M3 · Update Skills URI
 ```bash
