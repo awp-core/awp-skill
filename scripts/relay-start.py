@@ -104,7 +104,7 @@ def main() -> None:
     nonce_resp = rpc("nonce.get", {"address": wallet_addr})
     if not isinstance(nonce_resp, dict) or "nonce" not in nonce_resp:
         die(f"Invalid nonce response: {nonce_resp}")
-    nonce = nonce_resp["nonce"]
+    nonce = int(nonce_resp["nonce"])  # Must be int for EIP-712 uint256 encoding
 
     # Step 5: Deadline (1 hour from now)
     deadline = int(time.time()) + 3600
