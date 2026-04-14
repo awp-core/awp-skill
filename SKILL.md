@@ -177,11 +177,11 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 |--------|--------|-------------|
 | `governance.listProposals` | `status?`, `chainId?`, `page?`, `limit?` | List proposals. Status: `Active`/`Pending`/`Canceled`/`Defeated`/`Succeeded`/`Queued`/`Expired`/`Executed` |
 | `governance.listAllProposals` | `status?`, `page?`, `limit?` | Cross-chain proposal list |
-| `governance.listGrouped` | `page?`, `limit?` | Cross-chain merged proposals (same proposalId across chains) |
-| `governance.listByStatusGrouped` | `status`, `page?`, `limit?` | Merged proposals filtered by status |
-| `governance.getActive` | `page?`, `limit?` | Active proposals shortcut (cross-chain merged) |
-| `governance.getProposal` | `proposalId` **(required)**, `chainId?` | Enriched proposal detail: votes, state, voters (top 100), quorum |
-| `governance.decodeProposalActions` | `proposalId` **(required)**, `chainId?` | Decode proposal calldata into human-readable function calls |
+| `governance.listGrouped` | `page?`, `limit?` | Cross-chain merged view — same proposalId across chains merged into one entry |
+| `governance.listByStatusGrouped` | `status` **(required)**, `page?`, `limit?` | Merged proposals where at least one chain matches the status |
+| `governance.getActive` | `page?`, `limit?` | Active proposals shortcut — equivalent to listByStatusGrouped(status="Active") |
+| `governance.getProposal` | `proposalId` **(required)**, `chainId?` | Enriched detail: live votes (from contract), state, voters top 100, quorum, body (signal only) |
+| `governance.decodeProposalActions` | `proposalId` **(required)**, `chainId?` | Decode calldata into human-readable function calls. Supports: AWPRegistry, AWPDAO, Treasury, AWPEmission, AWPAllocator, veAWP, AWPWorkNet |
 | `governance.getTimeline` | `proposalId` **(required)**, `chainId?` | Full lifecycle timeline: Created → VotingStarted → VotingEnded → Queued → Executed/Canceled |
 | `governance.getQuorumProgress` | `proposalId` **(required)**, `chainId?` | Real-time quorum progress (bps), willPassIfEnded, deadline |
 | `governance.getEligibleTokens` | `address` **(required)**, `proposalId` **(required)**, `chainId?` | veAWP NFT eligibility per proposal (eligible if createdAt < proposalCreatedAt) |
@@ -991,9 +991,15 @@ Deallocate(address staker, address agent, uint256 worknetId, uint256 amount, uin
 ExtendedBallot(uint256 proposalId, uint8 support, address voter, uint256 nonce, string reason, bytes params)
 Propose(address proposer, address[] targets, uint256[] values, bytes[] calldatas, string description, uint256[] tokenIds, uint256 nonce, uint256 deadline)
 SignalPropose(address proposer, string description, uint256[] tokenIds, uint256 nonce, uint256 deadline)
+  ↳ description = "title\n\ncontent_hash:0x..." (server-constructed by /signal-propose/prepare; do NOT construct manually)
 ```
 
-**Nonce workflow**: **ALWAYS read nonces directly from the chain via `eth_call(nonces(address))`** on `AWPRegistry` (for bind/unbind/setRecipient/registerWorknet/grantDelegate/revokeDelegate) or `AWPAllocator` (for allocate/deallocate). The API methods `nonce.get` / `nonce.getStaking` may return stale values due to indexer lag, causing `invalid EIP-712 signature` errors. The bundled scripts use `awp_lib.get_onchain_nonce()` which reads from the contract directly via selector `0x7ecebe00`. Nonces auto-increment after each successful relay; failed verification does NOT increment.
+**Nonce workflow**: **ALWAYS read nonces directly from the chain via `eth_call(nonces(address))`**. Three separate nonce spaces:
+- **AWPRegistry** (bind/unbind/setRecipient/registerWorknet/grantDelegate/revokeDelegate) — `AWPRegistry.nonces(address)`
+- **AWPAllocator** (allocate/deallocate) — `AWPAllocator.nonces(address)`
+- **AWPDAO** (vote/propose/signalPropose) — `AWPDAO.nonces(address)` (shared across all DAO operations)
+
+The API methods `nonce.get` / `nonce.getStaking` may return stale values due to indexer lag, causing `invalid EIP-712 signature` errors. The bundled scripts use `awp_lib.get_onchain_nonce()` (selector `0x7ecebe00`) or the `/prepare` endpoints (which handle nonce server-side). Nonces auto-increment after each successful relay; failed verification does NOT increment.
 
 ## Pre-Flight Checklist (before ANY write action)
 

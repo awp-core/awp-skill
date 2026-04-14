@@ -223,6 +223,18 @@ _ID_TO_CANONICAL: dict[int, str] = {
 }
 
 
+def get_chain_id() -> int:
+    """Get the current chain ID from EVM_CHAIN env var (default: 8453 Base)."""
+    chain_env = os.environ.get("EVM_CHAIN", "base").lower()
+    cid = _CHAIN_IDS.get(chain_env)
+    if cid is not None:
+        return cid
+    try:
+        return int(chain_env)
+    except ValueError:
+        return _DEFAULT_CHAIN_ID
+
+
 def _get_chain_name() -> str:
     """Return the canonical chain name for wallet CLI commands.
 
@@ -339,7 +351,18 @@ def wallet_send(token: str, to: str, data: str, value: str = "0") -> str:
     """
     bridge = str(Path(__file__).parent / "wallet-raw-call.mjs")
     chain = _get_chain_name()
-    args = ["node", bridge, "--to", to, "--data", data, "--value", value, "--chain", chain]
+    args = [
+        "node",
+        bridge,
+        "--to",
+        to,
+        "--data",
+        data,
+        "--value",
+        value,
+        "--chain",
+        chain,
+    ]
     if token:
         args += ["--token", token]
     try:
@@ -739,7 +762,9 @@ def get_onchain_nonce(contract_addr: str, wallet_addr: str) -> int:
     chain state after a recent transaction, causing signed messages to use stale nonces
     and producing 'invalid EIP-712 signature' errors.
     """
-    nonce_hex = rpc_call(contract_addr, encode_calldata("0x7ecebe00", pad_address(wallet_addr)))
+    nonce_hex = rpc_call(
+        contract_addr, encode_calldata("0x7ecebe00", pad_address(wallet_addr))
+    )
     if not nonce_hex or nonce_hex in ("0x", "null"):
         die(f"Could not read nonces({wallet_addr}) from {contract_addr}")
     return hex_to_int(nonce_hex)

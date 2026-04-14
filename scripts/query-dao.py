@@ -50,6 +50,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # Auto-select mode when --proposal is given without explicit --mode
+    if args.proposal and args.mode == "overview":
+        args.mode = "proposal"
+
     # Resolve address
     addr: str = ""
     if args.address:

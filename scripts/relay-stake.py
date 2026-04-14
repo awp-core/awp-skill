@@ -17,7 +17,6 @@ Optional: if --agent and --worknet are provided, also allocate after staking
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 import time
@@ -27,14 +26,13 @@ from pathlib import Path
 
 from awp_lib import (
     RELAY_BASE,
-    _CHAIN_IDS,
-    _DEFAULT_CHAIN_ID,
     _USER_AGENT,
     api_post,
     base_parser,
     days_to_seconds,
     die,
     expand_worknet_id,
+    get_chain_id,
     get_wallet_address,
     info,
     rpc,
@@ -45,18 +43,6 @@ from awp_lib import (
     validate_positive_number,
     wallet_sign_typed_data,
 )
-
-
-def _get_chain_id() -> int:
-    """Get chainId from EVM_CHAIN environment variable."""
-    chain_env = os.environ.get("EVM_CHAIN", "base").lower()
-    cid = _CHAIN_IDS.get(chain_env)
-    if cid is not None:
-        return cid
-    try:
-        return int(chain_env)
-    except ValueError:
-        return _DEFAULT_CHAIN_ID
 
 
 def main() -> None:
@@ -111,7 +97,7 @@ def main() -> None:
     # ── Step 1: Get wallet address and check preconditions ──
     step("setup")
     wallet_addr = get_wallet_address()
-    chain_id = _get_chain_id()
+    chain_id = get_chain_id()
 
     # Precondition: must be registered (staking without registration is pointless)
     step("precondition_check")

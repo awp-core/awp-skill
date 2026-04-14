@@ -11,42 +11,19 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
 
 from awp_lib import (
     RELAY_BASE,
     api_post,
     base_parser,
     die,
+    get_chain_id,
     get_wallet_address,
     info,
     rpc,
     step,
     wallet_sign_typed_data,
 )
-
-_CHAIN_IDS: dict[str, int] = {
-    "ethereum": 1,
-    "eth": 1,
-    "bsc": 56,
-    "bnb": 56,
-    "base": 8453,
-    "arbitrum": 42161,
-    "arb": 42161,
-}
-_DEFAULT_CHAIN_ID = 8453
-
-
-def _get_chain_id() -> int:
-    """Get chainId from EVM_CHAIN environment variable."""
-    chain_env = os.environ.get("EVM_CHAIN", "base").lower()
-    cid = _CHAIN_IDS.get(chain_env)
-    if cid is not None:
-        return cid
-    try:
-        return int(chain_env)
-    except ValueError:
-        return _DEFAULT_CHAIN_ID
 
 
 def main() -> None:
@@ -66,7 +43,7 @@ def main() -> None:
 
     token: str = args.token
     title: str = args.title
-    chain_id = _get_chain_id()
+    chain_id = get_chain_id()
 
     # Read body from file if @filename syntax
     body_arg: str = args.body

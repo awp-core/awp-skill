@@ -16,7 +16,6 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
 import re
 
 from awp_lib import (
@@ -25,35 +24,13 @@ from awp_lib import (
     api_post,
     base_parser,
     die,
+    get_chain_id,
     get_wallet_address,
     info,
     rpc,
     step,
     wallet_sign_typed_data,
 )
-
-_CHAIN_IDS: dict[str, int] = {
-    "ethereum": 1,
-    "eth": 1,
-    "bsc": 56,
-    "bnb": 56,
-    "base": 8453,
-    "arbitrum": 42161,
-    "arb": 42161,
-}
-_DEFAULT_CHAIN_ID = 8453
-
-
-def _get_chain_id() -> int:
-    """Get chainId from EVM_CHAIN environment variable."""
-    chain_env = os.environ.get("EVM_CHAIN", "base").lower()
-    cid = _CHAIN_IDS.get(chain_env)
-    if cid is not None:
-        return cid
-    try:
-        return int(chain_env)
-    except ValueError:
-        return _DEFAULT_CHAIN_ID
 
 
 def main() -> None:
@@ -77,7 +54,7 @@ def main() -> None:
 
     token: str = args.token
     description: str = args.description
-    chain_id = _get_chain_id()
+    chain_id = get_chain_id()
 
     # Parse and validate targets
     targets = [t.strip() for t in args.targets.split(",") if t.strip()]
@@ -171,6 +148,7 @@ def main() -> None:
         die("Invalid prepare response: submitTo.body is not a dict")
 
     # ── Step 5: Validate critical fields ──
+    # description is part of the proposalId hash — a modified description = different proposal
     step("validateTypedData")
     msg = typed_data.get("message", {})
     msg_proposer = (msg.get("proposer") or "").lower()
@@ -178,6 +156,9 @@ def main() -> None:
         die(
             f"Prepare returned wrong proposer: expected {wallet_addr}, got {msg.get('proposer')}"
         )
+    msg_desc = msg.get("description", "")
+    if msg_desc != description:
+        die("Prepare returned wrong description (affects proposalId hash)")
     if not submit_url.startswith(RELAY_BASE):
         die(f"Prepare returned untrusted submitTo.url: {submit_url}")
 

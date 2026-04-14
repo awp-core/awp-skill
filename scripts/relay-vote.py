@@ -14,13 +14,13 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
 
 from awp_lib import (
     RELAY_BASE,
     api_post,
     base_parser,
     die,
+    get_chain_id,
     get_wallet_address,
     info,
     rpc,
@@ -28,30 +28,7 @@ from awp_lib import (
     wallet_sign_typed_data,
 )
 
-_CHAIN_IDS: dict[str, int] = {
-    "ethereum": 1,
-    "eth": 1,
-    "bsc": 56,
-    "bnb": 56,
-    "base": 8453,
-    "arbitrum": 42161,
-    "arb": 42161,
-}
-_DEFAULT_CHAIN_ID = 8453
-
 _SUPPORT_LABELS = {0: "Against", 1: "For", 2: "Abstain"}
-
-
-def _get_chain_id() -> int:
-    """Get chainId from EVM_CHAIN environment variable."""
-    chain_env = os.environ.get("EVM_CHAIN", "base").lower()
-    cid = _CHAIN_IDS.get(chain_env)
-    if cid is not None:
-        return cid
-    try:
-        return int(chain_env)
-    except ValueError:
-        return _DEFAULT_CHAIN_ID
 
 
 def main() -> None:
@@ -78,7 +55,7 @@ def main() -> None:
     proposal_id: str = args.proposal
     support: int = args.support
     reason: str = args.reason
-    chain_id = _get_chain_id()
+    chain_id = get_chain_id()
 
     # ── Step 1: Get wallet address ──
     step("setup")
@@ -158,6 +135,17 @@ def main() -> None:
         die(
             f"Prepare returned wrong voter: expected {wallet_addr}, got {msg.get('voter')}"
         )
+    if str(msg.get("proposalId")) != str(proposal_id):
+        die(
+            f"Prepare returned wrong proposalId: expected {proposal_id}, got {msg.get('proposalId')}"
+        )
+    try:
+        if int(msg.get("support", -1)) != support:
+            die(
+                f"Prepare returned wrong support: expected {support}, got {msg.get('support')}"
+            )
+    except (ValueError, TypeError):
+        die(f"Prepare returned invalid support value: {msg.get('support')}")
     if not submit_url.startswith(RELAY_BASE):
         die(f"Prepare returned untrusted submitTo.url: {submit_url}")
 
