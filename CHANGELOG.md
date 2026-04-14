@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.8.1
+
+### Hex proposalId support + DAO parameter sync
+
+Fixes:
+- `awp_lib.py`: new `parse_proposal_id()` — accepts both hex (`0x...`) and
+  decimal proposalIds. API returns canonical hex; scripts must handle both.
+- `onchain-vote.py`: replaced `validate_positive_int` with `parse_proposal_id`
+  (was crashing on hex proposalIds from any API response).
+- `relay-vote.py`: proposalId comparison normalizes to int (user passes hex,
+  server returns decimal in EIP-712 message — was false "wrong proposalId").
+- `relay-signal-propose.py`: added `--url` flag for optional reference URL.
+
+DAO parameter sync with updated API doc:
+- votingDelay: 28,800s (8h) → 3,600s (1h)
+- votingPeriod: 172,800s (48h) → 86,400s (24h)
+- Added `lateQuorumVoteExtension`: 14,400s (4h auto-extension)
+- ProposalId format documented (canonical hex, both hex/decimal accepted)
+
 ## v1.8.0
 
 ### DAO governance — 4 new scripts, 16 API methods, full gasless support
