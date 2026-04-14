@@ -34,7 +34,7 @@ _SUPPORT_LABELS = {0: "Against", 1: "For", 2: "Abstain"}
 def main() -> None:
     parser = base_parser("Gasless DAO vote (no ETH needed)")
     parser.add_argument(
-        "--proposal", required=True, help="Proposal ID (decimal string)"
+        "--proposal", required=True, help="Proposal ID (hex 0x... or decimal)"
     )
     parser.add_argument(
         "--support",
@@ -135,10 +135,18 @@ def main() -> None:
         die(
             f"Prepare returned wrong voter: expected {wallet_addr}, got {msg.get('voter')}"
         )
-    if str(msg.get("proposalId")) != str(proposal_id):
-        die(
-            f"Prepare returned wrong proposalId: expected {proposal_id}, got {msg.get('proposalId')}"
+    # Compare proposalId as int — user may pass hex, server returns decimal
+    try:
+        local_pid = (
+            int(proposal_id, 0) if isinstance(proposal_id, str) else int(proposal_id)
         )
+        server_pid = int(str(msg.get("proposalId", "0")), 0)
+        if local_pid != server_pid:
+            die(
+                f"Prepare returned wrong proposalId: expected {proposal_id}, got {msg.get('proposalId')}"
+            )
+    except (ValueError, TypeError):
+        die(f"Prepare returned invalid proposalId: {msg.get('proposalId')}")
     try:
         if int(msg.get("support", -1)) != support:
             die(

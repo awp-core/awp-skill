@@ -223,6 +223,22 @@ _ID_TO_CANONICAL: dict[int, str] = {
 }
 
 
+def parse_proposal_id(val: str) -> int:
+    """Parse a proposalId that may be hex (0x...) or decimal. Returns int.
+
+    The DAO API returns proposalIds as canonical hex (0x + 64 hex chars) but
+    accepts both hex and decimal as input. This function handles both forms.
+    """
+    val = val.strip()
+    if not val:
+        die("Missing proposalId")
+    try:
+        return int(val, 0)  # auto-detects base: 0x... = hex, digits = decimal
+    except (ValueError, TypeError):
+        die(f"Invalid proposalId: {val} (must be hex 0x... or decimal)")
+        return 0  # unreachable
+
+
 def get_chain_id() -> int:
     """Get the current chain ID from EVM_CHAIN env var (default: 8453 Base)."""
     chain_env = os.environ.get("EVM_CHAIN", "base").lower()

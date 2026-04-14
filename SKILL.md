@@ -1535,16 +1535,17 @@ python3 scripts/onchain-propose.py --token $TOKEN --mode executable --targets "0
 
 **Gasless vote (recommended, no ETH):**
 ```bash
-python3 scripts/relay-vote.py --proposal 12345... --support 1 --reason "I support this"
+python3 scripts/relay-vote.py --proposal 0x62f25cfc...35670 --support 1 --reason "I support this"
 # Auto-discovers eligible veAWP tokens. Or specify manually:
-python3 scripts/relay-vote.py --proposal 12345... --support 0 --token-ids 1,2,3
+python3 scripts/relay-vote.py --proposal 0x62f25cfc...35670 --support 0 --token-ids 1,2,3
 ```
-Support: 0=Against, 1=For, 2=Abstain.
+Support: 0=Against, 1=For, 2=Abstain. ProposalId accepts both hex (`0x...`) and decimal.
 
 **On-chain vote (requires ETH):**
 ```bash
-python3 scripts/onchain-vote.py --token $TOKEN --proposal 42 --support 1 --reason "I support this"
+python3 scripts/onchain-vote.py --token $TOKEN --proposal 0x62f25cfc...35670 --support 1 --reason "I support this"
 ```
+ProposalId accepts hex (`0x...`) or decimal.
 
 ### G3 · Query DAO
 
@@ -1555,8 +1556,9 @@ python3 scripts/query-dao.py
 
 **Proposal detail with quorum progress + timeline:**
 ```bash
-python3 scripts/query-dao.py --proposal 12345...
+python3 scripts/query-dao.py --proposal 0x62f25cfc...35670
 ```
+When displaying signal proposal detail, also show the `url` field (external reference link) and `body` if present.
 
 **Voting power for address:**
 ```bash

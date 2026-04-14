@@ -5,8 +5,6 @@ params = abi.encode(uint256[] tokenIds) — eligible veAWP positions only
 Requires ETH for gas.
 """
 
-import json
-
 from awp_lib import *
 
 SUPPORT_LABELS = {0: "Against", 1: "For", 2: "Abstain"}
@@ -65,7 +63,7 @@ def main() -> None:
     parser.add_argument("--reason", default="", help="Voting reason (optional)")
     args = parser.parse_args()
 
-    proposal_id = validate_positive_int(args.proposal, "proposal")
+    proposal_id = parse_proposal_id(args.proposal)
 
     # Validate support value
     if args.support not in ("0", "1", "2"):
