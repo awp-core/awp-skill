@@ -175,9 +175,25 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 
 | Method | Params | Description |
 |--------|--------|-------------|
-| `governance.listProposals` | `status?`, `chainId?`, `page?`, `limit?` | List proposals. Status: `Active`/`Canceled`/`Defeated`/`Succeeded`/`Queued`/`Expired`/`Executed` |
+| `governance.listProposals` | `status?`, `chainId?`, `page?`, `limit?` | List proposals. Status: `Active`/`Pending`/`Canceled`/`Defeated`/`Succeeded`/`Queued`/`Expired`/`Executed` |
 | `governance.listAllProposals` | `status?`, `page?`, `limit?` | Cross-chain proposal list |
-| `governance.getProposal` | `proposalId` **(required)**, `chainId?` | Proposal details: description, votes, state, targets, calldatas |
+| `governance.listGrouped` | `page?`, `limit?` | Cross-chain merged proposals (same proposalId across chains) |
+| `governance.listByStatusGrouped` | `status`, `page?`, `limit?` | Merged proposals filtered by status |
+| `governance.getActive` | `page?`, `limit?` | Active proposals shortcut (cross-chain merged) |
+| `governance.getProposal` | `proposalId` **(required)**, `chainId?` | Enriched proposal detail: votes, state, voters (top 100), quorum |
+| `governance.decodeProposalActions` | `proposalId` **(required)**, `chainId?` | Decode proposal calldata into human-readable function calls |
+| `governance.getTimeline` | `proposalId` **(required)**, `chainId?` | Full lifecycle timeline: Created → VotingStarted → VotingEnded → Queued → Executed/Canceled |
+| `governance.getQuorumProgress` | `proposalId` **(required)**, `chainId?` | Real-time quorum progress (bps), willPassIfEnded, deadline |
+| `governance.getEligibleTokens` | `address` **(required)**, `proposalId` **(required)**, `chainId?` | veAWP NFT eligibility per proposal (eligible if createdAt < proposalCreatedAt) |
+| `governance.getVotingPower` | `address` **(required)**, `proposalId?`, `chainId?` | Aggregate voting power for address |
+| `governance.getVoterPower` | `proposalId` **(required)**, `voter` **(required)**, `chainId?` | Single voter status on proposal (hasVoted, weight, reason) |
+| `governance.getVoterVotesGlobal` | `proposalId` **(required)**, `voter` **(required)** | Voter's cross-chain votes for a proposal |
+| `governance.listProposalVotesGlobal` | `proposalId` **(required)**, `grouped?`, `page?`, `limit?` | All voters cross-chain for a proposal |
+| `governance.getUserVoteHistory` | `address` **(required)**, `page?`, `limit?` | User's complete vote history across all proposals |
+| `governance.getUserProposals` | `address` **(required)**, `page?`, `limit?` | Proposals submitted by address |
+| `governance.getApprovedProposers` | `chainId?` | Whitelisted proposers (bypass 200K AWP threshold) |
+| `governance.isApprovedProposer` | `address` **(required)**, `chainId?` | Check if address is approved proposer |
+| `governance.getStats` | none | DAO dashboard: total proposals, voters, pass rate, status breakdown |
 | `governance.getTreasury` | none | Returns treasury contract address |
 
 ---
@@ -594,7 +610,9 @@ If the user later wants to work on a worknet that requires staking, guide them t
 | Set minimum stake | M4 | **references/commands-worknet.md** |
 | Create governance proposal | G1 | **references/commands-governance.md** |
 | Vote on proposal | G2 | **references/commands-governance.md** |
-| Query proposals | G3 | None |
+| Query proposals / DAO overview | G3 | None (use `query-dao.py`) |
+| Decode proposal actions | G4 | None |
+| Check voting power / eligibility | G3 | None (use `query-dao.py --mode power`) |
 | Check treasury | G4 | None |
 | Watch / monitor events | W1 | None (presets below) |
 | Emission settlement alerts | W2 | None (workflow below) |
@@ -795,7 +813,11 @@ scripts/
 ├── relay-unbind.py                    Gasless unbind from binding target
 ├── relay-delegate.py                  Gasless grant/revoke delegate
 ├── relay-stake.py                     Gasless staking via ERC-2612 permit (no ETH needed)
-└── relay-allocate.py                  Gasless allocate/deallocate stake
+├── relay-allocate.py                  Gasless allocate/deallocate stake
+├── relay-vote.py                      Gasless DAO vote (auto-discovers eligible tokens)
+├── relay-propose.py                   Gasless executable proposal
+├── relay-signal-propose.py            Gasless signal proposal (title + body)
+└── query-dao.py                       Read-only DAO overview: stats, active proposals, voting power, history
 ```
 
 ## Security Controls
@@ -892,7 +914,8 @@ awp-wallet balance --token $TOKEN
 - **Has ETH** → use `onchain-*.py` scripts
 - **No ETH** → use `relay-*.py` scripts (gasless, rate limit: 100/IP/1h)
 - **Staking** → prefer `relay-stake.py` (gasless via ERC-2612 permit); fallback to `onchain-deposit.py` if relay fails
-- **Governance voting** → gasless via `/api/relay/vote` (OZ ExtendedBallot); no bundled script yet, call endpoint manually
+- **Governance voting** → gasless via `relay-vote.py` (auto-discovers eligible tokens); on-chain fallback: `onchain-vote.py`
+- **Proposals** → gasless via `relay-signal-propose.py` (signal) or `relay-propose.py` (executable); on-chain fallback: `onchain-propose.py`
 - cancelWorknet/pauseWorknet/resumeWorknet always need ETH — NFT-owner-only, no gasless option
 
 Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay/*`
@@ -910,7 +933,12 @@ Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay
 | `POST /api/relay/stake` | Gasless staking (ERC-2612 permit) | AWP Token (permit domain) |
 | `POST /api/relay/allocate` | Allocate stake to agent | AWPAllocator |
 | `POST /api/relay/deallocate` | Deallocate stake | AWPAllocator |
+| `POST /api/relay/vote/prepare` | **LLM-friendly:** returns pre-built ExtendedBallot typedData for vote | -- |
 | `POST /api/relay/vote` | Gasless governance vote (OZ ExtendedBallot EIP-712) | AWPDAO |
+| `POST /api/relay/propose/prepare` | **LLM-friendly:** returns pre-built typedData for executable proposal | -- |
+| `POST /api/relay/propose` | Gasless executable proposal (EIP-712) | AWPDAO |
+| `POST /api/relay/signal-propose/prepare` | **LLM-friendly:** returns typedData for signal proposal + contentHash | -- |
+| `POST /api/relay/signal-propose` | Gasless signal proposal (title+body, body stored off-chain as hash) | AWPDAO |
 | `GET /api/relay/status/{txHash}` | Check relay tx status | -- |
 
 Relay request format uses a **combined 65-byte signature** (NOT split v/r/s — the live API rejects split fields):
@@ -941,6 +969,11 @@ Response: `{"txHash": "0x..."}` | Error: `{"error": "invalid EIP-712 signature"}
 {"name": "AWP Token", "version": "1", "chainId": 8453, "verifyingContract": "0x0000A1050AcF9DEA8af9c2E74f0D7CF43f1000A1"}
 ```
 
+**AWPDAO domain** (vote, propose, signalPropose):
+```json
+{"name": "AWPDAO", "version": "1", "chainId": 8453, "verifyingContract": "0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0"}
+```
+
 ### EIP-712 Type Definitions
 
 ```
@@ -955,6 +988,9 @@ RegisterWorknet(address user, WorknetParams params, uint256 nonce, uint256 deadl
   WorknetParams(string name, string symbol, address worknetManager, bytes32 salt, uint128 minStake, string skillsURI)
 Allocate(address staker, address agent, uint256 worknetId, uint256 amount, uint256 nonce, uint256 deadline)
 Deallocate(address staker, address agent, uint256 worknetId, uint256 amount, uint256 nonce, uint256 deadline)
+ExtendedBallot(uint256 proposalId, uint8 support, address voter, uint256 nonce, string reason, bytes params)
+Propose(address proposer, address[] targets, uint256[] values, bytes[] calldatas, string description, uint256[] tokenIds, uint256 nonce, uint256 deadline)
+SignalPropose(address proposer, string description, uint256[] tokenIds, uint256 nonce, uint256 deadline)
 ```
 
 **Nonce workflow**: **ALWAYS read nonces directly from the chain via `eth_call(nonces(address))`** on `AWPRegistry` (for bind/unbind/setRecipient/registerWorknet/grantDelegate/revokeDelegate) or `AWPAllocator` (for allocate/deallocate). The API methods `nonce.get` / `nonce.getStaking` may return stale values due to indexer lag, causing `invalid EIP-712 signature` errors. The bundled scripts use `awp_lib.get_onchain_nonce()` which reads from the contract directly via selector `0x7ecebe00`. Nonces auto-increment after each successful relay; failed verification does NOT increment.
@@ -1452,30 +1488,80 @@ python3 scripts/onchain-worknet-update.py --token $TOKEN --worknet 1 --min-stake
 
 ---
 
-## Governance (wallet + veAWP positions — load commands-governance.md for G1/G2)
+## Governance (wallet + veAWP positions)
+
+DAO parameters (from `registry.get` response):
+- **Proposal threshold**: 200,000 AWP staked (waived for approved proposers)
+- **Voting delay**: 28,800s (8 hours after creation before voting starts)
+- **Voting period**: 172,800s (48 hours voting window)
+- **Quorum**: 4% of total staked AWP (For + Abstain count toward quorum, Against does not)
 
 ### G1 · Create Proposal
-Load commands-governance.md. Needs >= 200,000 AWP voting power (on-chain proposalThreshold).
+
+**Signal proposal (gasless, no ETH)** — community sentiment poll, no execution targets:
+```bash
+python3 scripts/relay-signal-propose.py --title "Should we expand to Solana?" --body "Full rationale..."
+# Or read body from file:
+python3 scripts/relay-signal-propose.py --title "..." --body @proposal.md
+```
+
+**Executable proposal (gasless, no ETH)** — with on-chain execution targets:
+```bash
+python3 scripts/relay-propose.py \
+  --targets "0xRegistry..." --values "0" --calldatas "0x2f2ff15d..." \
+  --description "Set new guardian"
+```
+
+**On-chain proposal (requires ETH):**
+```bash
+python3 scripts/onchain-propose.py --token $TOKEN --mode signal --description "..." --token-ids 1,2
+python3 scripts/onchain-propose.py --token $TOKEN --mode executable --targets "0x..." --values "0" --calldatas "0x..." --description "..." --token-ids 1,2
+```
 
 ### G2 · Vote
+
+**Gasless vote (recommended, no ETH):**
+```bash
+python3 scripts/relay-vote.py --proposal 12345... --support 1 --reason "I support this"
+# Auto-discovers eligible veAWP tokens. Or specify manually:
+python3 scripts/relay-vote.py --proposal 12345... --support 0 --token-ids 1,2,3
+```
+Support: 0=Against, 1=For, 2=Abstain.
+
+**On-chain vote (requires ETH):**
 ```bash
 python3 scripts/onchain-vote.py --token $TOKEN --proposal 42 --support 1 --reason "I support this"
 ```
-Support: 0=Against, 1=For, 2=Abstain. The script handles position filtering and ABI encoding.
 
-### G3 · Query Proposals
+### G3 · Query DAO
+
+**DAO overview (stats + active proposals):**
+```bash
+python3 scripts/query-dao.py
+```
+
+**Proposal detail with quorum progress + timeline:**
+```bash
+python3 scripts/query-dao.py --proposal 12345...
+```
+
+**Voting power for address:**
+```bash
+python3 scripts/query-dao.py --address 0x... --mode power
+```
+
+**Vote + proposal history:**
+```bash
+python3 scripts/query-dao.py --address 0x... --mode history
+```
+
+### G4 · Decode Proposal Actions
 ```bash
 curl -s -X POST https://api.awp.sh/v2 \
   -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"governance.listProposals","params":{"status":"Active","page":1,"limit":20},"id":1}'
+  -d '{"jsonrpc":"2.0","method":"governance.decodeProposalActions","params":{"proposalId":"12345..."},"id":1}'
 ```
-
-### G4 · Query Treasury
-```bash
-curl -s -X POST https://api.awp.sh/v2 \
-  -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"governance.getTreasury","params":{},"id":1}'
-```
+Returns human-readable function names and decoded arguments for each proposal action.
 
 ---
 
@@ -1488,12 +1574,13 @@ a JSON message with `subscribe: [eventName, ...]`, optional `watchAllocations`, 
 optional `watchAddresses`. Every event includes `type`, `chainId`, `blockNumber`,
 `txHash`, and event-specific `data` fields.
 
-| Preset | Events (25 total) | Emoji |
+| Preset | Events (31 total) | Emoji |
 |--------|-------------------|-------|
 | staking | StakePositionCreated, StakePositionIncreased, StakePositionClosed, Allocated, Deallocated, Reallocated | `$` |
 | worknets | WorknetRegistered, WorknetActivated, WorknetPaused, WorknetResumed, WorknetBanned, WorknetUnbanned, WorknetRejected, WorknetCancelled | `#` |
 | emission | EpochSettled, AllocationsSubmitted | `~` |
 | users | Bound, Unbound, RecipientSet, DelegateGranted, DelegateRevoked | `@` |
+| governance | ProposalCreated, VoteCast, ProposalQueued, ProposalExecuted, ProposalCanceled, ApprovedProposerSet | `🗳` |
 | protocol | GuardianUpdated, InitialAlphaPriceUpdated, WorknetTokenFactoryUpdated, WorknetNFTTransfer | `⚙` |
 
 All 25 WebSocket events with key fields (every event includes `chainId`, `blockNumber`, `txHash`):
@@ -1525,6 +1612,12 @@ All 25 WebSocket events with key fields (every event includes `chainId`, `blockN
 | `InitialAlphaPriceUpdated` | AWPRegistry | `newPrice` |
 | `WorknetTokenFactoryUpdated` | AWPRegistry | `newFactory` |
 | `WorknetNFTTransfer` | AWPWorkNet | `from`, `to`, `tokenId` |
+| `ProposalCreated` | AWPDAO | `proposalId`, `proposer`, `voteStart`, `voteEnd`, `description` |
+| `VoteCast` | AWPDAO | `voter`, `proposalId`, `support`, `weight`, `reason` |
+| `ProposalQueued` | AWPDAO | `proposalId`, `etaSeconds` |
+| `ProposalExecuted` | AWPDAO | `proposalId` |
+| `ProposalCanceled` | AWPDAO | `proposalId` |
+| `ApprovedProposerSet` | AWPDAO | `proposer`, `approved` |
 
 Display format:
 ```
