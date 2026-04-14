@@ -180,7 +180,7 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 | `governance.listGrouped` | `page?`, `limit?` | Cross-chain merged view — same proposalId across chains merged into one entry |
 | `governance.listByStatusGrouped` | `status` **(required)**, `page?`, `limit?` | Merged proposals where at least one chain matches the status |
 | `governance.getActive` | `page?`, `limit?` | Active proposals shortcut — equivalent to listByStatusGrouped(status="Active") |
-| `governance.getProposal` | `proposalId` **(required)**, `chainId?` | Enriched detail: live votes (from contract), state, voters top 100, quorum, body (signal only) |
+| `governance.getProposal` | `proposalId` **(required, hex or decimal)**, `chainId?` | Enriched detail: live votes, state, voters top 100, quorum, body + url (signal only), contentHash |
 | `governance.decodeProposalActions` | `proposalId` **(required)**, `chainId?` | Decode calldata into human-readable function calls. Supports: AWPRegistry, AWPDAO, Treasury, AWPEmission, AWPAllocator, veAWP, AWPWorkNet |
 | `governance.getTimeline` | `proposalId` **(required)**, `chainId?` | Full lifecycle timeline: Created → VotingStarted → VotingEnded → Queued → Executed/Canceled |
 | `governance.getQuorumProgress` | `proposalId` **(required)**, `chainId?` | Real-time quorum progress (bps), willPassIfEnded, deadline |
@@ -1496,20 +1496,27 @@ python3 scripts/onchain-worknet-update.py --token $TOKEN --worknet 1 --min-stake
 
 ## Governance (wallet + veAWP positions)
 
-DAO parameters (from `registry.get` response):
+**Proposal ID format**: All API responses return proposalId as canonical hex (`0x` + 64 lowercase hex chars). All endpoints accept both hex and decimal input — the server auto-normalizes. Example: `0x62f25cfc5f274d2104972527c3f4d40a7270d4bea0a1cf516669e12edda35670`.
+
+DAO parameters (from `registry.get` → `daoParams`):
 - **Proposal threshold**: 200,000 AWP staked (waived for approved proposers)
-- **Voting delay**: 28,800s (8 hours after creation before voting starts)
-- **Voting period**: 172,800s (48 hours voting window)
+- **Voting delay**: 3,600s (1 hour after creation before voting starts)
+- **Voting period**: 86,400s (24 hours voting window)
+- **Late quorum vote extension**: 14,400s (4 hours auto-extension if quorum reached in final window)
 - **Quorum**: 4% of total staked AWP (For + Abstain count toward quorum, Against does not)
+- **Lifecycle**: submit → votingDelay (1h) → voting (24h) → optional extension (+4h) → 2-day Timelock (executable only) → execute
 
 ### G1 · Create Proposal
 
 **Signal proposal (gasless, no ETH)** — community sentiment poll, no execution targets:
 ```bash
 python3 scripts/relay-signal-propose.py --title "Should we expand to Solana?" --body "Full rationale..."
-# Or read body from file:
+# Read body from file:
 python3 scripts/relay-signal-propose.py --title "..." --body @proposal.md
+# With optional reference URL (e.g., GitHub ERP, forum thread):
+python3 scripts/relay-signal-propose.py --title "ERP-0001" --body @proposal.md --url "https://github.com/awp-core/ERPs/..."
 ```
+Note: `--url` is off-chain metadata (not covered by EIP-712 signature). For cryptographic integrity, embed the URL in the body text.
 
 **Executable proposal (gasless, no ETH)** — with on-chain execution targets:
 ```bash

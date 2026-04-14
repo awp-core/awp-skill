@@ -35,6 +35,11 @@ def main() -> None:
         help="Proposal body text (or @filename to read from file)",
     )
     parser.add_argument(
+        "--url",
+        default="",
+        help="External reference URL (e.g., forum thread, GitHub ERP). Optional.",
+    )
+    parser.add_argument(
         "--token-ids",
         default="",
         help="Comma-separated veAWP token IDs (optional — auto-discovers if omitted)",
@@ -61,6 +66,14 @@ def main() -> None:
         die("--title cannot be empty")
     if not body_text.strip():
         die("--body cannot be empty")
+
+    # Validate optional URL
+    url: str = args.url.strip()
+    if url:
+        if not (url.startswith("http://") or url.startswith("https://")):
+            die("--url must start with http:// or https://")
+        if len(url.encode("utf-8")) > 2048:
+            die("--url exceeds 2048 bytes")
 
     # ── Step 1: Get wallet address ──
     step("setup")
@@ -97,13 +110,15 @@ def main() -> None:
     # ── Step 3: Call /prepare endpoint ──
     prepare_url = f"{RELAY_BASE}/relay/signal-propose/prepare"
     step("prepare", endpoint=prepare_url)
-    prepare_body = {
+    prepare_body: dict = {
         "chainId": chain_id,
         "proposer": wallet_addr,
         "title": title,
         "body": body_text,
         "tokenIds": token_ids,
     }
+    if url:
+        prepare_body["url"] = url
     http_code, prepare_resp = api_post(prepare_url, prepare_body)
     if not (200 <= http_code < 300) or not isinstance(prepare_resp, dict):
         die(f"Prepare endpoint failed (HTTP {http_code}): {prepare_resp}")
