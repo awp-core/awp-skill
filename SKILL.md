@@ -1589,7 +1589,7 @@ optional `watchAddresses`. Every event includes `type`, `chainId`, `blockNumber`
 | governance | ProposalCreated, VoteCast, ProposalQueued, ProposalExecuted, ProposalCanceled, ApprovedProposerSet | `🗳` |
 | protocol | GuardianUpdated, InitialAlphaPriceUpdated, WorknetTokenFactoryUpdated, WorknetNFTTransfer | `⚙` |
 
-All 25 WebSocket events with key fields (every event includes `chainId`, `blockNumber`, `txHash`):
+All 31 WebSocket events with key fields (every event includes `chainId`, `blockNumber`, `txHash`):
 
 | Event | Source | Key Fields |
 |-------|--------|------------|
