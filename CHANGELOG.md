@@ -1,5 +1,45 @@
 # Changelog
 
+## v1.8.0
+
+### DAO governance — 4 new scripts, 16 API methods, full gasless support
+
+New scripts:
+- `relay-vote.py` — gasless DAO vote via `/vote/prepare`. Auto-discovers eligible
+  veAWP tokens via `governance.getEligibleTokens`. Validates proposalId, support,
+  and voter in typedData before signing.
+- `relay-signal-propose.py` — gasless signal proposal via `/signal-propose/prepare`.
+  Supports `@filename` syntax for reading proposal body from file. Body stored
+  off-chain as contentHash for gas savings.
+- `relay-propose.py` — gasless executable proposal via `/propose/prepare`. Validates
+  targets/values/calldatas array lengths and description hash integrity.
+- `query-dao.py` — read-only DAO overview with 5 modes: overview (stats + active
+  proposals), active (paginated), proposal (detail + quorum + timeline + voter
+  status), power (voting power + recent votes), history (full participation).
+  Auto-infers `--mode proposal` when `--proposal` is given.
+
+SKILL.md:
+- Added 16 new governance API methods to method reference table (getEligibleTokens,
+  getVotingPower, getQuorumProgress, listGrouped, listByStatusGrouped, getActive,
+  decodeProposalActions, getTimeline, getVoterPower, getVoterVotesGlobal,
+  listProposalVotesGlobal, getUserVoteHistory, getUserProposals,
+  getApprovedProposers, isApprovedProposer, getStats).
+- Added 6 new relay endpoints (vote/prepare, vote, propose/prepare, propose,
+  signal-propose/prepare, signal-propose) to relay table.
+- Added AWPDAO EIP-712 domain and 3 type hashes (ExtendedBallot, Propose,
+  SignalPropose) with construction notes.
+- Documented 3 separate nonce spaces (AWPRegistry, AWPAllocator, AWPDAO).
+- Expanded G1-G4 governance sections: gasless as primary, on-chain as fallback.
+- Added 6 DAO WebSocket events (ProposalCreated, VoteCast, ProposalQueued,
+  ProposalExecuted, ProposalCanceled, ApprovedProposerSet).
+- DAO parameters (votingDelay, votingPeriod, quorumPercent, proposalThreshold).
+
+Code quality:
+- New `awp_lib.get_chain_id()` helper — eliminates `_CHAIN_IDS`/`_get_chain_id()`
+  duplication across 4 relay scripts (relay-vote, relay-signal-propose,
+  relay-propose, relay-stake).
+- WebSocket event count corrected: 25 → 31.
+
 ## v1.7.0
 
 ### Critical gasless fix + full API sync with skill-reference.md
