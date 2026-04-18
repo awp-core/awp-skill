@@ -212,23 +212,16 @@ AWPAllocator:         0x0000D6BB5e040E35081b3AaF59DD71b21C9800AA
 veAWP:                0x0000b534C63D78212f1BDCc315165852793A00A8
 AWPWorkNet:           0x00000bfbdEf8533E5F3228c9C846522D906100A7
 LPManager (proxy):    0x00001961b9AcCD86b72DE19Be24FaD6f7c5b00A2
-WorknetTokenFactory:  0x000058EF25751Bb3687eB314185B46b942bE00AF
+WorknetTokenFactory:  0x00000a82b06Ea5b5BdD6003fbfb9602FA531CAFE
 Treasury:             0x82562023a053025F3201785160CaE6051efD759e
 VeAWPHelper:          0x0000561EDE5C1Ba0b81cE585964050bEAE730001
 AWPDAO:               0x00006879f79f3Da189b5D0fF6e58ad0127Cc0DA0
 Guardian (Safe 3/5):  0x000002bEfa6A1C99A710862Feb6dB50525dF00A3
 ```
 
-### WorknetManager Default Implementation (differs per chain due to DEX integration)
+WorknetManager default implementations differ per chain (DEX-specific). See **references/commands-worknet.md** for per-chain addresses. Query on-chain via `AWPRegistry.defaultWorknetManagerImpl()`.
 
-| Chain | Address |
-|-------|---------|
-| Base (8453) | `0x00000cb9FFd06DDd1e85abAa5AC147bB4e3B0001` |
-| Ethereum (1) | `0x0000031Aa47479219317C062E6dF065bb4d50001` |
-| Arbitrum (42161) | `0x000073a1393a36c8b7677069706B261683Ec0001` |
-| BSC (56) | `0x0000907bEC346871dE2D7c54e8E6fD102De00001` |
-
-Supported chains: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). All core protocol addresses identical across all 4 chains (except LPManager proxies and WorknetManager default impls which differ per DEX).
+Supported chains: Base (8453), Ethereum (1), Arbitrum (42161), BSC (56). All core protocol addresses identical across all 4 chains.
 
 ## On Skill Load
 
@@ -1477,9 +1470,9 @@ python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action
 own NFT. Guardian-only operations: `activateWorknet`, `rejectWorknet`, `banWorknet`,
 `unbanWorknet`, `deregisterWorknet`. End users cannot execute these.
 
-**Lifecycle states**: Pending → Active ↔ Paused → Deregistered (final, irreversible).
-Cancel only works on Pending (refunds AWP escrow). Deregister only works on Active
-(Guardian-only, irreversible — worknet is permanently shut down).
+**Lifecycle states**: Pending → Active ↔ Paused; Active → Banned ↔ Unbanned; Active → Deregistered (final).
+Cancel only works on Pending (refunds AWP escrow). Ban/unban and deregister are Guardian-only.
+Banned worknets have allocations frozen (`staking.getFrozen`). Deregister is irreversible.
 
 ### M3 · Update Skills URI
 ```bash
@@ -1499,12 +1492,11 @@ python3 scripts/onchain-worknet-update.py --token $TOKEN --worknet 1 --min-stake
 
 DAO parameters (from `registry.get` → `daoParams` — Guardian-configurable, always fetch dynamically):
 - **Proposal threshold**: 200,000 AWP staked (waived for approved proposers)
-- **Voting delay**: 12 hours (43,200s) — time after creation before voting starts
-- **Voting period**: 48 hours (172,800s) — voting window
-- **Late quorum vote extension**: 8 hours (28,800s) — auto-extension if quorum reached in final window
+- **Voting delay**: 3,600s (1 hour) — time after creation before voting starts
+- **Voting period**: 86,400s (24 hours) — voting window
 - **Quorum**: 4% of total staked AWP (For + Abstain count toward quorum, Against does not)
 - **Option E (anti-flash-stake)**: veAWP lockEndTime must be >= proposalDeadline + 7 days
-- **Lifecycle**: submit → 12h delay → 48h voting → (+8h if late quorum) → 2-day Timelock (executable only) → execute
+- **Lifecycle**: submit → 1h delay → 24h voting → 2-day Timelock (executable only) → execute
 
 ### G1 · Create Proposal
 

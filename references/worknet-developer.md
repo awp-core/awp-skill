@@ -346,13 +346,14 @@ Nonce: `AWPDAO.nonces(address)` — shared across vote/propose/signal.
 **Parameters:**
 | Param | Value |
 |-------|-------|
-| votingDelay | 12 hours (43200s) |
-| votingPeriod | 48 hours (172800s) |
-| lateQuorumVoteExtension | 8 hours (28800s) |
+| votingDelay | 1 hour (3600s) |
+| votingPeriod | 24 hours (86400s) |
 | quorumPercent | 4% of total staked AWP |
 | proposalThreshold | 200,000 AWP staked (waived for approvedProposer) |
 
-**Proposal lifecycle**: create → 12h delay → 48h voting → (+8h if late quorum) → Succeeded/Defeated → 2-day Timelock → execute.
+Note: DAO params are Guardian-configurable — always fetch from `registry.get → daoParams`.
+
+**Proposal lifecycle**: create → 1h delay → 24h voting → Succeeded/Defeated → 2-day Timelock → execute.
 
 **ProposalId format**: `0x` + 64 hex chars (bytes32 form of uint256). API accepts both hex and decimal, always returns hex.
 
@@ -434,7 +435,7 @@ Nonce: `AWPDAO.nonces(address)` — shared across vote/propose/signal.
 **Registration**: `address.check`, `address.resolveRecipient`, `nonce.get`, `nonce.getStaking`
 **Users**: `users.get`, `users.getPortfolio`, `users.list`, `users.count`
 **Staking**: `staking.getBalance`, `staking.getPositions`, `staking.getAllocations`
-**WorkNets**: `subnets.list`, `subnets.get`, `subnets.getSkills`, `subnets.getEarnings`, `subnets.listRanked`, `subnets.search`
+**WorkNets**: `worknets.list`, `worknets.get`, `worknets.getSkills`, `worknets.getEarnings`, `worknets.listRanked`, `worknets.search`, `worknets.listAgents`, `worknets.getByOwner`, `worknets.getAgentInfo`
 **Emission**: `emission.getCurrent`, `emission.getSchedule`, `emission.listEpochs`
 **Governance**: `governance.listProposals`, `governance.getProposal`, `governance.getEligibleTokens`, `governance.getVotingPower`, `governance.getQuorumProgress`, `governance.getStats`
 **Tokens**: `tokens.getAWP`, `tokens.getWorknetTokenInfo`, `tokens.getWorknetTokenPrice`
