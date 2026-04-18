@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.9.1
+
+### Fix 5 inconsistencies from worknet-llm-reference.md (verified against live API)
+
+- DAO params reverted to live registry values: votingDelay=3600 (1h),
+  votingPeriod=86400 (24h). Removed lateQuorumVoteExtension (not in registry).
+- WorknetTokenFactory address fixed: `0x000058EF...` → `0x00000a82...CAFE`.
+- WorknetManager impl address table removed from SKILL.md (conflicted with
+  commands-worknet.md); replaced with pointer + on-chain query guidance.
+- references/worknet-developer.md: `subnets.*` → `worknets.*` + missing methods.
+- Lifecycle: added Banned state (ban/unban functions exist but were missing).
+
 ## v1.9.0
 
 ### API rename + worknet developer guide + lifecycle updates
