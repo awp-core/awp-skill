@@ -191,5 +191,5 @@ function balanceOf(address account) view returns (uint256)   // on AWPToken
 ### Worknet Earnings
 
 ```json
-{"jsonrpc": "2.0", "method": "subnets.getEarnings", "params": {"worknetId": "1", "page": 1, "limit": 20}, "id": 1}
+{"jsonrpc": "2.0", "method": "worknets.getEarnings", "params": {"worknetId": "1", "page": 1, "limit": 20}, "id": 1}
 ```

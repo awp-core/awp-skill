@@ -41,7 +41,7 @@ def main() -> None:
     awp_registry = require_contract(registry, "awpRegistry")
 
     # ── Check current worknet status ──
-    worknet_info = rpc("subnets.get", {"worknetId": str(worknet_id)})
+    worknet_info = rpc("worknets.get", {"worknetId": str(worknet_id)})
     if not isinstance(worknet_info, dict):
         die(f"Worknet #{worknet_id} not found")
 

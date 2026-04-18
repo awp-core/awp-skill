@@ -146,15 +146,15 @@ Quick index of JSON-RPC 2.0 methods and relay endpoints. For write operations, s
 
 | Method | Params | Description |
 |--------|--------|-------------|
-| `subnets.list` | `status?`, `chainId?`, `page?`, `limit?` | Filter: `Pending`/`Active`/`Paused`/`Banned` |
-| `subnets.listRanked` | `chainId?`, `page?`, `limit?` | Ranked by total stake |
-| `subnets.search` | `query` (required, 1-100 chars), `chainId?`, `page?`, `limit?` | Name/symbol search |
-| `subnets.getByOwner` | `owner` (required), `chainId?`, `page?`, `limit?` | Worknets owned by address |
-| `subnets.get` | `worknetId` (required) | Worknet details |
-| `subnets.getSkills` | `worknetId` (required) | Skills URI |
-| `subnets.getEarnings` | `worknetId` (required), `page?`, `limit?` | AWP earnings history |
-| `subnets.getAgentInfo` | `worknetId` (required), `agent` (required) | Agent info in worknet |
-| `subnets.listAgents` | `worknetId` (required), `chainId?`, `page?`, `limit?` | Agents ranked by stake |
+| `worknets.list` | `status?`, `chainId?`, `page?`, `limit?` | Filter: `Pending`/`Active`/`Paused`/`Banned` |
+| `worknets.listRanked` | `chainId?`, `page?`, `limit?` | Ranked by total stake |
+| `worknets.search` | `query` (required, 1-100 chars), `chainId?`, `page?`, `limit?` | Name/symbol search |
+| `worknets.getByOwner` | `owner` (required), `chainId?`, `page?`, `limit?` | Worknets owned by address |
+| `worknets.get` | `worknetId` (required) | Worknet details |
+| `worknets.getSkills` | `worknetId` (required) | Skills URI |
+| `worknets.getEarnings` | `worknetId` (required), `page?`, `limit?` | AWP earnings history |
+| `worknets.getAgentInfo` | `worknetId` (required), `agent` (required) | Agent info in worknet |
+| `worknets.listAgents` | `worknetId` (required), `chainId?`, `page?`, `limit?` | Agents ranked by stake |
 
 ### Emission
 

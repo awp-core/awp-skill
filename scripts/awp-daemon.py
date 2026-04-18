@@ -341,7 +341,7 @@ def fetch_announcements() -> list[dict[str, Any]]:
 
 def fetch_active_worknets() -> list[dict[str, Any]]:
     """Fetch the list of active worknets."""
-    result = rpc("subnets.list", {"status": "Active", "limit": 50})
+    result = rpc("worknets.list", {"status": "Active", "limit": 50})
     if isinstance(result, list):
         return result
     if isinstance(result, dict):

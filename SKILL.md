@@ -134,23 +134,23 @@ Throughout this document, all `curl` commands use JSON-RPC POST to `https://api.
 | `staking.getAllocations` | `address` **(required)**, `chainId?`, `page?`, `limit?` | Paginated allocation records: `{agent, worknetId, amount}` |
 | `staking.getFrozen` | `address` **(required)**, `chainId?` | Frozen allocations (from banned worknets) |
 | `staking.getPending` | `address` **(required)**, `chainId?` | Pending allocations awaiting confirmation |
-| `staking.getAgentSubnetStake` | `agent` **(required)**, `worknetId` **(required)** | Agent's total allocated stake in a specific worknet (cross-chain) |
-| `staking.getAgentSubnets` | `agent` **(required)** | All worknetIds where this agent has non-zero allocations |
-| `staking.getSubnetTotalStake` | `worknetId` **(required)** | Total AWP staked across all agents in a worknet |
+| `staking.getAgentWorknetStake` | `agent` **(required)**, `worknetId` **(required)** | Agent's total allocated stake in a specific worknet (cross-chain) |
+| `staking.getAgentWorknets` | `agent` **(required)** | All worknetIds where this agent has non-zero allocations |
+| `staking.getWorknetTotalStake` | `worknetId` **(required)** | Total AWP staked across all agents in a worknet |
 
 #### Worknets
 
 | Method | Params | Description |
 |--------|--------|-------------|
-| `subnets.list` | `status?`, `chainId?`, `page?`, `limit?` | List worknets. Filter by status: `Pending`, `Active`, `Paused`, `Banned` |
-| `subnets.listRanked` | `chainId?`, `page?`, `limit?` | Worknets ranked by total stake (highest first) |
-| `subnets.search` | `query` **(required, 1-100 chars)**, `chainId?`, `page?`, `limit?` | Search by name or symbol (case-insensitive) |
-| `subnets.getByOwner` | `owner` **(required)**, `chainId?`, `page?`, `limit?` | Worknets owned by address |
-| `subnets.get` | `worknetId` **(required)** | Full worknet details: name, symbol, status, alphaToken, LP pool, owner, stakes |
-| `subnets.getSkills` | `worknetId` **(required)** | Skills URI (off-chain metadata describing the worknet's capabilities) |
-| `subnets.getEarnings` | `worknetId` **(required)**, `page?`, `limit?` | Paginated AWP earnings history by epoch |
-| `subnets.getAgentInfo` | `worknetId` **(required)**, `agent` **(required)** | Agent's info within a specific worknet: stake, validity, reward recipient |
-| `subnets.listAgents` | `worknetId` **(required)**, `chainId?`, `page?`, `limit?` | Agents in worknet ranked by stake |
+| `worknets.list` | `status?`, `chainId?`, `page?`, `limit?` | List worknets. Filter by status: `Pending`, `Active`, `Paused`, `Banned` |
+| `worknets.listRanked` | `chainId?`, `page?`, `limit?` | Worknets ranked by total stake (highest first) |
+| `worknets.search` | `query` **(required, 1-100 chars)**, `chainId?`, `page?`, `limit?` | Search by name or symbol (case-insensitive) |
+| `worknets.getByOwner` | `owner` **(required)**, `chainId?`, `page?`, `limit?` | Worknets owned by address |
+| `worknets.get` | `worknetId` **(required)** | Full worknet details: name, symbol, status, alphaToken, LP pool, owner, stakes |
+| `worknets.getSkills` | `worknetId` **(required)** | Skills URI (off-chain metadata describing the worknet's capabilities) |
+| `worknets.getEarnings` | `worknetId` **(required)**, `page?`, `limit?` | Paginated AWP earnings history by epoch |
+| `worknets.getAgentInfo` | `worknetId` **(required)**, `agent` **(required)** | Agent's info within a specific worknet: stake, validity, reward recipient |
+| `worknets.listAgents` | `worknetId` **(required)**, `chainId?`, `page?`, `limit?` | Agents in worknet ranked by stake |
 
 #### Emission
 
@@ -827,7 +827,7 @@ scripts/
 This skill uses a Node.js bridge to sign and send raw contract calls because `awp-wallet send` only supports simple token transfers, not arbitrary calldata. The bridge:
 
 - **Does NOT access private keys directly** — it imports awp-wallet's `loadSigner()` which manages key material internally. The skill never sees, logs, or transmits private keys.
-- **Enforces a two-layer contract allowlist** — calls are restricted to known AWP protocol contracts via a hardcoded static set (11 addresses) INTERSECTED with the live registry. A compromised API cannot add unknown contracts. Per-worknet WorknetManager addresses are verified via the `subnets.list` API before allowing calls.
+- **Enforces a two-layer contract allowlist** — calls are restricted to known AWP protocol contracts via a hardcoded static set (11 addresses) INTERSECTED with the live registry. A compromised API cannot add unknown contracts. Per-worknet WorknetManager addresses are verified via the `worknets.list` API before allowing calls.
 - **Session token optional** — new wallet versions work without `--token`. Older wallets may require a short-lived session token from `awp-wallet unlock` (scope: `transfer`). Never a private key or password.
 - **Validates all inputs** — `--to` (address format), `--data` (hex format), `--value` (non-negative integer). Invalid inputs are rejected before any network call.
 
@@ -1050,7 +1050,7 @@ Without `chainId` (omit) → all chains where registered:
 ```bash
 curl -s -X POST https://api.awp.sh/v2 \
   -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"subnets.get","params":{"worknetId":"ID"},"id":1}'
+  -d '{"jsonrpc":"2.0","method":"worknets.get","params":{"worknetId":"ID"},"id":1}'
 ```
 Print:
 ```
@@ -1132,14 +1132,14 @@ decay:          ~0.3156% per epoch
 ```bash
 curl -s -X POST https://api.awp.sh/v2 \
   -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"subnets.getAgentInfo","params":{"worknetId":"ID","agent":"0x..."},"id":1}'
+  -d '{"jsonrpc":"2.0","method":"worknets.getAgentInfo","params":{"worknetId":"ID","agent":"0x..."},"id":1}'
 ```
 
 ### Q5 · List Worknets
 ```bash
 curl -s -X POST https://api.awp.sh/v2 \
   -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"subnets.list","params":{"status":"Active","page":1,"limit":20},"id":1}'
+  -d '{"jsonrpc":"2.0","method":"worknets.list","params":{"status":"Active","page":1,"limit":20},"id":1}'
 ```
 Sort: worknets with skills first, then min_stake ascending.
 ```
@@ -1155,7 +1155,7 @@ Sort: worknets with skills first, then min_stake ascending.
 ```bash
 curl -s -X POST https://api.awp.sh/v2 \
   -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"subnets.getSkills","params":{"worknetId":"ID"},"id":1}'
+  -d '{"jsonrpc":"2.0","method":"worknets.getSkills","params":{"worknetId":"ID"},"id":1}'
 ```
 
 For `awp-worknet` sources (`github.com/awp-worknet/*`), install directly:
@@ -1183,8 +1183,8 @@ curl -s -X POST https://api.awp.sh/v2 \
 
 | Query | Method | Key Params |
 |-------|--------|------------|
-| **Q8** Search worknets | `subnets.search` | `{"query":"NAME"}` |
-| **Q9** Ranked worknets | `subnets.listRanked` | `{"page":1,"limit":20}` |
+| **Q8** Search worknets | `worknets.search` | `{"query":"NAME"}` |
+| **Q9** Ranked worknets | `worknets.listRanked` | `{"page":1,"limit":20}` |
 | **Q10** Portfolio overview | `users.getPortfolio` | `{"address":"ADDR"}` |
 | **Q11** Cross-chain balance | `staking.getUserBalanceGlobal` | `{"address":"ADDR"}` |
 | **Q11b** Cross-chain positions | `staking.getPositionsGlobal` | `{"address":"ADDR"}` |

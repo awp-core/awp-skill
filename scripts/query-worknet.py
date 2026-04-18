@@ -69,7 +69,7 @@ def main() -> None:
     # rpc() calls die() (sys.exit) on API errors before returning, so catch
     # SystemExit to produce a clean JSON error for this read-only script.
     try:
-        worknet = rpc("subnets.get", {"worknetId": str(wid)})
+        worknet = rpc("worknets.get", {"worknetId": str(wid)})
     except SystemExit:
         print(json.dumps({"error": f"Worknet {wid} not found or API error"}))
         sys.exit(1)
@@ -113,7 +113,7 @@ def main() -> None:
 
     # ── Fetch skills URI (non-critical — graceful fallback on error) ──
     try:
-        skills = rpc("subnets.getSkills", {"worknetId": str(wid)})
+        skills = rpc("worknets.getSkills", {"worknetId": str(wid)})
     except SystemExit:
         skills = None
     if isinstance(skills, dict):
@@ -127,7 +127,7 @@ def main() -> None:
     # ── Fetch top agents (non-critical) ──
     try:
         agents_resp = rpc(
-            "subnets.listAgents",
+            "worknets.listAgents",
             {"worknetId": str(wid), "limit": args.agents},
         )
     except SystemExit:
@@ -167,7 +167,7 @@ def main() -> None:
     # ── Fetch recent earnings (non-critical) ──
     try:
         earnings_resp = rpc(
-            "subnets.getEarnings",
+            "worknets.getEarnings",
             {"worknetId": str(wid), "limit": 5},
         )
     except SystemExit:

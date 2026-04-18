@@ -288,7 +288,7 @@ def main() -> None:
         state["totalAllocated"] = str(total_allocated)
 
     # ── Phase 4: Check available worknets ──
-    worknets_resp = _rpc("subnets.list", {"status": "Active", "limit": 20})
+    worknets_resp = _rpc("worknets.list", {"status": "Active", "limit": 20})
     free_worknets: list[dict] = []
     raw_list: list = []
     if isinstance(worknets_resp, list):

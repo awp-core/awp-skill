@@ -320,7 +320,7 @@ AWP refund.
 
 Always check current status via JSON-RPC before calling:
 ```json
-{"jsonrpc": "2.0", "method": "subnets.get", "params": {"worknetId": "123"}, "id": 1}
+{"jsonrpc": "2.0", "method": "worknets.get", "params": {"worknetId": "123"}, "id": 1}
 ```
 
 ### Complete Command Templates
@@ -424,7 +424,7 @@ python3 scripts/onchain-worknet-metadata.py --token $TOKEN --worknet <ID> --imag
 **Query your worknets:**
 ```bash
 curl -s -X POST https://api.awp.sh/v2 -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","method":"subnets.getByOwner","params":{"owner":"<YOUR_ADDRESS>"},"id":1}'
+  -d '{"jsonrpc":"2.0","method":"worknets.getByOwner","params":{"owner":"<YOUR_ADDRESS>"},"id":1}'
 ```
 
 ### WorknetManager Configuration (Advanced)

@@ -90,7 +90,7 @@ const STATIC_ALLOWED = new Set([
 ])
 
 async function isWorknetManager(address, chainName) {
-  // Verify an address is a known WorknetManager by querying subnets.list.
+  // Verify an address is a known WorknetManager by querying worknets.list.
   // WorknetManagers are per-worknet contracts deployed by the factory — they are
   // NOT in the static allowlist or the registry. This separate check allows
   // onchain-claim.py to target these contracts safely.
@@ -106,7 +106,7 @@ async function isWorknetManager(address, chainName) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             jsonrpc: "2.0",
-            method: "subnets.list",
+            method: "worknets.list",
             params: { status, limit: 100, page, chainId: CHAIN_IDS[chainName?.toLowerCase()] || 8453 },
             id: 2,
           }),
