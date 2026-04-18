@@ -605,7 +605,8 @@ If the user later wants to work on a worknet that requires staking, guide them t
 | Deposit / stake AWP (gasless or on-chain) | S2 | **references/commands-staking.md** |
 | Allocate / deallocate / reallocate | S3 | **references/commands-staking.md** |
 | Register a new worknet | M1 | **references/commands-worknet.md** |
-| Activate / pause / resume worknet | M2 | **references/commands-worknet.md** |
+| Develop / operate a worknet (roles, rewards, strategy) | M1 | **references/worknet-developer.md** |
+| Activate / pause / resume / deregister worknet | M2 | **references/commands-worknet.md** |
 | Update skills URI | M3 | **references/commands-worknet.md** |
 | Set minimum stake | M4 | **references/commands-worknet.md** |
 | Create governance proposal | G1 | **references/commands-governance.md** |
@@ -928,6 +929,7 @@ Gasless relay endpoints (REST, NOT JSON-RPC): `POST https://api.awp.sh/api/relay
 | `POST /api/relay/set-recipient` | Set reward recipient | AWPRegistry |
 | `POST /api/relay/grant-delegate` | Authorize a delegate | AWPRegistry |
 | `POST /api/relay/revoke-delegate` | Revoke a delegate | AWPRegistry |
+| `POST /api/relay/register-worknet/prepare` | **LLM-friendly:** returns pre-built typedData for worknet registration | -- |
 | `POST /api/relay/register-worknet` | Register worknet (with AWP permit, 2 signatures) | AWPRegistry |
 | `POST /api/relay/stake/prepare` | **LLM-friendly:** returns pre-built typedData + submitTo body (no manual nonce/domain needed) | -- |
 | `POST /api/relay/stake` | Gasless staking (ERC-2612 permit) | AWP Token (permit domain) |
@@ -1457,7 +1459,8 @@ To combine register + deposit + allocate in a single user intent, use `onchain-o
 
 ### M1 · Register Worknet (gasless relay — costs ~1,000,000 AWP)
 
-Load **references/commands-worknet.md** for full registration details (LP cost calculation, WorknetParams struct, vanity salt, dual-signature flow, post-registration steps).
+Load **references/commands-worknet.md** for registration details (LP cost calculation, WorknetParams struct, vanity salt, dual-signature flow, post-registration steps).
+For full worknet development guide (Manager roles, reward distribution, Alpha token, strategies, acceptance criteria): load **references/worknet-developer.md**.
 
 ```bash
 python3 scripts/relay-register-worknet.py --token $TOKEN --name "MyWorknet" --symbol "MWKN" --skills-uri "ipfs://QmHash"
@@ -1471,12 +1474,12 @@ python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action
 python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet 1 --action cancel
 ```
 `pause` / `resume` / `cancel` are the only actions a worknet owner can take on their
-own NFT. `activateWorknet`, `rejectWorknet`, `banWorknet`, `unbanWorknet` are all
-**Guardian-only** — end users cannot self-activate/reject/ban and any attempt will
-revert. Cancel is only valid for Pending worknets (before Guardian activation) and
-refunds the full AWP escrow. Reject (Guardian) on Pending worknets also refunds the
-escrow. Banned worknets have their allocations frozen (use `staking.getFrozen` to
-see stuck funds).
+own NFT. Guardian-only operations: `activateWorknet`, `rejectWorknet`, `banWorknet`,
+`unbanWorknet`, `deregisterWorknet`. End users cannot execute these.
+
+**Lifecycle states**: Pending → Active ↔ Paused → Deregistered (final, irreversible).
+Cancel only works on Pending (refunds AWP escrow). Deregister only works on Active
+(Guardian-only, irreversible — worknet is permanently shut down).
 
 ### M3 · Update Skills URI
 ```bash
@@ -1494,13 +1497,14 @@ python3 scripts/onchain-worknet-update.py --token $TOKEN --worknet 1 --min-stake
 
 **Proposal ID format**: All API responses return proposalId as canonical hex (`0x` + 64 lowercase hex chars). All endpoints accept both hex and decimal input — the server auto-normalizes. Example: `0x62f25cfc5f274d2104972527c3f4d40a7270d4bea0a1cf516669e12edda35670`.
 
-DAO parameters (from `registry.get` → `daoParams`):
+DAO parameters (from `registry.get` → `daoParams` — Guardian-configurable, always fetch dynamically):
 - **Proposal threshold**: 200,000 AWP staked (waived for approved proposers)
-- **Voting delay**: 3,600s (1 hour after creation before voting starts)
-- **Voting period**: 86,400s (24 hours voting window)
-- **Late quorum vote extension**: 14,400s (4 hours auto-extension if quorum reached in final window)
+- **Voting delay**: 12 hours (43,200s) — time after creation before voting starts
+- **Voting period**: 48 hours (172,800s) — voting window
+- **Late quorum vote extension**: 8 hours (28,800s) — auto-extension if quorum reached in final window
 - **Quorum**: 4% of total staked AWP (For + Abstain count toward quorum, Against does not)
-- **Lifecycle**: submit → votingDelay (1h) → voting (24h) → optional extension (+4h) → 2-day Timelock (executable only) → execute
+- **Option E (anti-flash-stake)**: veAWP lockEndTime must be >= proposalDeadline + 7 days
+- **Lifecycle**: submit → 12h delay → 48h voting → (+8h if late quorum) → 2-day Timelock (executable only) → execute
 
 ### G1 · Create Proposal
 
