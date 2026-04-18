@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.9.0
+
+### API rename + worknet developer guide + lifecycle updates
+
+API rename (server-side breaking change):
+- All JSON-RPC methods renamed: `subnets.*` → `worknets.*` (9 methods),
+  `staking.*Subnet*` → `staking.*Worknet*` (3 methods). Updated across
+  4 scripts, 1 .mjs bridge, SKILL.md, 3 reference files.
+
+New reference:
+- `references/worknet-developer.md` — comprehensive 550-line worknet
+  development guide: Manager roles (MERKLE/TRANSFER/STRATEGY/CHECKPOINT/
+  UPGRADER), AWP strategies, Alpha token mint cap, reward distribution
+  playbook, packed batch format, acceptance criteria, operational FAQ.
+
+SKILL.md updates:
+- DAO parameters: votingDelay=12h, votingPeriod=48h,
+  lateQuorumVoteExtension=8h (synced with worknet-llm-reference.md).
+- Option E anti-flash-stake: lockEndTime >= proposalDeadline + 7 days.
+- Deregistered lifecycle state (Guardian-only, final, irreversible).
+- Added `/api/relay/register-worknet/prepare` to relay endpoint table.
+- M1 registration details moved to references (SKILL.md slimmed).
+- LP cost fixed in commands-worknet.md: 100K → 1M AWP.
+- Post-registration workflow added to commands-worknet.md.
+- Intent routing: "Develop/operate a worknet" → worknet-developer.md.
+
 ## v1.8.1
 
 ### Hex proposalId support + DAO parameter sync
