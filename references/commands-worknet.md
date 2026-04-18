@@ -36,9 +36,10 @@ WALLET_ADDR=$(awp-wallet receive | jq -r '.eoaAddress')
 
 ```solidity
 function initialAlphaPrice() view returns (uint256)   // on AWPRegistry
-// INITIAL_ALPHA_MINT = 100,000,000 x 10^18
-// lpCost = INITIAL_ALPHA_MINT x initialAlphaPrice / 10^18
-// Currently: 100,000,000 x 0.001 = 100,000 AWP
+function initialAlphaMint() view returns (uint256)    // on AWPRegistry (Guardian-controlled)
+// lpCost = initialAlphaMint() x initialAlphaPrice() / 10^18
+// Currently: 1,000,000,000 x 0.001 = 1,000,000 AWP
+// Both params are Guardian-controlled — always compute dynamically, never hardcode
 ```
 
 ### WorknetParams Struct (6 fields)
@@ -67,7 +68,7 @@ function approve(address spender, uint256 amount) returns (bool)   // on AWPToke
 function registerWorknet(WorknetParams params) returns (uint256 worknetId)   // on AWPRegistry
 // params.salt = bytes32(0) uses worknetId as CREATE2 salt
 // params.worknetManager = address(0) auto-deploys WorknetManager proxy
-// Costs 100,000 AWP (initialAlphaMint x initialAlphaPrice)
+// Costs ~1,000,000 AWP (initialAlphaMint x initialAlphaPrice / 1e18, Guardian-controlled)
 
 // Gasless (requires prior AWP approve to AWPRegistry)
 function registerWorknetFor(address user, WorknetParams params, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
@@ -367,3 +368,79 @@ function setMinStake(uint256 worknetId, uint128 minStake)   // on AWPWorkNet
 ```bash
 python3 scripts/onchain-worknet-update.py --token {T} --worknet {worknetId} --min-stake {minStakeWei}
 ```
+
+---
+
+## Post-Registration Workflow
+
+After `relay-register-worknet.py` succeeds, the worknet goes through these stages:
+
+```
+1. Registration  →  Pending (you are here)
+2. Guardian activates  →  Active
+3. You configure the worknet  →  Ready for agents
+```
+
+### Stage 1: After Registration (Pending)
+
+Your worknet is in **Pending** status. The Guardian reviews and activates it.
+
+**Check status:**
+```bash
+python3 scripts/query-worknet.py --worknet <WORKNET_ID>
+```
+
+**Cancel (refund) if needed** (only while Pending):
+```bash
+python3 scripts/onchain-worknet-lifecycle.py --token $TOKEN --worknet <ID> --action cancel
+```
+
+### Stage 2: After Guardian Activation (Active)
+
+Once the Guardian calls `activateWorknet`, your worknet becomes **Active** and:
+- A WorknetToken (ERC-20) is deployed via CREATE2
+- An LP pool is created on the chain's DEX (Uniswap V4 / PancakeSwap V4)
+- A WorknetManager proxy is deployed (if `worknetManager=address(0)`)
+- You receive the AWPWorkNet NFT (tokenId = worknetId) as the owner
+
+### Stage 3: Configure Your Worknet
+
+**Set skills URI** (describes what your worknet does):
+```bash
+python3 scripts/onchain-worknet-update.py --token $TOKEN --worknet <ID> --skills-uri "ipfs://QmNewHash"
+```
+
+**Set minimum stake** (optional, advisory only — not enforced by contracts):
+```bash
+python3 scripts/onchain-worknet-update.py --token $TOKEN --worknet <ID> --min-stake 0
+```
+
+**Set metadata/image URI** (for marketplace display):
+```bash
+python3 scripts/onchain-worknet-metadata.py --token $TOKEN --worknet <ID> --metadata-uri "ipfs://QmMeta"
+python3 scripts/onchain-worknet-metadata.py --token $TOKEN --worknet <ID> --image-uri "ipfs://QmImg"
+```
+
+**Query your worknets:**
+```bash
+curl -s -X POST https://api.awp.sh/v2 -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"subnets.getByOwner","params":{"owner":"<YOUR_ADDRESS>"},"id":1}'
+```
+
+### WorknetManager Configuration (Advanced)
+
+After activation, the deployed WorknetManager has these roles:
+- **DEFAULT_ADMIN_ROLE** — you (the registrant) have this by default
+- **MERKLE_ROLE** — who can submit Merkle distribution roots
+- **STRATEGY_ROLE** — who can manage AWP handling strategy (Reserve/AddLiquidity/BuybackBurn)
+- **TRANSFER_ROLE** — who can transfer tokens from the manager
+
+These role assignments are on-chain via AccessControl. Use the WorknetManager contract directly (no bundled script — advanced users only).
+
+### Lifecycle Management
+
+| Action | Command | When |
+|--------|---------|------|
+| Pause | `onchain-worknet-lifecycle.py --action pause` | Active → Paused (stops new allocations) |
+| Resume | `onchain-worknet-lifecycle.py --action resume` | Paused → Active |
+| Cancel | `onchain-worknet-lifecycle.py --action cancel` | Pending → refunds AWP escrow |

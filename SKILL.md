@@ -1456,17 +1456,13 @@ To combine register + deposit + allocate in a single user intent, use `onchain-o
 ## Worknet Management (wallet + AWPWorkNet ownership — load commands-worknet.md first)
 
 ### M1 · Register Worknet (gasless relay — costs ~1,000,000 AWP)
+
+Load **references/commands-worknet.md** for full registration details (LP cost calculation, WorknetParams struct, vanity salt, dual-signature flow, post-registration steps).
+
 ```bash
 python3 scripts/relay-register-worknet.py --token $TOKEN --name "MyWorknet" --symbol "MWKN" --skills-uri "ipfs://QmHash"
 ```
-The script handles all EIP-712 signing and relay submission internally — do not construct or show EIP-712 JSON to the user, just run the script.
-
-Cost is computed dynamically from `initialAlphaPrice() × initialAlphaMint() ÷ 1e18`
-on AWPRegistry. At current on-chain parameters (price = 0.001 AWP per WorknetToken,
-mint = 1 billion WorknetTokens), the registration deposit is **1,000,000 AWP** (not
-100,000 — that's a legacy figure from when initial mint was 100M). The Guardian can
-adjust both parameters via `setInitialAlphaPrice` / `setInitialAlphaMint`, so always
-quote the figure as approximate.
+Cost is ~1,000,000 AWP (dynamically computed, Guardian-controlled). The script handles dual EIP-712 signing internally.
 
 ### M2 · Pause / Resume / Cancel (NFT owner only)
 ```bash
