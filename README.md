@@ -44,7 +44,7 @@
 
 AWP is a decentralized **Agent Work** protocol deployed on 4 EVM chains (Base, Ethereum, Arbitrum, BSC). Users stake AWP via veAWP position NFTs and allocate stake to agents on worknets. Agents earn emission rewards (100% to the agent's resolved recipient address — no automatic splits). Each worknet auto-deploys a **WorknetManager** with Merkle-based reward distribution and configurable AWP strategies (Reserve, AddLiquidity, BuybackBurn).
 
-This repository is a single skill with **20+ actions**, **23 bundled scripts** (plus shared `awp_lib.py` + Node bridge), and **25 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
+This repository is a single skill with **20+ actions**, **36 bundled scripts** (plus shared `awp_lib.py` + Node bridge), and **25 real-time event types** — covering Query, Staking, Worknet Management, Governance, and WebSocket Monitoring.
 
 ## Quick Install
 
@@ -207,7 +207,7 @@ awp-skill/
 
 **Progressive loading**: The agent loads only what it needs per action. Query and Monitor actions use SKILL.md alone. Write actions load the specific command reference file, and all on-chain operations use bundled scripts — preventing manual calldata construction errors.
 
-**14 bundled scripts** (+ shared `awp_lib.py` library + `wallet-raw-call.mjs` Node bridge) cover every read and write operation. Each script handles:
+**36 bundled scripts** (+ shared `awp_lib.py` library + `wallet-raw-call.mjs` Node bridge) cover every read and write operation. Each script handles:
 
 - Input validation (address regex, numeric bounds, uint128 range checks)
 - Correct contract targeting (AWPRegistry vs veAWP vs AWPWorkNet vs AWPAllocator vs AWPDAO)
